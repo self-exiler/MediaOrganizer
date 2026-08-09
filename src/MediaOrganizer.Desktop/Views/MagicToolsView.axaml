@@ -1,0 +1,79 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:MediaOrganizer.Desktop.ViewModels"
+             x:Class="MediaOrganizer.Desktop.Views.MagicToolsView"
+             x:DataType="vm:MagicToolsViewModel">
+
+    <ScrollViewer>
+        <StackPanel Spacing="14" Margin="24,20">
+            <StackPanel>
+                <TextBlock Classes="h1" Text="魔术工具"/>
+                <TextBlock Classes="muted" Text="加载失败文件样本 → 查看结构指纹 → 编写/测试正则 → 保存到 patterns.json（交互式圈选生成正则为后续迭代）" Margin="0,4,0,0" TextWrapping="Wrap"/>
+            </StackPanel>
+
+            <Grid ColumnDefinitions="280,1*" ColumnSpacing="14">
+                <!-- 样本 -->
+                <Border Classes="card">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Classes="h2" Text="样本"/>
+                        <ListBox ItemsSource="{Binding Samples}" SelectedItem="{Binding SelectedSample}"
+                                 BorderThickness="0" Background="Transparent" MinHeight="120">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="x:String">
+                                    <TextBlock Text="{Binding}" FontFamily="Cascadia Code, Consolas, monospace" FontSize="12"/>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <TextBlock DockPanel.Dock="Bottom" Text="{Binding SampleInfo}" Classes="muted" FontSize="11" Margin="0,8,0,0"/>
+                    </DockPanel>
+                </Border>
+
+                <!-- 编辑与测试 -->
+                <StackPanel Spacing="14">
+                    <Border Classes="card">
+                        <StackPanel Spacing="8">
+                            <TextBlock Classes="h2" Text="结构指纹"/>
+                            <TextBox Text="{Binding Fingerprint}" IsReadOnly="True"
+                                     FontFamily="Cascadia Code, Consolas, monospace" FontSize="13"/>
+                            <TextBlock Classes="muted" FontSize="11" Text="D=数字 / L=字母 / S=符号。指纹一致的文件名可用同一条规则。"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Classes="card">
+                        <StackPanel Spacing="10">
+                            <TextBlock Classes="h2" Text="正则测试"/>
+                            <TextBox Text="{Binding RegexText}" PlaceholderText="例如：mm_export(\d{13})"
+                                     FontFamily="Cascadia Code, Consolas, monospace"/>
+                            <TextBlock Classes="muted" FontSize="11"
+                                       Text="支持命名组 (?&lt;year&gt;\d{4}) 等；无命名组时按 1组=时间戳 / 3组=年月日 / 6组=年月日时分秒 自动推断。"/>
+                            <ItemsControl ItemsSource="{Binding TestResults}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:RegexTestItem">
+                                        <Grid ColumnDefinitions="1*,80,150" Margin="0,2">
+                                            <TextBlock Grid.Column="0" Text="{Binding Sample}" FontFamily="Cascadia Code, Consolas, monospace" FontSize="12" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding Matched}" FontSize="12"/>
+                                            <TextBlock Grid.Column="2" Text="{Binding Result}" FontSize="12" Classes="muted"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Text="{Binding SaveHint}" FontSize="11" Foreground="#0067C0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Classes="card">
+                        <StackPanel Spacing="10">
+                            <TextBlock Classes="h2" Text="保存规则"/>
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                <TextBlock Grid.Column="0" Text="规则名称" VerticalAlignment="Center" Classes="muted"/>
+                                <TextBox Grid.Column="1" Text="{Binding PatternName}" PlaceholderText="例如：微信导出时间戳"/>
+                            </Grid>
+                            <Button Classes="accent" Content="保存到 patterns.json" Command="{Binding SavePatternCommand}"
+                                    HorizontalAlignment="Right"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

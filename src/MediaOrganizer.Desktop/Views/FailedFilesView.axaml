@@ -1,0 +1,77 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:MediaOrganizer.Desktop.ViewModels"
+             x:Class="MediaOrganizer.Desktop.Views.FailedFilesView"
+             x:DataType="vm:FailedFilesViewModel">
+
+    <StackPanel Margin="24,20" Spacing="14">
+
+        <!-- 页头 -->
+        <DockPanel>
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <TextBlock Classes="h1" Text="失败文件"/>
+                    <Border Classes="chip" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Items.Count, StringFormat='{}{0} 个'}" FontSize="12" Classes="muted"/>
+                    </Border>
+                </StackPanel>
+                <TextBlock Classes="muted" Text="未能提取日期的文件：用魔术工具加规则后重新分析，或批量移入待处理文件夹" Margin="0,4,0,0"/>
+            </StackPanel>
+        </DockPanel>
+
+        <StackPanel Orientation="Horizontal" Spacing="10">
+            <Button Classes="accent" Content="🪄 用样本打开魔术工具" Command="{Binding OpenMagicToolsCommand}"/>
+            <Button Content="全部移到待处理文件夹" Command="{Binding MoveToPendingCommand}"/>
+            <Button Content="系统应用打开" Command="{Binding OpenWithSystemCommand}"/>
+        </StackPanel>
+
+        <Grid ColumnDefinitions="1*,6,330" ClipToBounds="True">
+
+            <!-- 文件列表 -->
+            <Border Classes="card" Padding="0">
+                <DockPanel>
+                    <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+                            BorderThickness="0,0,0,1" Padding="14,10">
+                        <TextBlock Text="按文件名结构指纹聚类排序" Classes="muted" FontSize="12"/>
+                    </Border>
+                    <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}"
+                             BorderThickness="0" Background="Transparent">
+                        <ListBox.Resources>
+                            <SolidColorBrush x:Key="ListBoxItemBackgroundPointerOver" Color="#0D000000"/>
+                            <SolidColorBrush x:Key="ListBoxItemBackgroundSelected" Color="#1A0067C0"/>
+                            <SolidColorBrush x:Key="ListBoxItemForegroundSelected" Color="{DynamicResource SystemAccentColor}"/>
+                            <CornerRadius x:Key="ListBoxItemCornerRadius">6</CornerRadius>
+                        </ListBox.Resources>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:FailedItem">
+                                <StackPanel Margin="6,2" Spacing="2">
+                                    <TextBlock Text="{Binding Name}" FontSize="12.5"
+                                               FontFamily="Cascadia Code, Consolas, monospace" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding Fingerprint}" FontSize="10.5" Classes="muted"
+                                               FontFamily="Cascadia Code, Consolas, monospace"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Width="6"/>
+
+            <!-- 预览与信息 -->
+            <Border Classes="card" Grid.Column="2" Padding="12">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Classes="h2" Text="预览"/>
+                    <TextBlock DockPanel.Dock="Bottom" Text="{Binding PreviewInfo}" TextWrapping="Wrap"
+                               FontSize="11" Classes="muted" Margin="0,8,0,0"/>
+                    <Border CornerRadius="6" Background="{DynamicResource SystemControlBackgroundBaseLowBrush}" ClipToBounds="True">
+                        <Panel>
+                            <Image Source="{Binding Preview}" Stretch="Uniform" Margin="8"/>
+                            <TextBlock Text="无可用预览" Classes="muted" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Panel>
+                    </Border>
+                </DockPanel>
+            </Border>
+        </Grid>
+    </StackPanel>
+</UserControl>

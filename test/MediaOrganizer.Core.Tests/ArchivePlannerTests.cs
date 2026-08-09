@@ -1,0 +1,55 @@
+using MediaOrganizer.Core.Configuration;
+using MediaOrganizer.Core.Models;
+using MediaOrganizer.Core.Planning;
+
+namespace MediaOrganizer.Core.Tests;
+
+public class ArchivePlannerTests
+{
+    private static ParsedFile Pf(string name, int year, int month = 1, int day = 1) =>
+        new(new MediaFile(Path.Combine(@"C:\src", name), 10, "jpg"),
+            new DateTimeOffset(year, month, day, 0, 0, 0, TimeSpan.Zero), "FileName");
+
+    private static AnalysisResult Result(params ParsedFile[] files) =>
+        new(@"C:\src", new DateTimeOffset(2026, 8, 8, 0, 0, 0, TimeSpan.Zero), files, []);
+
+    [Fact]
+    public void 按日分级()
+    {
+        var plan = new ArchivePlanner(ClassificationLevel.Day).Plan(Result(Pf("a.jpg", 2024, 1, 15)), @"D:\out");
+        Assert.Equal("2024/01/15/a.jpg", plan.Files[0].RelativeTarget);
+    }
+
+    [Fact]
+    public void 按月分级()
+    {
+        var plan = new ArchivePlanner(ClassificationLevel.Month).Plan(Result(Pf("a.jpg", 2024, 1, 15)), @"D:\out");
+        Assert.Equal("2024/01/a.jpg", plan.Files[0].RelativeTarget);
+    }
+
+    [Fact]
+    public void 按年分级()
+    {
+        var plan = new ArchivePlanner(ClassificationLevel.Year).Plan(Result(Pf("a.jpg", 2024, 1, 15)), @"D:\out");
+        Assert.Equal("2024/a.jpg", plan.Files[0].RelativeTarget);
+    }
+
+    [Fact]
+    public void 未来日期进入FutureDate()
+    {
+        // 2026-08-08 之后 3 天仍在校验缓冲内（假设未来缓冲 7 天），应归入 FutureDate/
+        var file = new ParsedFile(
+            new MediaFile(@"C:\src\f.jpg", 10, "jpg"),
+            new DateTimeOffset(2026, 8, 11, 0, 0, 0, TimeSpan.Zero), "Exif");
+        var now = new DateTimeOffset(2026, 8, 8, 0, 0, 0, TimeSpan.Zero);
+        var plan = new ArchivePlanner(ClassificationLevel.Day, now).Plan(Result(file), @"D:\out");
+        Assert.Equal("FutureDate/2026/08/11/f.jpg", plan.Files[0].RelativeTarget);
+    }
+
+    [Fact]
+    public void 未来缓冲为0时校验应拦截未来日期()
+    {
+        var validator = new Extraction.DateRangeValidator(30, 0, new DateTimeOffset(2026, 8, 8, 0, 0, 0, TimeSpan.Zero));
+        Assert.False(validator.IsValid(new DateTimeOffset(2026, 8, 9, 0, 0, 0, TimeSpan.Zero)));
+    }
+}

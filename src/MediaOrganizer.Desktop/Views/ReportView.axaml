@@ -1,0 +1,24 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:MediaOrganizer.Desktop.ViewModels"
+             x:Class="MediaOrganizer.Desktop.Views.ReportView"
+             x:DataType="vm:ReportViewModel">
+
+    <DockPanel Margin="24,20">
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,14" LastChildFill="False">
+            <StackPanel>
+                <TextBlock Classes="h1" Text="分析报告"/>
+                <TextBlock Classes="muted" Text="{Binding ReportMeta}" Margin="0,4,0,0"/>
+            </StackPanel>
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Button Classes="accent" Content="另存为…" Command="{Binding SaveReportCommand}"/>
+            </StackPanel>
+        </DockPanel>
+
+        <Border Classes="card" Padding="0">
+            <TextBox Text="{Binding ReportText}" IsReadOnly="True" AcceptsReturn="True"
+                     TextWrapping="NoWrap" BorderThickness="0" Background="Transparent"
+                     Padding="16" FontFamily="Cascadia Code, Consolas, monospace" FontSize="12.5"/>
+        </Border>
+    </DockPanel>
+</UserControl>

@@ -1,0 +1,106 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:MediaOrganizer.Desktop.ViewModels"
+             x:Class="MediaOrganizer.Desktop.Views.WorkbenchView"
+             x:DataType="vm:WorkbenchViewModel">
+
+    <ScrollViewer>
+        <StackPanel Spacing="14" Margin="24,20">
+
+            <!-- 页头 -->
+            <DockPanel LastChildFill="False">
+                <StackPanel>
+                    <TextBlock Classes="h1" Text="整理工作台"/>
+                    <TextBlock Classes="muted" Text="扫描源目录 → 提取拍摄日期 → 按日期归档" Margin="0,4,0,0"/>
+                </StackPanel>
+                <TextBlock DockPanel.Dock="Right" Text="{Binding StatusText}" Classes="muted"
+                           VerticalAlignment="Bottom" HorizontalAlignment="Right"/>
+            </DockPanel>
+
+            <!-- 目录与扫描 -->
+            <Border Classes="card">
+                <StackPanel Spacing="10">
+                    <TextBlock Classes="h2" Text="目录"/>
+                    <Grid ColumnDefinitions="70,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="10">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="源目录" VerticalAlignment="Center" Classes="muted"/>
+                        <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding SourceDir}" PlaceholderText="选择包含照片/视频的文件夹"/>
+                        <Button Grid.Row="0" Grid.Column="2" Content="浏览…" Command="{Binding BrowseSourceCommand}"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="输出目录" VerticalAlignment="Center" Classes="muted"/>
+                        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding OutputDir}" PlaceholderText="按日期归档的目标文件夹"/>
+                        <Button Grid.Row="1" Grid.Column="2" Content="浏览…" Command="{Binding BrowseOutputCommand}"/>
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Button Classes="accent" Content="▶ 开始分析" Command="{Binding AnalyzeCommand}" IsEnabled="{Binding !IsBusy}"/>
+                        <ProgressBar Value="{Binding Progress}" Maximum="100" Width="280" VerticalAlignment="Center"
+                                     IsVisible="{Binding IsBusy}"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- 统计 -->
+            <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="10">
+                <Border Classes="stat">
+                    <StackPanel>
+                        <TextBlock Text="{Binding TotalFiles}" Classes="stat-num"/>
+                        <TextBlock Text="总文件数" Classes="muted" Margin="0,3,0,0"/>
+                    </StackPanel>
+                </Border>
+                <Border Classes="stat" Grid.Column="1">
+                    <StackPanel>
+                        <TextBlock Text="{Binding SuccessFiles}" Classes="stat-num" Foreground="#107C10"/>
+                        <TextBlock Text="成功" Classes="muted" Margin="0,3,0,0"/>
+                    </StackPanel>
+                </Border>
+                <Border Classes="stat" Grid.Column="2">
+                    <StackPanel>
+                        <TextBlock Text="{Binding FailedFiles}" Classes="stat-num" Foreground="#C42B1C"/>
+                        <TextBlock Text="失败" Classes="muted" Margin="0,3,0,0"/>
+                    </StackPanel>
+                </Border>
+                <Border Classes="stat" Grid.Column="3">
+                    <StackPanel>
+                        <TextBlock Text="{Binding SuccessRate}" Classes="stat-num"/>
+                        <TextBlock Text="成功率" Classes="muted" Margin="0,3,0,0"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- 整理计划与执行 -->
+            <Border Classes="card">
+                <StackPanel Spacing="12">
+                    <TextBlock Classes="h2" Text="整理计划"/>
+
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12">
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="操作类型" Classes="muted" FontSize="12"/>
+                            <ComboBox ItemsSource="{Binding OperationOptions}" SelectedIndex="{Binding OperationIndex}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Spacing="5">
+                            <TextBlock Text="同名文件" Classes="muted" FontSize="12"/>
+                            <ComboBox ItemsSource="{Binding ExistActionOptions}" SelectedIndex="{Binding ExistActionIndex}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Spacing="5">
+                            <TextBlock Text="目录分级" Classes="muted" FontSize="12"/>
+                            <ComboBox ItemsSource="{Binding LevelOptions}" SelectedIndex="{Binding LevelIndex}"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <CheckBox Content="将目标文件修改时间设为拍摄日期（mtime 矫正）" IsChecked="{Binding FixMtime}"/>
+
+                    <Border Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+                            CornerRadius="6" Padding="12,8">
+                        <TextBlock Text="{Binding PlanText}" TextWrapping="Wrap"/>
+                    </Border>
+
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Button Classes="accent" Content="✔ 确认并执行归档" Command="{Binding ExecuteFilesCommand}"
+                                IsEnabled="{Binding CanExecute}"/>
+                        <TextBlock Text="未来日期文件将自动归入 FutureDate/" VerticalAlignment="Center" Classes="muted"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

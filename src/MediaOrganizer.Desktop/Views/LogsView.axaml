@@ -1,0 +1,37 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:MediaOrganizer.Desktop.ViewModels"
+             xmlns:logging="using:MediaOrganizer.Core.Logging"
+             xmlns:converters="using:MediaOrganizer.Desktop.Converters"
+             x:Class="MediaOrganizer.Desktop.Views.LogsView"
+             x:DataType="vm:LogsViewModel">
+
+    <DockPanel Margin="24,20">
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,14" LastChildFill="False">
+            <StackPanel>
+                <TextBlock Classes="h1" Text="日志"/>
+                <TextBlock Classes="muted" Text="内存环形缓冲 · 最多 1000 条 · 新日志在顶部" Margin="0,4,0,0"/>
+            </StackPanel>
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Button Content="清空" Command="{Binding ClearLogCommand}"/>
+            </StackPanel>
+        </DockPanel>
+
+        <Border Classes="card" Padding="6">
+            <ScrollViewer>
+                <ItemsControl ItemsSource="{Binding Entries}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="logging:LogEntry">
+                            <Grid ColumnDefinitions="160,60,1*" Margin="8,4">
+                                <TextBlock Grid.Column="0" Text="{Binding Timestamp, StringFormat={}{0:HH:mm:ss.fff}}" Classes="muted" FontSize="12"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Level}" FontSize="12" FontWeight="SemiBold"
+                                           Foreground="{Binding Level, Converter={x:Static converters:LogLevelBrushConverter.Instance}}"/>
+                                <TextBlock Grid.Column="2" Text="{Binding Message}" FontSize="12" TextWrapping="Wrap"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+    </DockPanel>
+</UserControl>

@@ -1,0 +1,72 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:MediaOrganizer.Desktop.ViewModels"
+        xmlns:icons="using:MediaOrganizer.Desktop.Icons"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="760"
+        x:Class="MediaOrganizer.Desktop.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Width="1200" Height="760"
+        MinWidth="980" MinHeight="620"
+        WindowStartupLocation="CenterScreen"
+        Title="MediaOrganizer · 媒体文件整理器">
+
+    <DockPanel>
+
+        <!-- 底部状态栏 -->
+        <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource SystemControlBackgroundBaseLowBrush}" BorderThickness="0,1,0,0">
+            <DockPanel Margin="14,5" LastChildFill="False">
+                <TextBlock Text="就绪" Classes="muted" FontSize="12" VerticalAlignment="Center"/>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="18" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding SelectedNav.Title, StringFormat='当前：{0}'}" Classes="muted" FontSize="12" VerticalAlignment="Center"/>
+                    <TextBlock Text="v0.1 · .NET 10 · Avalonia 12" Classes="muted" FontSize="12" VerticalAlignment="Center"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="220"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 左侧导航 -->
+            <Border Grid.Column="0" BorderBrush="{DynamicResource SystemControlBackgroundBaseLowBrush}" BorderThickness="0,0,1,0"
+                    Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
+                <DockPanel Margin="8">
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="9" Margin="10,14,10,18">
+                        <Path Data="{x:Static icons:IconPaths.Folder}" Width="18" Height="18"
+                              Fill="{DynamicResource SystemControlForegroundAccentBrush}" Stretch="Uniform"/>
+                        <TextBlock Text="MediaOrganizer" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <ListBox ItemsSource="{Binding NavItems}"
+                             SelectedItem="{Binding SelectedNav}"
+                             Background="Transparent" BorderThickness="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.Resources>
+                            <SolidColorBrush x:Key="ListBoxItemBackgroundPointerOver" Color="#14000000"/>
+                            <SolidColorBrush x:Key="ListBoxItemBackgroundSelected" Color="#1A0067C0"/>
+                            <SolidColorBrush x:Key="ListBoxItemForegroundSelected" Color="{DynamicResource SystemAccentColor}"/>
+                            <CornerRadius x:Key="ListBoxItemCornerRadius">6</CornerRadius>
+                        </ListBox.Resources>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:NavItem">
+                                <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,2">
+                                    <Path Data="{Binding Icon}" Width="17" Height="17" Stretch="Uniform"
+                                          Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
+                                    <TextBlock Text="{Binding Title}" FontSize="13" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+
+            <!-- 内容区：ViewLocator 按 ViewModel 解析视图 -->
+            <ContentControl Grid.Column="1" Content="{Binding SelectedNav.ViewModel}"
+                            Background="{DynamicResource SystemControlBackgroundAltMediumLowBrush}"/>
+        </Grid>
+    </DockPanel>
+</Window>

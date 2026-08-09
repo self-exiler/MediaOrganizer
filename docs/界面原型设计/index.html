@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediaOrganizer · 界面原型（Avalonia 12 / Fluent）</title>
+<style>
+  :root{
+    --accent:#0067c0; --accent-hover:#1975c5; --accent-press:#005a9e;
+    --bg:#f3f3f3; --card:#ffffff; --card-border:#e5e5e5;
+    --text:#1b1b1b; --text-2:#616161; --text-3:#8a8a8a;
+    --success:#107c10; --warning:#ca5010; --error:#c42b1c;
+    --rail:#eaeaea; --radius:8px;
+    --shadow:0 1px 2px rgba(0,0,0,.06),0 4px 12px rgba(0,0,0,.06);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:"Segoe UI Variable Text","Segoe UI","Microsoft YaHei UI","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);font-size:13px;overflow:hidden}
+  .app{display:flex;height:100vh}
+
+  /* ===== 左侧导航 NavigationView ===== */
+  .rail{width:220px;background:var(--rail);border-right:1px solid var(--card-border);display:flex;flex-direction:column;padding:8px;gap:2px;flex-shrink:0}
+  .brand{display:flex;align-items:center;gap:10px;padding:10px 12px 14px;font-weight:600;font-size:14px}
+  .brand .logo{width:26px;height:26px;border-radius:6px;background:linear-gradient(135deg,#0067c0,#4fa3e3);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px}
+  .navitem{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:6px;cursor:pointer;color:var(--text-2);position:relative;user-select:none}
+  .navitem:hover{background:rgba(0,0,0,.05)}
+  .navitem.active{background:#fff;color:var(--text);box-shadow:var(--shadow);font-weight:600}
+  .navitem.active::before{content:"";position:absolute;left:0;top:22%;height:56%;width:3px;border-radius:2px;background:var(--accent)}
+  .navitem .ico{width:18px;text-align:center}
+  .badge{margin-left:auto;background:var(--error);color:#fff;font-size:11px;border-radius:10px;padding:1px 7px}
+  .rail .spacer{flex:1}
+  .nav-sep{height:1px;background:var(--card-border);margin:6px 4px}
+
+  /* ===== 主内容区 ===== */
+  .content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+  .titlebar{height:46px;display:flex;align-items:center;padding:0 20px;gap:12px;border-bottom:1px solid var(--card-border);background:var(--card);flex-shrink:0}
+  .titlebar h1{font-size:15px;font-weight:600}
+  .titlebar .crumb{color:var(--text-3)}
+  .screen{flex:1;overflow-y:auto;padding:20px;display:none}
+  .screen.show{display:block}
+
+  .card{background:var(--card);border:1px solid var(--card-border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:16px}
+  .card h2{font-size:13px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .card h2 .tag{font-size:11px;font-weight:400;color:var(--text-3)}
+
+  /* ===== 控件 ===== */
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:6px;border:1px solid var(--card-border);background:#fbfbfb;cursor:pointer;font-size:13px;color:var(--text);user-select:none}
+  .btn:hover{background:#f5f5f5}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.primary:hover{background:var(--accent-hover)}
+  .btn.danger{color:var(--error)}
+  .btn:disabled{opacity:.45;pointer-events:none}
+  .btn.sm{padding:4px 10px;font-size:12px}
+  .field{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .field label{width:78px;color:var(--text-2);flex-shrink:0;text-align:right}
+  .input{flex:1;display:flex;align-items:center;background:#fbfbfb;border:1px solid var(--card-border);border-radius:6px;padding:6px 10px;color:var(--text-2);gap:8px}
+  .input.mono{font-family:Cascadia Code,Consolas,monospace;font-size:12px}
+  select,.sel{background:#fbfbfb;border:1px solid var(--card-border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:13px}
+  .toggle{display:inline-flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+  .toggle .tk{width:36px;height:18px;border-radius:9px;background:#cfcfcf;position:relative;transition:.15s}
+  .toggle .tk::after{content:"";position:absolute;width:12px;height:12px;border-radius:50%;background:#fff;top:3px;left:3px;transition:.15s;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+  .toggle.on .tk{background:var(--accent)}
+  .toggle.on .tk::after{left:21px}
+
+  /* InfoBar */
+  .infobar{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border-radius:6px;border:1px solid;margin-bottom:16px;font-size:12.5px}
+  .infobar.warn{background:#fff9f5;border-color:#f4d1bc;color:#8a3714}
+  .infobar.info{background:#f3f9fd;border-color:#c3dcf1;color:#0f4e7d}
+  .infobar.ok{background:#f2fbf2;border-color:#bfe6bf;color:#0b5a0b}
+
+  /* 进度 */
+  .progress{height:4px;background:#e8e8e8;border-radius:2px;overflow:hidden}
+  .progress>div{height:100%;background:var(--accent);border-radius:2px}
+  .statgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .stat{background:#fafafa;border:1px solid var(--card-border);border-radius:8px;padding:12px 14px}
+  .stat .num{font-size:22px;font-weight:600}
+  .stat .lbl{color:var(--text-3);font-size:12px;margin-top:2px}
+
+  /* 表格 DataGrid */
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th{text-align:left;color:var(--text-2);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--card-border);background:#fafafa;position:sticky;top:0}
+  td{padding:7px 10px;border-bottom:1px solid #f0f0f0;color:var(--text)}
+  tr:hover td{background:#f7fbff}
+  tr.sel td{background:#e8f2fb}
+  .chip{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px}
+  .chip.exif{background:#e8f2fb;color:#0f4e7d}
+  .chip.fn{background:#e9f7e9;color:#0b5a0b}
+  .chip.err{background:#fdeceb;color:#a4262c}
+
+  /* 分栏 */
+  .split{display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start}
+  .preview-box{background:#fafafa;border:1px dashed var(--card-border);border-radius:8px;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;color:var(--text-3);flex-direction:column;gap:8px;font-size:12px}
+
+  /* 步骤条 */
+  .steps{display:flex;gap:0;margin-bottom:18px}
+  .step{flex:1;text-align:center;position:relative;color:var(--text-3);font-size:12px;padding-top:22px}
+  .step::before{content:attr(data-n);position:absolute;top:0;left:50%;transform:translateX(-50%);width:18px;height:18px;border-radius:50%;background:#e0e0e0;color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center}
+  .step::after{content:"";position:absolute;top:9px;left:calc(50% + 14px);right:calc(-50% + 14px);height:2px;background:#e0e0e0}
+  .step:last-child::after{display:none}
+  .step.done{color:var(--success)}.step.done::before{background:var(--success)}
+  .step.cur{color:var(--accent);font-weight:600}.step.cur::before{background:var(--accent)}
+
+  /* 魔术工具着色 */
+  .fnview{font-family:Cascadia Code,Consolas,monospace;font-size:16px;padding:14px;background:#fafafa;border:1px solid var(--card-border);border-radius:8px;letter-spacing:1px;user-select:none}
+  .fnview .d{color:#d63384;cursor:text}.fnview .l{color:#2e8b57;cursor:text}.fnview .s{color:#3a6ea5;cursor:text}
+  .fnview .mark{border-radius:3px;padding:0 1px}
+  .fnview .mark.y{background:rgba(255,193,7,.55);outline:1px solid #e0a800}
+  .fnview .mark.m{background:rgba(111,66,193,.28);outline:1px solid #6f42c1}
+  .fnview .mark.ts{background:rgba(23,162,184,.3);outline:1px solid #17a2b8}
+  .legend{display:flex;gap:14px;font-size:12px;color:var(--text-2);margin-top:8px;flex-wrap:wrap}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+  .regex-out{font-family:Cascadia Code,Consolas,monospace;font-size:12.5px;background:#1e1e1e;color:#d4d4d4;border-radius:8px;padding:12px 14px;line-height:1.7}
+  .regex-out .g{color:#4ec9b0}.regex-out .k{color:#c586c0}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+  .pick{border:1px solid var(--card-border);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;background:#fff}
+  .pick:hover{border-color:var(--accent);color:var(--accent)}
+
+  /* Tabs */
+  .tabs{display:flex;gap:2px;border-bottom:1px solid var(--card-border);margin-bottom:16px}
+  .tab{padding:8px 16px;cursor:pointer;color:var(--text-2);border-bottom:2px solid transparent;font-size:13px;user-select:none}
+  .tab:hover{color:var(--text)}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+  .tabpage{display:none}.tabpage.show{display:block}
+
+  .slider-row{display:flex;align-items:center;gap:12px}
+  .slider{flex:1;height:4px;background:#e8e8e8;border-radius:2px;position:relative}
+  .slider>i{position:absolute;left:0;top:0;bottom:0;background:var(--accent);border-radius:2px}
+  .slider>b{position:absolute;top:-5px;width:14px;height:14px;border-radius:50%;background:var(--accent);transform:translateX(-50%);box-shadow:0 1px 3px rgba(0,0,0,.3)}
+
+  /* 状态栏 */
+  .statusbar{height:28px;background:var(--card);border-top:1px solid var(--card-border);display:flex;align-items:center;padding:0 16px;gap:18px;font-size:12px;color:var(--text-2);flex-shrink:0}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:0}
+  .dot.ok{background:var(--success)}.dot.busy{background:var(--accent)}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px 24px}
+  .muted{color:var(--text-3)} .small{font-size:12px}
+  .rowbtns{display:flex;gap:8px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ===================== 导航栏 ===================== -->
+  <nav class="rail">
+    <div class="brand"><div class="logo">🗂</div>MediaOrganizer</div>
+    <div class="navitem active" data-screen="workbench"><span class="ico">🏠</span>整理工作台</div>
+    <div class="navitem" data-screen="failed"><span class="ico">⚠️</span>失败文件<span class="badge">23</span></div>
+    <div class="navitem" data-screen="magic"><span class="ico">🪄</span>魔术工具</div>
+    <div class="navitem" data-screen="report"><span class="ico">📄</span>分析报告</div>
+    <div class="nav-sep"></div>
+    <div class="navitem" data-screen="settings"><span class="ico">⚙️</span>设置</div>
+    <div class="spacer"></div>
+    <div class="navitem" data-screen="logs"><span class="ico">📋</span>日志</div>
+    <div class="navitem"><span class="ico">❓</span>帮助与关于</div>
+  </nav>
+
+  <!-- ===================== 内容区 ===================== -->
+  <div class="content">
+
+    <!-- ======== 屏幕 1：整理工作台 ======== -->
+    <div class="screen show" id="s-workbench">
+      <div class="titlebar" style="margin:-20px -20px 16px"><h1>整理工作台</h1><span class="crumb">按拍摄日期归档照片与视频</span></div>
+
+      <div class="steps">
+        <div class="step done" data-n="✓">① 选择目录并分析</div>
+        <div class="step cur" data-n="2">② 确认整理计划</div>
+        <div class="step" data-n="3">③ 执行归档</div>
+        <div class="step" data-n="4">④ 处理失败文件</div>
+      </div>
+
+      <div class="card">
+        <h2>目录</h2>
+        <div class="field"><label>源目录</label><div class="input mono">D:\Photos\手机导出\2026-08</div><button class="btn sm">浏览…</button></div>
+        <div class="field" style="margin-bottom:0"><label>输出目录</label><div class="input mono">D:\Photos\图库</div><button class="btn sm">浏览…</button></div>
+      </div>
+
+      <div class="card">
+        <h2>分析 <span class="tag">并行提取 · 可取消</span></h2>
+        <div class="rowbtns" style="margin-bottom:12px">
+          <button class="btn primary">▶ 开始分析</button>
+          <button class="btn" disabled>⏸ 取消</button>
+          <button class="btn">重新分析（规则已更新）</button>
+        </div>
+        <div class="progress" style="margin-bottom:6px"><div style="width:100%"></div></div>
+        <div class="small muted" style="margin-bottom:14px">已完成 4,382 / 4,382 · 耗时 21.4 秒 · 204 文件/秒</div>
+        <div class="statgrid">
+          <div class="stat"><div class="num">4,382</div><div class="lbl">总文件数</div></div>
+          <div class="stat"><div class="num" style="color:var(--success)">4,359</div><div class="lbl">成功（99.5%）</div></div>
+          <div class="stat"><div class="num" style="color:var(--error)">23</div><div class="lbl">失败</div></div>
+          <div class="stat"><div class="num">2019–2026</div><div class="lbl">日期跨度</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>日期来源分布</h2>
+        <table>
+          <tr><th>来源</th><th>文件数</th><th>占比</th><th></th></tr>
+          <tr><td><span class="chip exif">EXIF</span></td><td>3,912</td><td>89.7%</td><td><div class="progress" style="width:200px"><div style="width:89.7%"></div></div></td></tr>
+          <tr><td><span class="chip fn">文件名</span></td><td>447</td><td>10.3%</td><td><div class="progress" style="width:200px"><div style="width:10.3%"></div></div></td></tr>
+          <tr><td><span class="chip err">失败</span></td><td>23</td><td>0.5%</td><td><div class="progress" style="width:200px"><div style="width:0.5%;background:var(--error)"></div></div></td></tr>
+        </table>
+      </div>
+
+      <div class="infobar info">💡 有 23 个文件未能解析日期。可到「失败文件」中预览排查，或用「魔术工具」添加文件名规则后重新分析。</div>
+
+      <div class="card">
+        <h2>整理计划 <span class="tag">步骤 ②</span></h2>
+        <div class="grid2">
+          <div class="field"><label>操作类型</label><select class="sel"><option>复制 copy（保留原文件）</option><option>移动 move</option></select></div>
+          <div class="field"><label>同名文件</label><select class="sel"><option>跳过 skip</option><option>覆盖 overwrite</option><option>重命名 rename（_1、_2…）</option></select></div>
+          <div class="field"><label>目录分级</label><select class="sel"><option>按日 2024/01/15</option><option>按月 2024/01</option><option>按年 2024</option></select></div>
+          <div class="field"><label>&nbsp;</label><span class="toggle on"><span class="tk"></span>矫正文件修改时间为拍摄日期</span></div>
+        </div>
+        <div class="infobar warn" style="margin:6px 0 12px">⚠️ 将对 <b>4,359</b> 个文件执行「复制」到 <span class="mono">D:\Photos\图库</span>，预计占用 18.2 GB。未来日期文件（0 个）将归入 FutureDate/。</div>
+        <div class="rowbtns">
+          <button class="btn primary">✔ 确认并执行归档</button>
+          <button class="btn">导出整理计划…</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======== 屏幕 2：失败文件 ======== -->
+    <div class="screen" id="s-failed">
+      <div class="titlebar" style="margin:-20px -20px 16px"><h1>失败文件</h1><span class="crumb">23 个文件未能提取日期 · 已按文件名结构聚类</span></div>
+
+      <div class="infobar warn">⚠️ 这些文件无法自动归档。建议：选中样本 → 打开魔术工具添加规则 → 重新分析；或直接批量移入待处理文件夹。</div>
+
+      <div class="rowbtns" style="margin-bottom:16px">
+        <button class="btn primary">🪄 用选中样本打开魔术工具</button>
+        <button class="btn">全部移到待处理文件夹…</button>
+        <button class="btn">系统应用打开</button>
+      </div>
+
+      <div class="split">
+        <div class="card" style="margin-bottom:0">
+          <h2>文件列表 <span class="tag">结构指纹排序</span></h2>
+          <table>
+            <tr><th style="width:36px"></th><th>文件名</th><th>结构指纹</th><th>失败原因</th></tr>
+            <tr><td><input type="checkbox" checked></td><td class="mono">mm_export1718012345678.jpg</td><td class="mono muted">LLLLLLDDDDDDDDDDDDD.SLL</td><td><span class="chip err">无有效日期</span></td></tr>
+            <tr class="sel"><td><input type="checkbox" checked></td><td class="mono">mm_export1718012398745.jpg</td><td class="mono muted">LLLLLLDDDDDDDDDDDDD.SLL</td><td><span class="chip err">无有效日期</span></td></tr>
+            <tr><td><input type="checkbox"></td><td class="mono">mm_export1718012456123.jpg</td><td class="mono muted">LLLLLLDDDDDDDDDDDDD.SLL</td><td><span class="chip err">无有效日期</span></td></tr>
+            <tr><td><input type="checkbox"></td><td class="mono">xhsv_2024_final_v2.mp4</td><td class="mono muted">LLLLSDDDDSLLLLSSLS.LLL</td><td><span class="chip err">无有效日期</span></td></tr>
+            <tr><td><input type="checkbox"></td><td class="mono">xhsv_2024_trip.mp4</td><td class="mono muted">LLLLSDDDDSLLL.LLL</td><td><span class="chip err">无有效日期</span></td></tr>
+            <tr><td><input type="checkbox"></td><td class="mono">scan001.tif</td><td class="mono muted">LLLLDDD.SLL</td><td><span class="chip err">无有效日期</span></td></tr>
+            <tr><td><input type="checkbox"></td><td class="mono">scan002.tif</td><td class="mono muted">LLLLDDD.SLL</td><td><span class="chip err">无有效日期</span></td></tr>
+            <tr><td><input type="checkbox"></td><td class="mono">未命名文件.heic</td><td class="mono muted">LLLLLL.SLLL</td><td><span class="chip err">无有效日期</span></td></tr>
+          </table>
+        </div>
+        <div>
+          <div class="card">
+            <h2>预览</h2>
+            <div class="preview-box">🖼<br>mm_export1718012398745.jpg<br><span class="small">3.2 MB · 4032×3024</span></div>
+          </div>
+          <div class="card" style="margin-bottom:0">
+            <h2>诊断</h2>
+            <table>
+              <tr><td class="muted">EXIF</td><td>无 DateTimeOriginal</td></tr>
+              <tr><td class="muted">文件名</td><td>未命中任何模式<br><span class="small" style="color:var(--accent)">疑似 13 位时间戳 →</span></td></tr>
+              <tr><td class="muted">mtime</td><td>提取器已禁用</td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======== 屏幕 3：魔术工具 ======== -->
+    <div class="screen" id="s-magic">
+      <div class="titlebar" style="margin:-20px -20px 16px"><h1>魔术工具</h1><span class="crumb">可视化文件名日期规则编辑器</span></div>
+
+      <div class="split" style="grid-template-columns:300px 1fr">
+        <div class="card" style="margin-bottom:0">
+          <h2>样本</h2>
+          <div class="rowbtns" style="margin-bottom:10px">
+            <button class="btn sm">从失败文件载入</button>
+            <button class="btn sm">从源目录载入</button>
+          </div>
+          <table>
+            <tr class="sel"><td class="mono">mm_export1718012345678.jpg</td></tr>
+            <tr><td class="mono">mm_export1718012398745.jpg</td></tr>
+            <tr><td class="mono">mm_export1718012456123.jpg</td></tr>
+          </table>
+          <div class="small muted" style="margin-top:10px">3 个样本 · 结构指纹一致<br><span class="mono">LLLLLL D×13 .SLL</span></div>
+        </div>
+
+        <div>
+          <div class="card">
+            <h2>① 圈选日期片段</h2>
+            <div class="fnview"><span class="l">m</span><span class="l">m</span><span class="s">_</span><span class="l">e</span><span class="l">x</span><span class="l">p</span><span class="l">o</span><span class="l">r</span><span class="l">t</span><span class="mark ts"><span class="d">1</span><span class="d">7</span><span class="d">1</span><span class="d">8</span><span class="d">0</span><span class="d">1</span><span class="d">2</span><span class="d">3</span><span class="d">4</span><span class="d">5</span><span class="d">6</span><span class="d">7</span><span class="d">8</span></span><span class="s">.</span><span class="l">j</span><span class="l">p</span><span class="l">g</span></div>
+            <div class="legend">
+              <span><i style="background:#d63384"></i>数字</span>
+              <span><i style="background:#2e8b57"></i>字母</span>
+              <span><i style="background:#3a6ea5"></i>符号</span>
+              <span><i style="background:#17a2b8"></i>已标记：时间戳（13 位）</span>
+            </div>
+            <div class="chips" style="margin-top:12px">
+              <span class="muted small" style="align-self:center">标记为：</span>
+              <button class="pick">年</button><button class="pick">月</button><button class="pick">日</button>
+              <button class="pick">时</button><button class="pick">分</button><button class="pick">秒</button>
+              <button class="pick" style="border-color:#17a2b8;color:#17a2b8">时间戳</button>
+              <button class="pick">忽略</button><button class="pick">清除标记</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>② 生成的正则 <span class="tag">已用 3 个样本做变体校验</span></h2>
+            <div class="regex-out">
+              <span class="k">模式</span>  mm_export<span class="g">(\d{13})</span><br>
+              <span class="k">映射</span>  timestamp → 组 1 · timestampLength = 13<br>
+              <span class="k">解析</span>  1718012345678 → 2024-06-10 18:39:05 ✓
+            </div>
+          </div>
+
+          <div class="card" style="margin-bottom:0">
+            <h2>③ 测试与保存</h2>
+            <table style="margin-bottom:12px">
+              <tr><th>样本</th><th>命中</th><th>解析结果</th></tr>
+              <tr><td class="mono">mm_export1718012345678.jpg</td><td style="color:var(--success)">✓</td><td>2024-06-10 18:39:05</td></tr>
+              <tr><td class="mono">mm_export1718012398745.jpg</td><td style="color:var(--success)">✓</td><td>2024-06-10 18:39:58</td></tr>
+              <tr><td class="mono">mm_export1718012456123.jpg</td><td style="color:var(--success)">✓</td><td>2024-06-10 18:40:56</td></tr>
+            </table>
+            <div class="field"><label style="width:64px">规则名称</label><div class="input" style="max-width:260px">微信导出时间戳</div><button class="btn primary sm">保存到 patterns.json</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======== 屏幕 4：分析报告 ======== -->
+    <div class="screen" id="s-report">
+      <div class="titlebar" style="margin:-20px -20px 16px"><h1>分析报告</h1><span class="crumb">2026-08-08 21:58 生成</span>
+        <div style="margin-left:auto" class="rowbtns"><button class="btn sm">另存为…</button><button class="btn sm">复制全文</button></div>
+      </div>
+      <div class="card">
+        <pre style="font-family:Cascadia Code,Consolas,monospace;font-size:12.5px;line-height:1.8;white-space:pre-wrap">媒体文件分析报告
+==================
+源目录:    D:\Photos\手机导出\2026-08
+输出目录:  D:\Photos\图库
+分析时间:  2026-08-08 21:58:12
+
+总计: 4,382  成功: 4,359 (99.5%)  失败: 23
+
+按来源:
+  EXIF       3,912  (89.7%)
+  文件名       447  (10.3%)
+
+按年份:
+  2026  ████████████ 1,204
+  2025  ██████████████████ 1,861
+  2024  ████████ 893
+  2023  ███ 301
+  ...
+
+失败文件（23）:
+  mm_export1718012345678.jpg   无有效日期
+  scan001.tif                  无有效日期
+  ...</pre>
+      </div>
+    </div>
+
+    <!-- ======== 屏幕 5：设置（配置编辑器 4 Tab） ======== -->
+    <div class="screen" id="s-settings">
+      <div class="titlebar" style="margin:-20px -20px 16px"><h1>设置</h1>
+        <div style="margin-left:auto" class="rowbtns"><button class="btn sm">恢复默认</button><button class="btn primary sm">保存配置</button></div>
+      </div>
+
+      <div class="tabs">
+        <div class="tab active" data-tab="t-ex">提取器</div>
+        <div class="tab" data-tab="t-pt">文件名模式</div>
+        <div class="tab" data-tab="t-sys">系统</div>
+        <div class="tab" data-tab="t-gui">界面</div>
+      </div>
+
+      <div class="tabpage show" id="t-ex">
+        <div class="card">
+          <h2>提取器链 <span class="tag">按权重降序依次尝试</span></h2>
+          <table>
+            <tr><th style="width:40px"></th><th>提取器</th><th style="width:220px">权重</th><th>说明</th></tr>
+            <tr><td><span class="toggle on"><span class="tk"></span></span></td><td><b>Exif</b></td><td><div class="slider-row"><div class="slider"><i style="width:60%"></i><b style="left:60%"></b></div><span>1.2</span></div></td><td class="muted">EXIF / HEIC 元数据（Magick.NET）</td></tr>
+            <tr><td><span class="toggle on"><span class="tk"></span></span></td><td><b>FileName</b></td><td><div class="slider-row"><div class="slider"><i style="width:55%"></i><b style="left:55%"></b></div><span>1.1</span></div></td><td class="muted">文件名正则模式（12 条已启用）</td></tr>
+            <tr><td><span class="toggle"><span class="tk"></span></span></td><td><b>FileSystem</b></td><td><div class="slider-row"><div class="slider"><i style="width:40%"></i><b style="left:40%"></b></div><span>0.8</span></div></td><td class="muted">文件修改时间兜底（默认禁用）</td></tr>
+          </table>
+        </div>
+        <div class="card" style="margin-bottom:0">
+          <h2>日期校验</h2>
+          <div class="grid2">
+            <div class="field"><label>最多追溯</label><div class="input" style="max-width:120px">30</div><span class="muted">年</span></div>
+            <div class="field"><label>未来缓冲</label><div class="input" style="max-width:120px">0</div><span class="muted">天</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tabpage" id="t-pt">
+        <div class="card" style="margin-bottom:0">
+          <h2>文件名模式 <span class="tag">13 条 · 12 启用</span>
+            <span style="margin-left:auto" class="rowbtns"><button class="btn sm primary">🪄 打开魔术工具</button></span>
+          </h2>
+          <table>
+            <tr><th style="width:40px"></th><th>名称</th><th>正则</th><th>权重</th><th>来源</th></tr>
+            <tr><td><span class="toggle on"><span class="tk"></span></span></td><td>微信导出</td><td class="mono">mm_export(\d{13})</td><td>1.0</td><td><span class="chip exif">内置</span></td></tr>
+            <tr><td><span class="toggle on"><span class="tk"></span></span></td><td>通用日期时间</td><td class="mono">(\d{4})[-_.](\d{2})[-_.](\d{2})…</td><td>1.0</td><td><span class="chip exif">内置</span></td></tr>
+            <tr><td><span class="toggle on"><span class="tk"></span></span></td><td>紧凑日期时间</td><td class="mono">(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})</td><td>0.9</td><td><span class="chip exif">内置</span></td></tr>
+            <tr><td><span class="toggle"><span class="tk"></span></span></td><td>旧相机格式</td><td class="mono">DSC_(\d{4})</td><td>0.5</td><td><span class="chip fn">自定义</span></td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="tabpage" id="t-sys">
+        <div class="card">
+          <h2>扫描</h2>
+          <div class="field"><label>源目录</label><div class="input mono">D:\Photos\手机导出\2026-08</div><button class="btn sm">浏览…</button></div>
+          <div class="field"><label>输出目录</label><div class="input mono">D:\Photos\图库</div><button class="btn sm">浏览…</button></div>
+          <div class="field"><label>待处理目录</label><div class="input mono">D:\Photos\待处理</div><button class="btn sm">浏览…</button></div>
+          <div class="field"><label>&nbsp;</label><span class="toggle"><span class="tk"></span>扫描所有文件（忽略扩展名白名单）</span></div>
+          <div class="field" style="margin-bottom:0"><label>&nbsp;</label><span class="toggle on"><span class="tk"></span>支持的格式（21 种）jpg, heic, mp4…</span></div>
+        </div>
+        <div class="card" style="margin-bottom:0">
+          <h2>执行与性能</h2>
+          <div class="grid2">
+            <div class="field"><label>目录分级</label><select class="sel"><option>按日</option><option>按月</option><option>按年</option></select></div>
+            <div class="field"><label>并发数</label><div class="input" style="max-width:120px">0（自动）</div></div>
+            <div class="field"><label>进度间隔</label><div class="input" style="max-width:120px">10</div><span class="muted">个文件</span></div>
+            <div class="field"><label>&nbsp;</label><span class="toggle"><span class="tk"></span>矫正 mtime 为拍摄日期</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tabpage" id="t-gui">
+        <div class="card" style="margin-bottom:0">
+          <h2>界面</h2>
+          <div class="grid2">
+            <div class="field"><label>主题</label><select class="sel"><option>浅色</option><option>深色</option><option>跟随系统</option></select></div>
+            <div class="field"><label>语言</label><select class="sel"><option>简体中文</option><option disabled>English（即将推出）</option></select></div>
+            <div class="field"><label>窗口尺寸</label><div class="input" style="max-width:160px">1280 × 760</div></div>
+            <div class="field"><label>预览图大小</label><div class="slider-row"><div class="slider"><i style="width:45%"></i><b style="left:45%"></b></div><span>320</span></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======== 屏幕 6：日志 ======== -->
+    <div class="screen" id="s-logs">
+      <div class="titlebar" style="margin:-20px -20px 16px"><h1>日志</h1><span class="crumb">内存环形缓冲 · 最多 1000 条</span>
+        <div style="margin-left:auto" class="rowbtns"><button class="btn sm">刷新</button><button class="btn sm danger">清空</button></div>
+      </div>
+      <div class="card">
+        <table>
+          <tr><th style="width:150px">时间</th><th style="width:70px">级别</th><th>消息</th></tr>
+          <tr><td class="mono muted">21:58:12.044</td><td><span class="chip exif">INFO</span></td><td>分析完成：4,382 个文件，成功率 99.5%</td></tr>
+          <tr><td class="mono muted">21:58:11.980</td><td><span class="chip err">WARN</span></td><td>mm_export1718012345678.jpg：所有提取器均无有效日期</td></tr>
+          <tr><td class="mono muted">21:57:50.612</td><td><span class="chip exif">INFO</span></td><td>开始分析 D:\Photos\手机导出\2026-08（并发 8）</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- ======== 状态栏 ======== -->
+    <div class="statusbar">
+      <span><span class="dot ok"></span>就绪</span>
+      <span>分析结果：analysis-result.json（21:58）</span>
+      <span style="margin-left:auto">MediaOrganizer v1.0 · .NET 10 · Avalonia 12</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  // 导航切换
+  document.querySelectorAll('.navitem[data-screen]').forEach(el=>{
+    el.addEventListener('click',()=>{
+      document.querySelectorAll('.navitem').forEach(n=>n.classList.remove('active'));
+      el.classList.add('active');
+      document.querySelectorAll('.screen').forEach(s=>s.classList.remove('show'));
+      document.getElementById('s-'+el.dataset.screen).classList.add('show');
+    });
+  });
+  // Tab 切换
+  document.querySelectorAll('.tab').forEach(el=>{
+    el.addEventListener('click',()=>{
+      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      el.classList.add('active');
+      document.querySelectorAll('.tabpage').forEach(p=>p.classList.remove('show'));
+      document.getElementById(el.dataset.tab).classList.add('show');
+    });
+  });
+  // 开关演示
+  document.querySelectorAll('.toggle').forEach(el=>{
+    el.addEventListener('click',()=>el.classList.toggle('on'));
+  });
+  // 表格行选择演示
+  document.querySelectorAll('table tr').forEach(tr=>{
+    tr.addEventListener('click',()=>{
+      const tb=tr.parentElement;
+      tb.querySelectorAll('tr').forEach(r=>r.classList.remove('sel'));
+      tr.classList.add('sel');
+    });
+  });
+</script>
+</body>
+</html>
