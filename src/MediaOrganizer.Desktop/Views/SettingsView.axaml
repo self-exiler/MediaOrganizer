@@ -63,10 +63,44 @@
                     <StackPanel Spacing="10" Margin="0,12,0,0">
                         <Border Classes="card">
                             <StackPanel Spacing="8">
-                                <TextBlock Classes="h2" Text="文件名模式"/>
+                                <Grid ColumnDefinitions="1*,Auto" ColumnSpacing="8">
+                                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                        <TextBlock Classes="h2" Text="文件名模式"/>
+                                        <TextBlock Classes="muted" Text="{Binding PatternSummary}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                        <Button Content="🪄 打开魔术工具" Command="{Binding OpenMagicToolsCommand}"/>
+                                        <Button Content="恢复默认" Command="{Binding RestoreDefaultPatternsCommand}"/>
+                                    </StackPanel>
+                                </Grid>
                                 <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
-                                           Text="patterns.json 中的规则由「魔术工具」维护。分析时按权重降序尝试。"/>
-                                <TextBlock Classes="muted" FontSize="12" Text="内置 8 条：微信导出 / 小红书 / 通用日期时间 / 通用日期 / 紧凑日期时间 / 紧凑日期 / 秒级时间戳 / 毫秒级时间戳。"/>
+                                           Text="分析时按权重降序依次尝试。勾选/取消即时生效；删除后点「保存配置」写入 patterns.json。"/>
+                                <Grid ColumnDefinitions="Auto,140,1*,70,60,56" ColumnSpacing="8" Margin="0,4,0,0">
+                                    <TextBlock Grid.Column="0" Text="启用" Classes="muted" FontSize="11"/>
+                                    <TextBlock Grid.Column="1" Text="名称" Classes="muted" FontSize="11"/>
+                                    <TextBlock Grid.Column="2" Text="正则" Classes="muted" FontSize="11"/>
+                                    <TextBlock Grid.Column="3" Text="权重" Classes="muted" FontSize="11"/>
+                                    <TextBlock Grid.Column="4" Text="来源" Classes="muted" FontSize="11"/>
+                                    <TextBlock Grid.Column="5" Text="操作" Classes="muted" FontSize="11"/>
+                                </Grid>
+                                <ItemsControl ItemsSource="{Binding Patterns}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:PatternSettingVM">
+                                            <Grid ColumnDefinitions="Auto,140,1*,70,60,56" ColumnSpacing="8" Margin="0,4">
+                                                <CheckBox Grid.Column="0" IsChecked="{Binding Enabled, Mode=TwoWay}" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Grid.Column="2" Text="{Binding Regex}" VerticalAlignment="Center"
+                                                           FontFamily="Cascadia Code, Consolas, monospace" FontSize="11.5"
+                                                           TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Regex}"/>
+                                                <TextBlock Grid.Column="3" Text="{Binding Weight, StringFormat={}{0:0.0}}" VerticalAlignment="Center" Classes="muted"/>
+                                                <TextBlock Grid.Column="4" Text="{Binding Source}" VerticalAlignment="Center" Classes="muted"/>
+                                                <Button Grid.Column="5" Content="删除" Classes="danger" FontSize="11" Padding="6,2"
+                                                        Command="{Binding $parent[ItemsControl].DataContext.DeletePatternCommand}"
+                                                        CommandParameter="{Binding}"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -96,18 +130,103 @@
                         </Border>
                         <Border Classes="card">
                             <StackPanel Spacing="10">
+                                <Grid ColumnDefinitions="1*,Auto" ColumnSpacing="8">
+                                    <TextBlock Classes="h2" Text="网络位置" VerticalAlignment="Center"/>
+                                    <Button Grid.Column="1" Content="＋ 添加网络位置" Classes="accent"
+                                            Command="{Binding BeginAddNetworkCommand}"/>
+                                </Grid>
+                                <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
+                                           Text="SMB（UNC 路径）与 WebDAV；FTP 不支持。选择网络目标后归档仅支持复制。密码在 Windows 以 DPAPI 加密存储。"/>
+                                <ItemsControl ItemsSource="{Binding NetworkProfiles}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:NetworkProfileVM">
+                                            <Grid ColumnDefinitions="Auto,140,1*,110,150" ColumnSpacing="8" Margin="0,4">
+                                                <Border Grid.Column="0" Classes="chip" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding TypeLabel}" FontSize="11"/>
+                                                </Border>
+                                                <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Grid.Column="2" Text="{Binding Address}" VerticalAlignment="Center" Classes="muted"
+                                                           FontFamily="Cascadia Code, Consolas, monospace" FontSize="11.5" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Address}"/>
+                                                <TextBlock Grid.Column="3" Text="{Binding VerifiedLabel}" VerticalAlignment="Center" FontSize="11"/>
+                                                <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="6">
+                                                    <Button Content="测试" FontSize="11" Padding="8,2"
+                                                            Command="{Binding $parent[ItemsControl].DataContext.TestProfileCommand}"
+                                                            CommandParameter="{Binding}"/>
+                                                    <Button Content="编辑" FontSize="11" Padding="8,2"
+                                                            Command="{Binding $parent[ItemsControl].DataContext.BeginEditNetworkCommand}"
+                                                            CommandParameter="{Binding}"/>
+                                                    <Button Content="删除" Classes="danger" FontSize="11" Padding="8,2"
+                                                            Command="{Binding $parent[ItemsControl].DataContext.DeleteNetworkCommand}"
+                                                            CommandParameter="{Binding}"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <!-- 内联编辑/新建表单 -->
+                                <Border IsVisible="{Binding EditingNetwork}" CornerRadius="6" Padding="12"
+                                        Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
+                                    <StackPanel Spacing="8">
+                                        <Grid ColumnDefinitions="70,1*" ColumnSpacing="8" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
+                                            <TextBlock Grid.Row="0" Grid.Column="0" Text="名称" VerticalAlignment="Center" Classes="muted"/>
+                                            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding EditName}" PlaceholderText="例如：家里的 NAS"/>
+
+                                            <TextBlock Grid.Row="1" Grid.Column="0" Text="协议" VerticalAlignment="Center" Classes="muted"/>
+                                            <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding NetworkTypeOptions}"
+                                                      SelectedIndex="{Binding EditTypeIndex}"/>
+
+                                            <TextBlock Grid.Row="2" Grid.Column="0" Text="地址" VerticalAlignment="Center" Classes="muted"/>
+                                            <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding EditAddress}"
+                                                     PlaceholderText="SMB: \\\\192.168.1.10\\photos　WebDAV: https://dav.xxx.com/dav/photos"
+                                                     FontFamily="Cascadia Code, Consolas, monospace"/>
+
+                                            <TextBlock Grid.Row="3" Grid.Column="0" Text="用户名" VerticalAlignment="Center" Classes="muted"/>
+                                            <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding EditUsername}"/>
+
+                                            <TextBlock Grid.Row="4" Grid.Column="0" Text="密码" VerticalAlignment="Center" Classes="muted"/>
+                                            <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding EditPassword}" PasswordChar="●"/>
+                                        </Grid>
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <Button Content="测试连接" Command="{Binding TestNetworkCommand}"/>
+                                            <Button Classes="accent" Content="保存" Command="{Binding SaveNetworkCommand}"/>
+                                            <Button Content="取消" Command="{Binding CancelNetworkCommand}"/>
+                                        </StackPanel>
+                                        <TextBlock Text="{Binding NetworkHint}" FontSize="11" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+                        <Border Classes="card">
+                            <StackPanel Spacing="10">
                                 <TextBlock Classes="h2" Text="扫描与执行"/>
-                                <Grid ColumnDefinitions="120,160,Auto" ColumnSpacing="8" RowDefinitions="Auto,Auto" RowSpacing="8">
+                                <Grid ColumnDefinitions="140,180,Auto" ColumnSpacing="8" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
                                     <TextBlock Grid.Row="0" Grid.Column="0" Text="进度间隔" VerticalAlignment="Center" Classes="muted"/>
                                     <NumericUpDown Grid.Row="0" Grid.Column="1" Value="{Binding ProgressInterval}" Minimum="1" Maximum="1000"/>
                                     <TextBlock Grid.Row="0" Grid.Column="2" Text="个文件" VerticalAlignment="Center" Classes="muted"/>
 
-                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="预览图大小" VerticalAlignment="Center" Classes="muted"/>
-                                    <NumericUpDown Grid.Row="1" Grid.Column="1" Value="{Binding PreviewSize}" Minimum="100" Maximum="1024"/>
-                                    <TextBlock Grid.Row="1" Grid.Column="2" Text="px" VerticalAlignment="Center" Classes="muted"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="扫描并发数" VerticalAlignment="Center" Classes="muted"/>
+                                    <NumericUpDown Grid.Row="1" Grid.Column="1" Value="{Binding MaxDegreeOfParallelism}" Minimum="0" Maximum="64"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="2" Text="0 = 自动" VerticalAlignment="Center" Classes="muted"/>
+
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="执行并发数" VerticalAlignment="Center" Classes="muted"/>
+                                    <NumericUpDown Grid.Row="2" Grid.Column="1" Value="{Binding ExecutionParallelism}" Minimum="0" Maximum="64"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="2" Text="0 = 自动（本地2/网络4）" VerticalAlignment="Center" Classes="muted"/>
+
+                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="目录分级" VerticalAlignment="Center" Classes="muted"/>
+                                    <ComboBox Grid.Row="3" Grid.Column="1" ItemsSource="{Binding ClassificationLevelOptions}"
+                                              SelectedIndex="{Binding ClassificationLevelIndex}"/>
+
+                                    <TextBlock Grid.Row="4" Grid.Column="0" Text="同名处理" VerticalAlignment="Center" Classes="muted"/>
+                                    <ComboBox Grid.Row="4" Grid.Column="1" ItemsSource="{Binding ExistActionOptions}"
+                                              SelectedIndex="{Binding ExistActionIndex}"/>
+
+                                    <CheckBox Grid.Row="5" Grid.Column="1" Content="扫描所有文件（忽略扩展名白名单）" IsChecked="{Binding ScanAllFiles}"/>
+                                    <CheckBox Grid.Row="6" Grid.Column="1" Content="矫正文件修改时间为拍摄日期" IsChecked="{Binding FixMtime}"/>
                                 </Grid>
-                                <TextBlock Classes="muted" FontSize="11"
-                                           Text="支持的扩展名白名单、并发数、扫描所有文件等高级项当前在 config.json 中手工维护（见 SRS §5.1）。"/>
+                                <TextBlock Classes="muted" FontSize="11" Text="扩展名白名单（逗号分隔，留空 = 全部）："/>
+                                <TextBox Text="{Binding SupportedFormatsText}" FontSize="11.5"
+                                         FontFamily="Cascadia Code, Consolas, monospace"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -120,14 +239,16 @@
                         <Border Classes="card">
                             <StackPanel Spacing="10">
                                 <TextBlock Classes="h2" Text="界面"/>
-                                <Grid ColumnDefinitions="100,180" ColumnSpacing="8" RowDefinitions="Auto,Auto" RowSpacing="8">
+                                <Grid ColumnDefinitions="100,180" ColumnSpacing="8" RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
                                     <TextBlock Grid.Row="0" Grid.Column="0" Text="主题" VerticalAlignment="Center" Classes="muted"/>
                                     <ComboBox Grid.Row="0" Grid.Column="1" ItemsSource="{Binding ThemeOptions}"
                                               SelectedIndex="{Binding ThemeIndex}"/>
 
-                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="语言" VerticalAlignment="Center" Classes="muted"/>
-                                    <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding LanguageOptions}"
-                                              SelectedIndex="0"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="窗口尺寸" VerticalAlignment="Center" Classes="muted"/>
+                                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding WindowSize}" PlaceholderText="1280x760"/>
+
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="预览图大小" VerticalAlignment="Center" Classes="muted"/>
+                                    <NumericUpDown Grid.Row="2" Grid.Column="1" Value="{Binding PreviewSize}" Minimum="100" Maximum="1024"/>
                                 </Grid>
                                 <TextBlock Classes="muted" FontSize="11" Text="首发仅简体中文；文本资源已外置（见 SRS NFR-8），英文将后续补充。"/>
                             </StackPanel>

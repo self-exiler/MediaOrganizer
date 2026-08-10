@@ -1,6 +1,3 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
-
 namespace MediaOrganizer.Core.Configuration;
 
 /// <summary>一条文件名日期解析模式（patterns.json）。结构见 SRS §5.3。</summary>
@@ -12,7 +9,8 @@ public sealed class PatternDefinition
     /// <summary>捕获组名 → 组号。支持键：year/month/day/hour/minute/second/timestamp。</summary>
     public Dictionary<string, int> GroupMapping { get; set; } = new();
 
-    public List<int> IgnoredGroups { get; set; } = new();
+    /// <summary>明确忽略的捕获组号（如前后缀 (.*) 组），解析与推断时跳过（FR-3.1）。</summary>
+    public List<int> IgnoredGroups { get; set; } = [];
 
     /// <summary>时间戳位数：10（秒）/ 13（毫秒）/ 16（微秒×10，除以 1000）。</summary>
     public int? TimestampLength { get; set; }
@@ -22,40 +20,23 @@ public sealed class PatternDefinition
     public bool Builtin { get; set; }
 }
 
+/// <summary>patterns.json 顶层结构。</summary>
+public sealed class PatternsFile
+{
+    public int Version { get; set; } = 1;
+    public List<PatternDefinition> Patterns { get; set; } = [];
+}
+
 /// <summary>patterns.json 的读写。</summary>
 public static class PatternsStore
 {
     public static List<PatternDefinition> Load(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-            {
-                var json = File.ReadAllText(path);
-                using var doc = JsonDocument.Parse(json);
-                var root = doc.RootElement;
-                if (root.TryGetProperty("patterns", out var arr))
-                {
-                    var list = System.Text.Json.JsonSerializer.Deserialize<List<PatternDefinition>>(
-                        arr.GetRawText(), ConfigManager.JsonOptions);
-                    if (list is not null && list.Count > 0) return list;
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"patterns.json 读取失败，使用内置模式: {ex.Message}");
-        }
-        return GetBuiltinPatterns();
-    }
+        => JsonFileStore.Load<PatternsFile>(path) is { Patterns.Count: > 0 } file
+            ? file.Patterns
+            : GetBuiltinPatterns();
 
     public static void Save(string path, IReadOnlyList<PatternDefinition> patterns)
-    {
-        var dir = Path.GetDirectoryName(Path.GetFullPath(path));
-        if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
-        var payload = new { version = 1, patterns };
-        File.WriteAllText(path, System.Text.Json.JsonSerializer.Serialize(payload, ConfigManager.JsonOptions));
-    }
+        => JsonFileStore.Save(path, new PatternsFile { Patterns = patterns.ToList() });
 
     /// <summary>内置模式：覆盖微信/小红书/OPPO/通用日期/紧凑日期/时间戳等常见场景。</summary>
     public static List<PatternDefinition> GetBuiltinPatterns() =>
@@ -103,9 +84,21 @@ public static class PatternsStore
         },
         new()
         {
+            Name = "OPPO 相机", Pattern = @"IMG_(\d{4})(\d{2})(\d{2})_(\d{6})",
+            GroupMapping = new() { ["year"] = 1, ["month"] = 2, ["day"] = 3, ["hour"] = 4, ["minute"] = 5, ["second"] = 6 },
+            Weight = 0.8, Builtin = true
+        },
+        new()
+        {
             Name = "毫秒级时间戳", Pattern = @"(^|[^0-9])(\d{13})([^0-9]|$)",
             GroupMapping = new() { ["timestamp"] = 2 }, TimestampLength = 13,
             Weight = 0.7, Builtin = true
+        },
+        new()
+        {
+            Name = "微秒级时间戳", Pattern = @"(^|[^0-9])(\d{16})([^0-9]|$)",
+            GroupMapping = new() { ["timestamp"] = 2 }, TimestampLength = 16,
+            Weight = 0.6, Builtin = true
         }
     ];
 }

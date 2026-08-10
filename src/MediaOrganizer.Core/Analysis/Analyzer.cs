@@ -26,8 +26,8 @@ public sealed class Analyzer
     public async Task<AnalysisResult> AnalyzeAsync(string sourceDir, IProgress<AnalysisProgress>? progress = null, CancellationToken ct = default)
     {
         var files = _scanner.Scan(sourceDir);
-        var parsed = new ConcurrentBag<ParsedFile>();
-        var unparsed = new ConcurrentBag<UnparsedFile>();
+        var parsed = new ConcurrentQueue<ParsedFile>();
+        var unparsed = new ConcurrentQueue<UnparsedFile>();
         long processed = 0;
         var total = files.Count;
 
@@ -37,9 +37,9 @@ public sealed class Analyzer
             token.ThrowIfCancellationRequested();
             var result = _chain.TryExtract(file);
             if (result is not null)
-                parsed.Add(new ParsedFile(file, result.Date, result.Source));
+                parsed.Enqueue(new ParsedFile(file, result.Date, result.Source));
             else
-                unparsed.Add(new UnparsedFile(file, "NoValidDate"));
+                unparsed.Enqueue(new UnparsedFile(file, "NoValidDate"));
 
             var done = Interlocked.Increment(ref processed);
             if (progress is not null && (done % _progressInterval == 0 || done == total))

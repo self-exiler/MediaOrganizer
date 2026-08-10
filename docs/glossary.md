@@ -18,6 +18,12 @@
 | 未来日期文件 | FutureDate | 超出缓冲天数的未来日期文件，归入 FutureDate/ |
 | 魔术工具 | Magic Tools | 可视化正则模式编辑器（C# 版完整保留）：字符着色、交互点选生成正则、智能变体、实时测试 |
 | mtime 矫正 | mtime fix | 整理后可选将文件修改时间设为提取日期，便于资源管理器排序 |
+| 网络位置 | network target | 输出目录的扩展：SMB（UNC）或 WebDAV 连接配置（ADR-0004，v1.0 新增） |
+| 连接配置 | network profile | 一条网络位置记录：名称/协议/地址/用户名/密码（密码加密存储） |
+| 文件存储抽象 | IFileStorage | 执行层文件操作抽象：Local / Smb / WebDav 三种实现 |
+| 临时名传输 | .mo-tmp | 网络拷贝先写 `<name>.mo-tmp`，成功且大小校验一致后改名，杜绝半成品 |
+| 大小校验 | size verification | 网络传输完成的判定：目标大小 == 源大小；失败重试 3 次（指数退避） |
+| ~~FTP 支持~~ | — | 明确不支持（ADR-0004） |
 | ~~加权投票~~ | — | 旧称，见"加权链" |
 | ~~详细模式~~ | log_mode detailed | Python 版的 SQLite+MD5 指纹日志，C# 版已删除 |
 | ~~link 操作~~ | hard/symbolic link | 已删除，只保留 copy/move |

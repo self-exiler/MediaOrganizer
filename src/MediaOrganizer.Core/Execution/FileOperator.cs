@@ -1,5 +1,7 @@
+using System.Collections.Concurrent;
 using MediaOrganizer.Core.Configuration;
 using MediaOrganizer.Core.Planning;
+using MediaOrganizer.Core.Storage;
 
 namespace MediaOrganizer.Core.Execution;
 
@@ -7,96 +9,163 @@ public sealed record FileOperationResult(
     int Succeeded, int Skipped, int Overwritten, int Renamed, int Failed,
     IReadOnlyList<string> Errors);
 
-/// <summary>执行 copy/move，处理同名策略与 mtime 矫正（SRS FR-5.2 / FR-5.3 / FR-5.5）。</summary>
+/// <summary>
+/// 执行 copy，处理同名策略与 mtime 矫正（SRS FR-5.2/5.3/5.5，ADR-0004）。
+/// 面向 IFileStorage 抽象：本地/SMB/WebDAV 统一语义。
+/// 网络传输约定：临时名 .mo-tmp → 大小校验 → 改名；失败重试 ≤3 次（指数退避 1/2/4s）。
+/// 支持并行执行（本地默认 2 / 网络默认 4），通过 maxDegreeOfParallelism 控制。
+/// </summary>
 public sealed class FileOperator
 {
+    public const int MaxRetries = 3;
+    private static readonly TimeSpan[] Backoff = [TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(4)];
+
+    private readonly IFileStorage _target;
     private readonly FileOperation _operation;
     private readonly ExistAction _existAction;
     private readonly bool _fixMtime;
+    private readonly int _maxDegreeOfParallelism;
 
-    public FileOperator(FileOperation operation, ExistAction existAction, bool fixMtime)
+    public FileOperator(IFileStorage target, FileOperation operation, ExistAction existAction, bool fixMtime, int maxDegreeOfParallelism = 2)
     {
+        _target = target;
         _operation = operation;
         _existAction = existAction;
         _fixMtime = fixMtime;
+        _maxDegreeOfParallelism = maxDegreeOfParallelism <= 0 ? 2 : maxDegreeOfParallelism;
     }
 
-    public FileOperationResult Execute(ArchivePlan plan, IProgress<double>? progress = null)
+    public async Task<FileOperationResult> ExecuteAsync(ArchivePlan plan, IProgress<double>? progress = null, CancellationToken ct = default)
     {
-        int ok = 0, skip = 0, overwrite = 0, rename = 0, fail = 0;
-        var errors = new List<string>();
+        long ok = 0, skip = 0, overwrite = 0, rename = 0, fail = 0;
+        var errors = new ConcurrentBag<string>();
         var files = plan.Files;
+        long processed = 0;
 
-        for (var i = 0; i < files.Count; i++)
+        var options = new ParallelOptions
         {
-            var f = files[i];
-            var target = Path.Combine(plan.OutputRoot, f.RelativeTarget.Replace('/', Path.DirectorySeparatorChar));
+            MaxDegreeOfParallelism = _maxDegreeOfParallelism,
+            CancellationToken = ct
+        };
+
+        await Parallel.ForEachAsync(files, options, async (f, token) =>
+        {
+            token.ThrowIfCancellationRequested();
+
             try
             {
-                var finalTarget = ResolveCollision(target, ref skip, ref overwrite, ref rename);
-                if (finalTarget is null) continue;
+                var resolution = await ResolveCollisionAsync(f.RelativeTarget, token);
+                if (resolution.Target is null)
+                {
+                    switch (resolution.Action)
+                    {
+                        case CollisionAction.Skip: Interlocked.Increment(ref skip); break;
+                        case CollisionAction.Overwrite: Interlocked.Increment(ref overwrite); break;
+                        case CollisionAction.Rename: Interlocked.Increment(ref rename); break;
+                    }
+                }
+                else
+                {
+                    if (resolution.Action == CollisionAction.Overwrite) Interlocked.Increment(ref overwrite);
+                    if (resolution.Action == CollisionAction.Rename) Interlocked.Increment(ref rename);
 
-                Directory.CreateDirectory(Path.GetDirectoryName(finalTarget)!);
-                Transfer(f.Source.Path, finalTarget);
+                    var temp = f.RelativeTarget + ".mo-tmp";
+                    await TransferWithRetryAsync(f, temp, resolution.Target, token);
 
-                if (_fixMtime)
-                    File.SetLastWriteTimeUtc(finalTarget, f.Date.UtcDateTime);
-                ok++;
+                    // move 语义：目标确认落盘后删除源（网络目标下 GUI 已禁用 move，此处防御性生效）
+                    if (_operation == FileOperation.Move && File.Exists(f.Source.Path))
+                        File.Delete(f.Source.Path);
+
+                    Interlocked.Increment(ref ok);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
-                fail++;
-                errors.Add($"{f.Source.FileName} -> {target}: {ex.Message}");
+                Interlocked.Increment(ref fail);
+                errors.Add($"{f.Source.FileName} -> {f.RelativeTarget}: {ex.Message}");
             }
-            progress?.Report((double)(i + 1) / files.Count);
-        }
-        return new FileOperationResult(ok, skip, overwrite, rename, fail, errors);
+            var done = Interlocked.Increment(ref processed);
+            progress?.Report((double)done / files.Count);
+        });
+
+        return new FileOperationResult((int)ok, (int)skip, (int)overwrite, (int)rename, (int)fail, errors.ToArray());
     }
 
-    private string? ResolveCollision(string target, ref int skip, ref int overwrite, ref int rename)
+    private enum CollisionAction { None, Skip, Overwrite, Rename }
+
+    private sealed record CollisionResolution(string? Target, CollisionAction Action);
+
+    private async Task<CollisionResolution> ResolveCollisionAsync(string relativeTarget, CancellationToken ct)
     {
-        if (!File.Exists(target))
-            return target;
+        if (!await _target.ExistsAsync(relativeTarget, ct))
+            return new CollisionResolution(relativeTarget, CollisionAction.None);
 
         switch (_existAction)
         {
             case ExistAction.Skip:
-                skip++;
-                return null;
+                return new CollisionResolution(null, CollisionAction.Skip);
             case ExistAction.Overwrite:
-                overwrite++;
-                return target;
+                await _target.DeleteAsync(relativeTarget, ct);
+                return new CollisionResolution(relativeTarget, CollisionAction.Overwrite);
             default:
-                rename++;
-                return FindFreeName(target);
+                var free = await FindFreeNameAsync(relativeTarget, ct);
+                return new CollisionResolution(free, CollisionAction.Rename);
         }
     }
 
-    private void Transfer(string source, string target)
+    private async Task TransferWithRetryAsync(PlannedFile f, string temp, string finalTarget, CancellationToken ct)
     {
-        if (_operation == FileOperation.Copy)
+        for (var attempt = 0; ; attempt++)
         {
-            File.Copy(source, target, overwrite: true);
-            return;
-        }
+            try
+            {
+                await _target.CreateDirectoryAsync(Path.GetDirectoryName(finalTarget)?.Replace('\\', '/') ?? "", ct);
+                await _target.CopyFromAsync(f.Source.Path, temp, null, ct);
 
-        // Move：优先 File.Move；跨卷/占用时回退 copy+delete
-        try
-        {
-            File.Move(source, target, overwrite: true);
-        }
-        catch (IOException)
-        {
-            File.Copy(source, target, overwrite: true);
-            File.Delete(source);
+                // 大小校验（WebDAV 获取不到长度时跳过）
+                var expected = new FileInfo(f.Source.Path).Length;
+                var actual = await _target.GetLengthAsync(temp, ct);
+                if (actual >= 0 && actual != expected)
+                    throw new IOException($"大小校验失败：期望 {expected}，实际 {actual}");
+
+                await _target.MoveAsync(temp, finalTarget, ct);
+                if (_fixMtime)
+                    await _target.SetModifiedUtcAsync(finalTarget, f.Date.UtcDateTime, ct);
+                return;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception) when (attempt < MaxRetries - 1)
+            {
+                await Task.Delay(Backoff[Math.Min(attempt, Backoff.Length - 1)], ct);
+            }
         }
     }
 
-    private static string FindFreeName(string target)
+    private async Task<string> FindFreeNameAsync(string relativeTarget, CancellationToken ct)
     {
-        var dir = Path.GetDirectoryName(target)!;
-        var name = Path.GetFileNameWithoutExtension(target);
-        var ext = Path.GetExtension(target);
+        var dir = relativeTarget[..relativeTarget.LastIndexOf('/')];
+        var name = Path.GetFileNameWithoutExtension(relativeTarget);
+        var ext = Path.GetExtension(relativeTarget);
+        for (var i = 1; ; i++)
+        {
+            var candidate = dir.Length == 0 ? $"{name}_{i}{ext}" : $"{dir}/{name}_{i}{ext}";
+            if (!await _target.ExistsAsync(candidate, ct)) return candidate;
+        }
+    }
+
+    /// <summary>本地文件系统查重名：返回追加 _n 且不存在的目标路径（失败文件批量移动等本地场景用）。</summary>
+    public static string FindFreeLocalPath(string targetPath)
+    {
+        var dir = Path.GetDirectoryName(targetPath) ?? "";
+        var name = Path.GetFileNameWithoutExtension(targetPath);
+        var ext = Path.GetExtension(targetPath);
         for (var i = 1; ; i++)
         {
             var candidate = Path.Combine(dir, $"{name}_{i}{ext}");

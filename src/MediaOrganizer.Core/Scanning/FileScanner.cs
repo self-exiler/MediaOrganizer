@@ -2,13 +2,13 @@ using MediaOrganizer.Core.Models;
 
 namespace MediaOrganizer.Core.Scanning;
 
-/// <summary>递归扫描源目录，按扩展名白名单过滤（SRS FR-1）。</summary>
+/// <summary>递归扫描源目录，按扩展名白名单过滤；ScanAllFiles 或空白名单 = 全收（SRS FR-1）。</summary>
 public sealed class FileScanner
 {
     private readonly HashSet<string> _formats;
     private readonly bool _scanAllFiles;
 
-    public FileScanner(IEnumerable<string> supportedFormats, bool scanAllFiles)
+    public FileScanner(IEnumerable<string> supportedFormats, bool scanAllFiles = false)
     {
         _formats = supportedFormats.Select(f => f.TrimStart('.').ToLowerInvariant()).ToHashSet();
         _scanAllFiles = scanAllFiles;
@@ -30,13 +30,14 @@ public sealed class FileScanner
             AttributesToSkip = FileAttributes.ReparsePoint | FileAttributes.System | FileAttributes.Hidden
         };
 
-        foreach (var path in Directory.EnumerateFiles(sourceDir, "*", options))
+        var dirInfo = new DirectoryInfo(sourceDir);
+        foreach (var fi in dirInfo.EnumerateFiles("*", options))
         {
-            var ext = Path.GetExtension(path).TrimStart('.').ToLowerInvariant();
-            if (!_scanAllFiles && !_formats.Contains(ext)) continue;
+            var ext = fi.Extension.TrimStart('.').ToLowerInvariant();
+            if (!_scanAllFiles && _formats.Count > 0 && !_formats.Contains(ext)) continue;
             try
             {
-                list.Add(new MediaFile(path, new FileInfo(path).Length, ext));
+                list.Add(new MediaFile(fi.FullName, fi.Length, ext));
             }
             catch
             {

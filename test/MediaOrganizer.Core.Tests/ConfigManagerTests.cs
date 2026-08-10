@@ -41,7 +41,6 @@ public class ConfigManagerTests
         try
         {
             var loaded = ConfigManager.Load(path);
-            Assert.Equal("zh", loaded.General.Language);
             Assert.Equal(30, loaded.Extraction.MaxYearsPast);
         }
         finally

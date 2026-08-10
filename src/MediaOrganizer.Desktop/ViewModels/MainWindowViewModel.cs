@@ -1,6 +1,7 @@
 ﻿using System.Collections.ObjectModel;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
+using MediaOrganizer.Core;
 using MediaOrganizer.Core.Configuration;
 using MediaOrganizer.Core.Logging;
 using MediaOrganizer.Desktop.Icons;
@@ -14,17 +15,17 @@ public sealed record NavItem(string Title, Geometry Icon, ViewModelBase ViewMode
 public partial class MainWindowViewModel : ViewModelBase
 {
     private readonly AppLogger _logger;
-    private readonly AppConfig _config;
-    private readonly List<PatternDefinition> _patterns;
-    private readonly string _configPath;
-    private readonly string _patternsPath;
 
+    public AppState State { get; }
     public WorkbenchViewModel Workbench { get; }
     public FailedFilesViewModel FailedFiles { get; }
     public MagicToolsViewModel MagicTools { get; }
     public SettingsViewModel Settings { get; }
     public ReportViewModel Report { get; }
     public LogsViewModel Logs { get; }
+
+    /// <summary>当前配置（供主窗口应用窗口尺寸等）。</summary>
+    public AppConfig Config => State.Config;
 
     public ObservableCollection<NavItem> NavItems { get; } = [];
 
@@ -34,18 +35,17 @@ public partial class MainWindowViewModel : ViewModelBase
     public MainWindowViewModel()
     {
         var baseDir = AppContext.BaseDirectory;
-        _configPath = Path.Combine(baseDir, "config.json");
-        _patternsPath = Path.Combine(baseDir, "patterns.json");
+        var configPath = Path.Combine(baseDir, "config.json");
+        var patternsPath = Path.Combine(baseDir, "patterns.json");
 
-        _config = ConfigManager.Load(_configPath);
-        _patterns = PatternsStore.Load(_patternsPath);
+        State = AppState.Load(configPath, patternsPath);
         _logger = new AppLogger();
-        ThemeHelper.Apply(_config.General.Theme);
+        ThemeHelper.Apply(State.Config.General.Theme);
 
-        Workbench = new WorkbenchViewModel(_config, _patterns, _logger, _configPath, _patternsPath);
-        FailedFiles = new FailedFilesViewModel(_config, _logger);
-        MagicTools = new MagicToolsViewModel(_patterns, _patternsPath);
-        Settings = new SettingsViewModel(_config, _configPath);
+        Workbench = new WorkbenchViewModel(State, _logger);
+        FailedFiles = new FailedFilesViewModel(State, _logger);
+        MagicTools = new MagicToolsViewModel(State);
+        Settings = new SettingsViewModel(State);
         Report = new ReportViewModel();
         Logs = new LogsViewModel(_logger);
 
@@ -53,19 +53,19 @@ public partial class MainWindowViewModel : ViewModelBase
         Workbench.AnalysisCompleted += result =>
         {
             FailedFiles.Refresh(result);
-            Report.Set(result, _config.Paths.OutputDir);
+            Report.Set(result, State.Config.Paths.OutputDir);
+            MagicTools.LoadFromAnalysisResult(result); // FR-7.1：魔术工具可用最近分析结果作样本
         };
-        MagicTools.PatternsSaved += Workbench.RebuildChain;
-        Settings.ConfigSaved += () =>
-        {
-            Workbench.RebuildChain();
-            FailedFiles.PendingDir = _config.Paths.PendingDir;
-        };
+        State.Changed += Workbench.RebuildChain;
+        State.Changed += () => FailedFiles.PendingDir = State.Config.Paths.PendingDir;
+        State.Changed += Workbench.ReloadOutputTargets; // 网络位置增删 → 工作台目标下拉刷新
         FailedFiles.NavigateToMagic += names =>
         {
             MagicTools.LoadSamples(names);
             SelectedNav = NavItems.First(n => ReferenceEquals(n.ViewModel, MagicTools));
         };
+        Settings.NavigateToMagic += () =>
+            SelectedNav = NavItems.First(n => ReferenceEquals(n.ViewModel, MagicTools));
 
         NavItems.Add(new NavItem("整理工作台", IconPaths.Home, Workbench));
         NavItems.Add(new NavItem("失败文件", IconPaths.Warning, FailedFiles));

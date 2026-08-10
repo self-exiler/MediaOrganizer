@@ -37,13 +37,25 @@ public class ArchivePlannerTests
     [Fact]
     public void 未来日期进入FutureDate()
     {
-        // 2026-08-08 之后 3 天仍在校验缓冲内（假设未来缓冲 7 天），应归入 FutureDate/
+        // 2026-08-08 + 缓冲 1 天 = 08-09；08-11 超出 → 归入 FutureDate/
         var file = new ParsedFile(
             new MediaFile(@"C:\src\f.jpg", 10, "jpg"),
             new DateTimeOffset(2026, 8, 11, 0, 0, 0, TimeSpan.Zero), "Exif");
         var now = new DateTimeOffset(2026, 8, 8, 0, 0, 0, TimeSpan.Zero);
-        var plan = new ArchivePlanner(ClassificationLevel.Day, now).Plan(Result(file), @"D:\out");
+        var plan = new ArchivePlanner(ClassificationLevel.Day, futureDateBufferDays: 1, now).Plan(Result(file), @"D:\out");
         Assert.Equal("FutureDate/2026/08/11/f.jpg", plan.Files[0].RelativeTarget);
+    }
+
+    [Fact]
+    public void 缓冲内未来日期不进FutureDate()
+    {
+        // 08-09 ≤ 08-08 + 1 天缓冲 → 正常归档，不进 FutureDate/
+        var file = new ParsedFile(
+            new MediaFile(@"C:\src\g.jpg", 10, "jpg"),
+            new DateTimeOffset(2026, 8, 9, 0, 0, 0, TimeSpan.Zero), "Exif");
+        var now = new DateTimeOffset(2026, 8, 8, 0, 0, 0, TimeSpan.Zero);
+        var plan = new ArchivePlanner(ClassificationLevel.Day, futureDateBufferDays: 1, now).Plan(Result(file), @"D:\out");
+        Assert.Equal("2026/08/09/g.jpg", plan.Files[0].RelativeTarget);
     }
 
     [Fact]

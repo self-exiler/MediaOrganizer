@@ -31,6 +31,14 @@ public static class AnalysisReportGenerator
         }
         sb.AppendLine();
 
+        sb.AppendLine("按月分布:");
+        foreach (var group in result.Parsed.GroupBy(p => (p.Date.Year, p.Date.Month)).OrderByDescending(g => g.Key))
+        {
+            var bar = new string('█', Math.Clamp(group.Count() * 20 / Math.Max(1, result.Parsed.Count), 1, 20));
+            sb.AppendLine($"  {group.Key.Year:0000}-{group.Key.Month:00}  {bar} {group.Count(),6}");
+        }
+        sb.AppendLine();
+
         sb.AppendLine($"失败文件（{result.Unparsed.Count}）:");
         foreach (var f in result.Unparsed.Take(200))
             sb.AppendLine($"  {f.File.FileName}   {f.Reason}");

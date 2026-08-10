@@ -9,6 +9,9 @@
 
   <ItemGroup>
     <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="14.16.0" />
+    <PackageReference Include="TagLibSharp" Version="2.3.0" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.0" />
+    <PackageReference Include="WebDAVClient" Version="2.7.0" />
   </ItemGroup>
 
 </Project>

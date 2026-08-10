@@ -1,31 +1,35 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:MediaOrganizer.Desktop.ViewModels"
+             xmlns:cv="using:Avalonia.Data.Converters"
              x:Class="MediaOrganizer.Desktop.Views.FailedFilesView"
              x:DataType="vm:FailedFilesViewModel">
 
-    <StackPanel Margin="24,20" Spacing="14">
+    <Grid Margin="24,20" RowDefinitions="Auto,Auto,*" ColumnDefinitions="*">
 
         <!-- 页头 -->
-        <DockPanel>
-            <StackPanel>
-                <StackPanel Orientation="Horizontal" Spacing="10">
-                    <TextBlock Classes="h1" Text="失败文件"/>
-                    <Border Classes="chip" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding Items.Count, StringFormat='{}{0} 个'}" FontSize="12" Classes="muted"/>
-                    </Border>
-                </StackPanel>
-                <TextBlock Classes="muted" Text="未能提取日期的文件：用魔术工具加规则后重新分析，或批量移入待处理文件夹" Margin="0,4,0,0"/>
+        <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,14">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <TextBlock Classes="h1" Text="失败文件"/>
+                <Border Classes="chip" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Items.Count, StringFormat='{}{0} 个'}" FontSize="12" Classes="muted"/>
+                </Border>
             </StackPanel>
-        </DockPanel>
-
-        <StackPanel Orientation="Horizontal" Spacing="10">
-            <Button Classes="accent" Content="🪄 用样本打开魔术工具" Command="{Binding OpenMagicToolsCommand}"/>
-            <Button Content="全部移到待处理文件夹" Command="{Binding MoveToPendingCommand}"/>
-            <Button Content="系统应用打开" Command="{Binding OpenWithSystemCommand}"/>
+            <TextBlock Classes="muted" Text="未能提取日期的文件：用魔术工具加规则后重新分析，或批量移入待处理文件夹"/>
         </StackPanel>
 
-        <Grid ColumnDefinitions="1*,6,330" ClipToBounds="True">
+        <!-- 操作按钮 -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10" Margin="0,0,0,14">
+            <Button Classes="accent" Content="🪄 用样本打开魔术工具" Command="{Binding OpenMagicToolsCommand}"/>
+            <Button Content="全部移到待处理文件夹" Command="{Binding MoveToPendingCommand}" IsEnabled="{Binding !IsMoving}"/>
+            <Button Content="系统应用打开" Command="{Binding OpenWithSystemCommand}"/>
+            <ProgressBar Value="{Binding MoveProgress}" Maximum="1" Width="160" VerticalAlignment="Center"
+                         IsVisible="{Binding IsMoving}"/>
+            <TextBlock Text="{Binding MoveHint}" Classes="muted" VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- 文件列表 + 预览（高度随窗口剩余空间约束） -->
+        <Grid Grid.Row="2" ColumnDefinitions="1*,6,330">
 
             <!-- 文件列表 -->
             <Border Classes="card" Padding="0">
@@ -66,12 +70,14 @@
                                FontSize="11" Classes="muted" Margin="0,8,0,0"/>
                     <Border CornerRadius="6" Background="{DynamicResource SystemControlBackgroundBaseLowBrush}" ClipToBounds="True">
                         <Panel>
-                            <Image Source="{Binding Preview}" Stretch="Uniform" Margin="8"/>
-                            <TextBlock Text="无可用预览" Classes="muted" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Image Source="{Binding Preview}" Stretch="Uniform" Margin="8"
+                                   IsVisible="{Binding Preview, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                            <TextBlock Text="无可用预览" Classes="muted" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       IsVisible="{Binding Preview, Converter={x:Static ObjectConverters.IsNull}}"/>
                         </Panel>
                     </Border>
                 </DockPanel>
             </Border>
         </Grid>
-    </StackPanel>
+    </Grid>
 </UserControl>

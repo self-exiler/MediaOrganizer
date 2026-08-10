@@ -1,9 +1,9 @@
 # 软件需求规格说明书（SRS）
 
 **项目名称**：MediaOrganizer（媒体文件整理器 · C# 版）
-**版本**：1.0（初稿）
-**日期**：2026-08-08
-**依据文档**：ADR-0001（迁移决策）、ADR-0002（功能范围）、ADR-0003（技术架构）、docs/glossary.md（领域词汇表）
+**版本**：1.1（新增网络输出目标）
+**日期**：2026-08-09
+**依据文档**：ADR-0001（迁移决策）、ADR-0002（功能范围）、ADR-0003（技术架构）、ADR-0004（网络输出目标）、docs/glossary.md（领域词汇表）
 
 ---
 
@@ -27,7 +27,7 @@ MediaOrganizer 扫描用户指定的源目录，从照片/视频文件中提取�
 
 - `功能需求要点.md`（Python 版功能基准）
 - `docs/adr/ADR-0001~0003`
-- 界面原型：`docs/prototype/index.html`
+- 界面原型：`docs/界面原型设计/index.html`
 
 ---
 
@@ -159,15 +159,40 @@ MediaOrganizer 扫描用户指定的源目录，从照片/视频文件中提取�
 | FR-9.3 | 状态栏：当前阶段、进度、文件计数 |
 | FR-9.4 | 语言切换实时刷新全部 UI 文本；首发仅提供 zh 资源，en 留空位 |
 
+### FR-10 网络输出目标（P0，v1.0 新增，ADR-0004）
+
+| 编号 | 需求 |
+|------|------|
+| FR-10.1 | 输出目录支持本地路径与网络位置两类目标；源目录保持本地 |
+| FR-10.2 | 网络位置以"连接配置"管理：名称、协议（SMB / WebDAV）、地址（`\\server\share` 或 WebDAV URL）、用户名、密码 |
+| FR-10.3 | SMB 走 UNC 路径（Windows 原生）；WebDAV 走协议客户端，全平台可用 |
+| FR-10.4 | 连接配置提供"测试连接"即时验证（认证 + 写权限探测） |
+| FR-10.5 | 网络目标下仅提供 copy，move 选项禁用并给出原因提示 |
+| FR-10.6 | 分块流式拷贝（8MB 缓冲），逐文件 + 总体双进度；网络中断自动重试 3 次（指数退避） |
+| FR-10.7 | 传输采用临时名（`<name>.mo-tmp`）+ 完成后改名，杜绝半成品；完成校验 = 大小一致 |
+| FR-10.8 | mtime 矫正兼容网络目标：SMB 用 SetLastWriteTime；WebDAV 用 PROPPATCH（服务端不支持则静默跳过） |
+| FR-10.9 | 明确不支持 FTP（ADR-0004）；SMB 在 macOS/Linux 需用户自行挂载（README 注明） |
+
+### FR-11 凭据管理（P0，v1.0 新增）
+
+| 编号 | 需求 |
+|------|------|
+| FR-11.1 | 凭据随连接配置保存在 config.json |
+| FR-11.2 | Windows：密码使用 DPAPI（CurrentUser 域）加密存储 |
+| FR-11.3 | macOS/Linux：首版 Base64 降级存储并在 UI 与 README 明确警告；后续版本接入系统密钥环 |
+| FR-11.4 | 日志与报告中严禁出现密码明文 |
+
 ---
 
 ## 4. 界面需求
 
-以 `docs/prototype/index.html` 为准（Avalonia 12 Fluent 风格，不沿用 Qt 布局）。要点：
+以 `docs/界面原型设计/index.html` 为准（Avalonia 12 Fluent 风格，不沿用 Qt 布局）。要点：
 
 - 主窗口单窗口三区块：顶部目录与操作区、中部进度与统计、底部失败文件列表 + 预览
 - 分析→执行为主流程向导式引导，降低开源用户学习成本
 - 魔术工具、配置编辑器为独立窗口
+- 输出目录支持本地/网络位置切换；网络位置配置为模态对话框（协议/地址/凭据/测试连接）
+- 设置-系统 Tab 含"网络位置"管理卡片（列表 + 测试/编辑/删除）
 
 ---
 
@@ -189,7 +214,17 @@ MediaOrganizer 扫描用户指定的源目录，从照片/视频文件中提取�
       { "name": "FileSystem", "enabled": false, "weight": 0.8 }
     ]
   },
-  "execute": { "operation": "copy", "existAction": "skip", "classificationLevel": "day", "fixMtime": false }
+  "execute": { "operation": "copy", "existAction": "skip", "classificationLevel": "day", "fixMtime": false },
+  "networkProfiles": [
+    {
+      "name": "家里的 NAS",
+      "type": "Smb",                  // Smb | WebDav
+      "address": "\\\\192.168.1.10\\photos",   // Smb: UNC；WebDav: https://dav.example.com/photos
+      "username": "dioha",
+      "password": "DPAPI:...",        // Windows DPAPI 加密；macOS/Linux 首版 "B64:..."（降级，见 FR-11.3）
+      "lastVerifiedAt": "2026-08-09T10:00:00+08:00"
+    }
+  ]
 }
 ```
 
@@ -240,6 +275,8 @@ MediaOrganizer 扫描用户指定的源目录，从照片/视频文件中提取�
 | NFR-7 | 开源合规 | 第三方依赖许可证清单随 Release 发布（Magick.NET Apache-2.0 等） |
 | NFR-8 | 国际化 | 全部 UI 文本外置资源文件；禁止硬编码可见文本 |
 | NFR-9 | 分发 | GitHub Actions 产出 win-x64 / osx / linux 框架依赖包，附校验和 |
+| NFR-10 | 安全 | 密码不得明文落盘（Windows）；任何平台日志/报告不得出现凭据；连接测试失败不泄露密码细节 |
+| NFR-11 | 网络可靠性 | 网络传输单文件失败重试 ≤ 3 次且退避间隔 ≤ 8s；断线不导致 UI 卡死；WebDAV 请求超时默认 30s 可配 |
 
 ---
 
@@ -250,6 +287,8 @@ MediaOrganizer 扫描用户指定的源目录，从照片/视频文件中提取�
 3. 魔术工具可新增一个自定义正则模式并立即用于重新分析，原失败文件被成功解析
 4. 分析/执行过程可取消且无残留部分写坏的状态文件
 5. Core 测试与 CI 全部通过；Release 页面可下载三平台包
+6. 新增 SMB/WebDAV 连接配置 → 测试连接通过 → 归档到网络目标，结果与本地一致；断网重试后错误清单正确
+7. 网络目标下 move 选项禁用；密码在 config.json 中为密文（Windows）
 
 ---
 
@@ -261,3 +300,6 @@ MediaOrganizer 扫描用户指定的源目录，从照片/视频文件中提取�
 | R-2 | 视频拍摄日期字段碎片化 | 开发早期 Spike 验证 TagLib#/Magick.NET 覆盖率，不足则视频仅靠文件名 |
 | R-3 | 魔术工具移植工作量大 | 独立窗口并行开发；引擎逻辑在 Core 先行测试 |
 | R-4 | Avalonia 12 新版 API 变动 | 脚手架阶段锁定版本并验证控件清单 |
+| R-5 | WebDAV 服务端实现差异（PROPPATCH/分块/超时） | 用真实 NAS/坚果云做兼容性 Spike；失败时降级为本地归档并提示 |
+| R-6 | SMB UNC 仅 Windows 可用 | v1.0 文档注明 macOS/Linux 需外部挂载；后续评估 SMBLibrary 纯托管实现 |
+| R-7 | macOS/Linux 凭据首版降级存储 | UI 警告 + README 注明；下一版接入系统密钥环 |

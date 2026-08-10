@@ -1,3 +1,4 @@
+using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MediaOrganizer.Core.Analysis;
@@ -5,7 +6,7 @@ using MediaOrganizer.Core.Models;
 
 namespace MediaOrganizer.Desktop.ViewModels;
 
-/// <summary>分析报告查看器。</summary>
+/// <summary>分析报告查看器（TXT 已由工作台分析完成时落盘，此处展示 + 另存为）。</summary>
 public partial class ReportViewModel : ViewModelBase
 {
     [ObservableProperty]
@@ -14,20 +15,29 @@ public partial class ReportViewModel : ViewModelBase
     [ObservableProperty]
     private string _reportMeta = "";
 
-    private string _sourceDir = "";
-
     public void Set(AnalysisResult result, string outputDir)
     {
-        _sourceDir = result.SourceDir;
         ReportText = AnalysisReportGenerator.Generate(result, outputDir);
         ReportMeta = $"{result.SourceDir} · {result.AnalyzedAt:yyyy-MM-dd HH:mm:ss}";
     }
 
+    /// <summary>另存为对话框保存报告（FR-4.4）。</summary>
     [RelayCommand]
-    private void SaveReport()
+    private async Task SaveReport()
     {
-        if (string.IsNullOrWhiteSpace(_sourceDir) || !Directory.Exists(_sourceDir)) return;
-        var path = Path.Combine(_sourceDir, "analysis-report.txt");
-        File.WriteAllText(path, ReportText);
+        var top = App.MainWindow;
+        if (top is null) return;
+        var file = await top.StorageProvider.SaveFilePickerAsync(new Avalonia.Platform.Storage.FilePickerSaveOptions
+        {
+            Title = "另存分析报告",
+            SuggestedFileName = "analysis-report.txt",
+            DefaultExtension = "txt",
+            FileTypeChoices = [new Avalonia.Platform.Storage.FilePickerFileType("文本文件") { Patterns = ["*.txt"] }]
+        });
+        if (file is null) return;
+        await using var stream = await file.OpenWriteAsync();
+        await using var writer = new StreamWriter(stream);
+        await writer.WriteAsync(ReportText);
     }
 }
+

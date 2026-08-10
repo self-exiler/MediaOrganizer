@@ -1,69 +1,172 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:MediaOrganizer.Desktop.ViewModels"
+             xmlns:cv="using:Avalonia.Data.Converters"
              x:Class="MediaOrganizer.Desktop.Views.MagicToolsView"
+             x:Name="Root"
              x:DataType="vm:MagicToolsViewModel">
 
-    <ScrollViewer>
-        <StackPanel Spacing="14" Margin="24,20">
-            <StackPanel>
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <Grid x:Name="LayoutRoot" Margin="24,20" RowDefinitions="Auto,Auto,*">
+
+            <!-- 页头 -->
+            <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,14">
                 <TextBlock Classes="h1" Text="魔术工具"/>
-                <TextBlock Classes="muted" Text="加载失败文件样本 → 查看结构指纹 → 编写/测试正则 → 保存到 patterns.json（交互式圈选生成正则为后续迭代）" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                <TextBlock Classes="muted" Text="加载样本 → 查看结构指纹 → 圈选标记/编写正则 → 实时测试 → 保存到 patterns.json" TextWrapping="Wrap"/>
             </StackPanel>
 
-            <Grid ColumnDefinitions="280,1*" ColumnSpacing="14">
-                <!-- 样本 -->
-                <Border Classes="card">
+            <!-- 操作按钮 -->
+            <WrapPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,14">
+                <Button Content="从失败文件载入" Command="{Binding LoadFromFailedFilesCommand}" Margin="0,0,10,6"/>
+                <Button Content="从源目录载入" Command="{Binding LoadFromSourceDirCommand}" Margin="0,0,10,6"/>
+                <Button Content="选择 JSON 文件" Command="{Binding BrowseJsonFileCommand}" Margin="0,0,10,6"/>
+            </WrapPanel>
+
+            <!-- 样本 + 编辑测试：宽屏并排，窄屏上下堆叠（由代码behind根据宽度切换） -->
+            <Grid x:Name="MainGrid" Grid.Row="2">
+                <Border x:Name="SamplePanel" Classes="card">
                     <DockPanel>
                         <TextBlock DockPanel.Dock="Top" Classes="h2" Text="样本"/>
+                        <StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="0,10,0,0">
+                            <Button Content="从失败文件载入" Command="{Binding LoadFromFailedFilesCommand}"/>
+                            <Button Content="从源目录载入" Command="{Binding LoadFromSourceDirCommand}"/>
+                            <Button Content="选择 JSON 文件" Command="{Binding BrowseJsonFileCommand}"/>
+                        </StackPanel>
                         <ListBox ItemsSource="{Binding Samples}" SelectedItem="{Binding SelectedSample}"
-                                 BorderThickness="0" Background="Transparent" MinHeight="120">
+                                 BorderThickness="0" Background="Transparent" MinHeight="140">
                             <ListBox.ItemTemplate>
                                 <DataTemplate x:DataType="x:String">
                                     <TextBlock Text="{Binding}" FontFamily="Cascadia Code, Consolas, monospace" FontSize="12"/>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
-                        <TextBlock DockPanel.Dock="Bottom" Text="{Binding SampleInfo}" Classes="muted" FontSize="11" Margin="0,8,0,0"/>
+                        <TextBlock DockPanel.Dock="Bottom" Text="{Binding SampleInfo}" Classes="muted" FontSize="11" Margin="0,4,0,0"/>
+                        <TextBlock DockPanel.Dock="Bottom" Text="{Binding Fingerprint, StringFormat='结构指纹：{0}'}"
+                                   Classes="muted" FontSize="11" FontFamily="Cascadia Code, Consolas, monospace"
+                                   IsVisible="{Binding Fingerprint, Converter={x:Static cv:StringConverters.IsNotNullOrEmpty}}"
+                                   Margin="0,2,0,0" TextWrapping="Wrap"/>
                     </DockPanel>
                 </Border>
 
-                <!-- 编辑与测试 -->
-                <StackPanel Spacing="14">
+                <GridSplitter x:Name="Splitter" Width="6" Margin="6,0"/>
+
+                <StackPanel x:Name="ContentPanel" Spacing="14">
                     <Border Classes="card">
-                        <StackPanel Spacing="8">
-                            <TextBlock Classes="h2" Text="结构指纹"/>
-                            <TextBox Text="{Binding Fingerprint}" IsReadOnly="True"
-                                     FontFamily="Cascadia Code, Consolas, monospace" FontSize="13"/>
-                            <TextBlock Classes="muted" FontSize="11" Text="D=数字 / L=字母 / S=符号。指纹一致的文件名可用同一条规则。"/>
+                        <StackPanel Spacing="10">
+                            <TextBlock Classes="h2" Text="① 圈选日期片段"/>
+                            <ItemsControl ItemsSource="{Binding CharCells}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel Orientation="Horizontal"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:MarkableCharVM">
+                                        <Button Content="{Binding Char}" FontFamily="Cascadia Code, Consolas, monospace"
+                                                FontSize="15" Padding="4,1" MinWidth="24" MinHeight="28"
+                                                Foreground="{Binding Brush}" ToolTip.Tip="{Binding Tooltip}"
+                                                Classes.sel="{Binding IsSelected}"
+                                                Command="{Binding $parent[ItemsControl].DataContext.SelectCharCommand}"
+                                                CommandParameter="{Binding}"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- 图例 -->
+                            <WrapPanel Orientation="Horizontal">
+                                <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,14,4">
+                                    <Border Width="10" Height="10" CornerRadius="2" Background="#E91E8C" VerticalAlignment="Center"/>
+                                    <TextBlock Text="数字" Classes="muted" FontSize="11"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,14,4">
+                                    <Border Width="10" Height="10" CornerRadius="2" Background="#107C10" VerticalAlignment="Center"/>
+                                    <TextBlock Text="字母" Classes="muted" FontSize="11"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,14,4">
+                                    <Border Width="10" Height="10" CornerRadius="2" Background="#0067C0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="符号" Classes="muted" FontSize="11"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,14,4">
+                                    <Border Width="10" Height="10" CornerRadius="2" Background="#1A0067C0" BorderBrush="#0067C0" BorderThickness="1" VerticalAlignment="Center"/>
+                                    <TextBlock Text="已标记（选中高亮）" Classes="muted" FontSize="11"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,14,4">
+                                    <Border Width="10" Height="10" CornerRadius="2" Background="#17A2B8" VerticalAlignment="Center"/>
+                                    <TextBlock Text="时间戳" Classes="muted" FontSize="11"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,14,4">
+                                    <Border Width="10" Height="10" CornerRadius="2" Background="#FFD700" VerticalAlignment="Center"/>
+                                    <TextBlock Text="必现" Classes="muted" FontSize="11"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,14,4">
+                                    <Border Width="10" Height="10" CornerRadius="2" Background="#808080" VerticalAlignment="Center"/>
+                                    <TextBlock Text="忽略" Classes="muted" FontSize="11"/>
+                                </StackPanel>
+                            </WrapPanel>
+
+                            <!-- 标记为：chips 行 -->
+                            <WrapPanel Orientation="Horizontal" VerticalAlignment="Top">
+                                <TextBlock Text="标记为：" Classes="muted" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,6"/>
+                                <Button Content="年" Classes="chip-btn" Command="{Binding SetRoleCommand}" CommandParameter="年" Margin="0,0,6,6"/>
+                                <Button Content="月" Classes="chip-btn" Command="{Binding SetRoleCommand}" CommandParameter="月" Margin="0,0,6,6"/>
+                                <Button Content="日" Classes="chip-btn" Command="{Binding SetRoleCommand}" CommandParameter="日" Margin="0,0,6,6"/>
+                                <Button Content="时" Classes="chip-btn" Command="{Binding SetRoleCommand}" CommandParameter="时" Margin="0,0,6,6"/>
+                                <Button Content="分" Classes="chip-btn" Command="{Binding SetRoleCommand}" CommandParameter="分" Margin="0,0,6,6"/>
+                                <Button Content="秒" Classes="chip-btn" Command="{Binding SetRoleCommand}" CommandParameter="秒" Margin="0,0,6,6"/>
+                                <Button Content="时间戳" Classes="chip-btn" Command="{Binding SetRoleCommand}" CommandParameter="时间戳" Margin="0,0,6,6"/>
+                                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" Margin="0,0,6,6">
+                                    <TextBlock Text="长度" Classes="muted" FontSize="11" VerticalAlignment="Center"/>
+                                    <ComboBox ItemsSource="{Binding TimestampLengthOptions}"
+                                              SelectedItem="{Binding TimestampLength}"
+                                              Width="60" FontSize="11" Padding="6,2"/>
+                                </StackPanel>
+                                <Button Content="忽略" Classes="chip-btn" Command="{Binding SetRoleCommand}" CommandParameter="忽略" Margin="0,0,6,6"/>
+                                <Button Content="必现" Classes="chip-btn" Command="{Binding SetRoleCommand}" CommandParameter="必现" Margin="0,0,6,6"/>
+                                <Button Content="清除标记" Classes="chip-btn" Command="{Binding ClearMarksCommand}" Margin="0,0,6,6"/>
+                            </WrapPanel>
+
+                            <WrapPanel Orientation="Horizontal">
+                                <Button Content="从标记生成正则" Command="{Binding GenerateFromMarksCommand}" Margin="0,0,8,6"/>
+                                <Button Content="多变体生成" Command="{Binding GenerateVariantsCommand}" Margin="0,0,8,6"/>
+                            </WrapPanel>
+
+                            <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
+                                       Text="结构指纹 D=数字/L=字母/S=符号。点击字符选中 → 点上方按钮标记；双击可循环切换角色。时间戳会按「长度」自动选中连续数字。"/>
                         </StackPanel>
                     </Border>
 
                     <Border Classes="card">
                         <StackPanel Spacing="10">
-                            <TextBlock Classes="h2" Text="正则测试"/>
-                            <TextBox Text="{Binding RegexText}" PlaceholderText="例如：mm_export(\d{13})"
-                                     FontFamily="Cascadia Code, Consolas, monospace"/>
-                            <TextBlock Classes="muted" FontSize="11"
-                                       Text="支持命名组 (?&lt;year&gt;\d{4}) 等；无命名组时按 1组=时间戳 / 3组=年月日 / 6组=年月日时分秒 自动推断。"/>
+                            <TextBlock Classes="h2" Text="② 生成的正则"/>
+                            <Border Background="#1E1E1E" CornerRadius="6" Padding="12,10">
+                                <TextBlock Text="{Binding RegexInfo}" Foreground="#D4D4D4" FontFamily="Cascadia Code, Consolas, monospace" FontSize="12" TextWrapping="Wrap"/>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Classes="card">
+                        <StackPanel Spacing="10">
+                            <TextBlock Classes="h2" Text="③ 测试与保存"/>
+
+                            <!-- 表头 -->
+                            <Grid ColumnDefinitions="1*,60,150">
+                                <TextBlock Grid.Column="0" Text="样本" FontSize="12" Classes="muted"/>
+                                <TextBlock Grid.Column="1" Text="命中" FontSize="12" Classes="muted"/>
+                                <TextBlock Grid.Column="2" Text="解析结果" FontSize="12" Classes="muted"/>
+                            </Grid>
                             <ItemsControl ItemsSource="{Binding TestResults}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="vm:RegexTestItem">
-                                        <Grid ColumnDefinitions="1*,80,150" Margin="0,2">
+                                        <Grid ColumnDefinitions="1*,60,150" Margin="0,2">
                                             <TextBlock Grid.Column="0" Text="{Binding Sample}" FontFamily="Cascadia Code, Consolas, monospace" FontSize="12" TextTrimming="CharacterEllipsis"/>
-                                            <TextBlock Grid.Column="1" Text="{Binding Matched}" FontSize="12"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding Matched, StringFormat='{}{0:✓;✗}'}" FontSize="12"/>
                                             <TextBlock Grid.Column="2" Text="{Binding Result}" FontSize="12" Classes="muted"/>
                                         </Grid>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
-                            <TextBlock Text="{Binding SaveHint}" FontSize="11" Foreground="#0067C0"/>
-                        </StackPanel>
-                    </Border>
 
-                    <Border Classes="card">
-                        <StackPanel Spacing="10">
-                            <TextBlock Classes="h2" Text="保存规则"/>
+                            <TextBlock Text="{Binding SaveHint}" FontSize="11" Foreground="#0067C0" TextWrapping="Wrap"/>
                             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                                 <TextBlock Grid.Column="0" Text="规则名称" VerticalAlignment="Center" Classes="muted"/>
                                 <TextBox Grid.Column="1" Text="{Binding PatternName}" PlaceholderText="例如：微信导出时间戳"/>
@@ -74,6 +177,6 @@
                     </Border>
                 </StackPanel>
             </Grid>
-        </StackPanel>
+        </Grid>
     </ScrollViewer>
 </UserControl>

@@ -24,8 +24,8 @@ public partial class LogsViewModel : ViewModelBase
     {
         Dispatcher.UIThread.Post(() =>
         {
-            Entries.Insert(0, entry);
-            while (Entries.Count > _logger.Capacity) Entries.RemoveAt(Entries.Count - 1);
+            Entries.Add(entry);
+            while (Entries.Count > _logger.Capacity) Entries.RemoveAt(0);
         });
     }
 

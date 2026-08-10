@@ -170,7 +170,17 @@
       <div class="card">
         <h2>目录</h2>
         <div class="field"><label>源目录</label><div class="input mono">D:\Photos\手机导出\2026-08</div><button class="btn sm">浏览…</button></div>
-        <div class="field" style="margin-bottom:0"><label>输出目录</label><div class="input mono">D:\Photos\图库</div><button class="btn sm">浏览…</button></div>
+        <div class="field"><label>输出目录</label>
+          <select class="sel" style="min-width:150px">
+            <option>本地目录</option>
+            <option>网络位置：家里的 NAS（SMB）</option>
+            <option>网络位置：坚果云（WebDAV）</option>
+          </select>
+          <div class="input mono">D:\Photos\图库</div>
+          <button class="btn sm">浏览…</button>
+          <button class="btn sm" onclick="document.getElementById('netdlg').style.display='flex'">网络位置…</button>
+        </div>
+        <div class="field" style="margin-bottom:0"><label>&nbsp;</label><span class="small muted">选择网络位置后，操作类型仅支持「复制 copy」，move 自动禁用</span></div>
       </div>
 
       <div class="card">
@@ -210,6 +220,7 @@
           <div class="field"><label>目录分级</label><select class="sel"><option>按日 2024/01/15</option><option>按月 2024/01</option><option>按年 2024</option></select></div>
           <div class="field"><label>&nbsp;</label><span class="toggle on"><span class="tk"></span>矫正文件修改时间为拍摄日期</span></div>
         </div>
+        <div class="infobar info" style="margin:6px 0 0">🌐 网络目标提示：选择 SMB/WebDAV 输出时，传输采用临时名 + 大小校验 + 失败重试 3 次；move 自动禁用；mtime 矫正对 WebDAV 视服务端能力静默降级。</div>
         <div class="infobar warn" style="margin:6px 0 12px">⚠️ 将对 <b>4,359</b> 个文件执行「复制」到 <span class="mono">D:\Photos\图库</span>，预计占用 18.2 GB。未来日期文件（0 个）将归入 FutureDate/。</div>
         <div class="rowbtns">
           <button class="btn primary">✔ 确认并执行归档</button>
@@ -411,6 +422,17 @@
           <div class="field"><label>&nbsp;</label><span class="toggle"><span class="tk"></span>扫描所有文件（忽略扩展名白名单）</span></div>
           <div class="field" style="margin-bottom:0"><label>&nbsp;</label><span class="toggle on"><span class="tk"></span>支持的格式（21 种）jpg, heic, mp4…</span></div>
         </div>
+        <div class="card">
+          <h2>网络位置 <span class="tag">SMB / WebDAV（不支持 FTP）</span>
+            <span style="margin-left:auto" class="rowbtns"><button class="btn sm primary" onclick="document.getElementById('netdlg').style.display='flex'">＋ 添加网络位置</button></span>
+          </h2>
+          <table>
+            <tr><th>名称</th><th>协议</th><th>地址</th><th>状态</th><th></th></tr>
+            <tr><td>家里的 NAS</td><td><span class="chip exif">SMB</span></td><td class="mono">\\192.168.1.10\photos</td><td style="color:var(--success)">✓ 已验证</td><td><button class="btn sm">测试</button> <button class="btn sm">编辑</button> <button class="btn sm danger">删除</button></td></tr>
+            <tr><td>坚果云</td><td><span class="chip fn">WebDAV</span></td><td class="mono">https://dav.jianguoyun.com/dav/photos</td><td style="color:var(--success)">✓ 已验证</td><td><button class="btn sm">测试</button> <button class="btn sm">编辑</button> <button class="btn sm danger">删除</button></td></tr>
+          </table>
+          <div class="small muted" style="margin-top:8px">凭据在 Windows 以 DPAPI 加密存储；macOS/Linux 首版降级为弱编码并在界面提示。SMB 跨平台需自行挂载。</div>
+        </div>
         <div class="card" style="margin-bottom:0">
           <h2>执行与性能</h2>
           <div class="grid2">
@@ -455,6 +477,28 @@
       <span><span class="dot ok"></span>就绪</span>
       <span>分析结果：analysis-result.json（21:58）</span>
       <span style="margin-left:auto">MediaOrganizer v1.0 · .NET 10 · Avalonia 12</span>
+    </div>
+  </div>
+</div>
+
+<!-- ======== 网络位置配置对话框（模态） ======== -->
+<div id="netdlg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);align-items:center;justify-content:center;z-index:100">
+  <div class="card" style="width:520px;box-shadow:0 8px 32px rgba(0,0,0,.25);margin:0">
+    <h2 style="font-size:15px">网络位置配置 <span class="tag">SMB / WebDAV</span></h2>
+    <div class="field"><label style="width:70px">名称</label><div class="input">家里的 NAS</div></div>
+    <div class="field"><label style="width:70px">协议</label>
+      <select class="sel"><option>SMB（Windows UNC 路径）</option><option>WebDAV（全平台）</option></select>
+      <span class="small muted">不支持 FTP</span>
+    </div>
+    <div class="field"><label style="width:70px">地址</label><div class="input mono">\\192.168.1.10\photos</div></div>
+    <div class="field"><label style="width:70px">用户名</label><div class="input">dioha</div></div>
+    <div class="field"><label style="width:70px">密码</label><div class="input">••••••••</div></div>
+    <div class="infobar warn" style="margin:4px 0 12px">🔐 Windows 密码以 DPAPI 加密存储；macOS/Linux 首版为降级存储，请注意。</div>
+    <div class="infobar ok" style="margin:0 0 12px">✓ 连接测试通过：认证成功，拥有写入权限（2026-08-09 10:00）</div>
+    <div class="rowbtns" style="justify-content:flex-end">
+      <button class="btn">测试连接</button>
+      <button class="btn" onclick="document.getElementById('netdlg').style.display='none'">取消</button>
+      <button class="btn primary" onclick="document.getElementById('netdlg').style.display='none'">保存</button>
     </div>
   </div>
 </div>

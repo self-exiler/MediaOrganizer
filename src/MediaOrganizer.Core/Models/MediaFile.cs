@@ -3,7 +3,7 @@ namespace MediaOrganizer.Core.Models;
 /// <summary>扫描到的一个媒体文件（不包含任何提取结果）。</summary>
 public sealed record MediaFile(string Path, long Size, string Extension)
 {
-    public string FileName => System.IO.Path.GetFileName(Path);
+    public string FileName { get; } = System.IO.Path.GetFileName(Path);
 }
 
 /// <summary>成功提取到日期的文件。</summary>

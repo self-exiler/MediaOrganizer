@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using MediaOrganizer.Core.Configuration;
 
@@ -8,19 +9,29 @@ public static class PatternEngine
 {
     private static readonly TimeZoneInfo LocalTz = TimeZoneInfo.Local;
 
+    // 预编译热路径正则（避免每文件重新编译）
+    private static readonly Regex TimestampRegex = new(@"\d{10,}", RegexOptions.Compiled);
+    private static readonly Regex YearRegex = new(@"19[7-9]\d|20\d\d|21\d\d", RegexOptions.Compiled);
+
+    // 正则编译缓存：pattern string → compiled Regex（线程安全）
+    private static readonly ConcurrentDictionary<string, Regex?> RegexCache = new();
+
+    private static Regex? GetCachedRegex(string pattern)
+        => RegexCache.GetOrAdd(pattern, p =>
+        {
+            try { return new Regex(p, RegexOptions.Compiled | RegexOptions.CultureInvariant); }
+            catch { return null; }
+        });
+
     /// <summary>快速预扫描：文件名中是否可能存在日期（年份或 ≥10 位连续数字时间戳），避免对每个文件跑全部正则。</summary>
     public static bool ContainsLikelyDate(string fileName, IReadOnlyList<PatternDefinition> patterns)
     {
         // 存在时间戳模式时：文件名需含 ≥10 位连续数字才算疑似
-        if (patterns.Any(p => p.Enabled && p.TimestampLength is not null))
-        {
-            foreach (Match m in Regex.Matches(fileName, @"\d{10,}"))
-            {
-                if (m.Success) return true;
-            }
-        }
+        if (patterns.Any(p => p.Enabled && p.TimestampLength is not null)
+            && TimestampRegex.IsMatch(fileName))
+            return true;
         // 4 位年份（1970-2100），允许嵌入更长的数字串（如紧凑日期 20240115）
-        foreach (Match m in Regex.Matches(fileName, @"19[7-9]\d|20\d\d|21\d\d"))
+        foreach (Match m in YearRegex.Matches(fileName))
         {
             if (int.TryParse(m.Value, out var y) && y >= 1970 && y <= 2100) return true;
         }
@@ -41,15 +52,17 @@ public static class PatternEngine
     {
         if (!pattern.Enabled || string.IsNullOrEmpty(pattern.Pattern)) return null;
 
-        Match m;
-        try { m = Regex.Match(fileName, pattern.Pattern, RegexOptions.CultureInvariant); }
-        catch { return null; }
+        var regex = GetCachedRegex(pattern.Pattern);
+        if (regex is null) return null;
+
+        var m = regex.Match(fileName);
         if (!m.Success) return null;
 
         var mapping = pattern.GroupMapping ?? new Dictionary<string, int>();
+        var ignored = pattern.IgnoredGroups ?? [];
 
         // 时间戳类型
-        if (mapping.TryGetValue("timestamp", out var tsGroup) && m.Groups[tsGroup].Success)
+        if (mapping.TryGetValue("timestamp", out var tsGroup) && !ignored.Contains(tsGroup) && m.Groups[tsGroup].Success)
         {
             var digits = m.Groups[tsGroup].Value;
             if (pattern.TimestampLength is int len && digits.Length > len)
@@ -61,6 +74,7 @@ public static class PatternEngine
         int Group(string key, int @default = 0)
         {
             if (!mapping.TryGetValue(key, out var idx)) return @default;
+            if (ignored.Contains(idx)) return @default;
             var g = m.Groups[idx];
             return g.Success && int.TryParse(g.Value, out var v) ? v : @default;
         }

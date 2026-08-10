@@ -21,17 +21,27 @@
             <Border Classes="card">
                 <StackPanel Spacing="10">
                     <TextBlock Classes="h2" Text="目录"/>
-                    <Grid ColumnDefinitions="70,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="10">
+                    <Grid ColumnDefinitions="70,*,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="10">
                         <TextBlock Grid.Row="0" Grid.Column="0" Text="源目录" VerticalAlignment="Center" Classes="muted"/>
                         <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding SourceDir}" PlaceholderText="选择包含照片/视频的文件夹"/>
                         <Button Grid.Row="0" Grid.Column="2" Content="浏览…" Command="{Binding BrowseSourceCommand}"/>
 
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="输出目录" VerticalAlignment="Center" Classes="muted"/>
-                        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding OutputDir}" PlaceholderText="按日期归档的目标文件夹"/>
-                        <Button Grid.Row="1" Grid.Column="2" Content="浏览…" Command="{Binding BrowseOutputCommand}"/>
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="输出目标" VerticalAlignment="Center" Classes="muted"/>
+                        <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding OutputTargetOptions}"
+                                  SelectedIndex="{Binding OutputTargetIndex}"/>
+                        <Button Grid.Row="1" Grid.Column="2" Content="浏览…" Command="{Binding BrowseOutputCommand}"
+                                IsEnabled="{Binding IsMoveAllowed}"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="输出目录" VerticalAlignment="Center" Classes="muted"/>
+                        <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding OutputDir}" PlaceholderText="按日期归档的目标文件夹（本地路径）"
+                                 IsEnabled="{Binding IsMoveAllowed}"/>
+                        <TextBlock Grid.Row="2" Grid.Column="2" Text="网络位置仅支持复制" Classes="muted" FontSize="11"
+                                   VerticalAlignment="Center" HorizontalAlignment="Right"
+                                   IsVisible="{Binding !IsMoveAllowed}"/>
                     </Grid>
                     <StackPanel Orientation="Horizontal" Spacing="10">
                         <Button Classes="accent" Content="▶ 开始分析" Command="{Binding AnalyzeCommand}" IsEnabled="{Binding !IsBusy}"/>
+                        <Button Content="⏸ 取消" Command="{Binding CancelAnalysisCommand}" IsEnabled="{Binding IsBusy}"/>
                         <ProgressBar Value="{Binding Progress}" Maximum="100" Width="280" VerticalAlignment="Center"
                                      IsVisible="{Binding IsBusy}"/>
                     </StackPanel>
@@ -74,7 +84,8 @@
                     <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12">
                         <StackPanel Spacing="5">
                             <TextBlock Text="操作类型" Classes="muted" FontSize="12"/>
-                            <ComboBox ItemsSource="{Binding OperationOptions}" SelectedIndex="{Binding OperationIndex}"/>
+                            <ComboBox ItemsSource="{Binding OperationOptions}" SelectedIndex="{Binding OperationIndex}"
+                                      IsEnabled="{Binding IsMoveAllowed}"/>
                         </StackPanel>
                         <StackPanel Grid.Column="1" Spacing="5">
                             <TextBlock Text="同名文件" Classes="muted" FontSize="12"/>
@@ -96,6 +107,7 @@
                     <StackPanel Orientation="Horizontal" Spacing="10">
                         <Button Classes="accent" Content="✔ 确认并执行归档" Command="{Binding ExecuteFilesCommand}"
                                 IsEnabled="{Binding CanExecute}"/>
+                        <Button Content="⏸ 取消执行" Command="{Binding CancelAnalysisCommand}" IsEnabled="{Binding IsBusy}"/>
                         <TextBlock Text="未来日期文件将自动归入 FutureDate/" VerticalAlignment="Center" Classes="muted"/>
                     </StackPanel>
                 </StackPanel>

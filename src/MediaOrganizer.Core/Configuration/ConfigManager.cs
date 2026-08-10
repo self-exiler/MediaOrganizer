@@ -15,26 +15,8 @@ public static class ConfigManager
     };
 
     public static AppConfig Load(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-            {
-                var cfg = JsonSerializer.Deserialize<AppConfig>(File.ReadAllText(path), JsonOptions);
-                if (cfg is not null) return cfg;
-            }
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"config.json 读取失败，使用默认配置: {ex.Message}");
-        }
-        return new AppConfig();
-    }
+        => JsonFileStore.Load<AppConfig>(path) ?? new AppConfig();
 
     public static void Save(string path, AppConfig config)
-    {
-        var dir = Path.GetDirectoryName(Path.GetFullPath(path));
-        if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
-        File.WriteAllText(path, JsonSerializer.Serialize(config, JsonOptions));
-    }
+        => JsonFileStore.Save(path, config);
 }

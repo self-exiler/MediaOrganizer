@@ -3,7 +3,7 @@ using MediaOrganizer.Core.Models;
 
 namespace MediaOrganizer.Core.Extraction;
 
-/// <summary>EXIF 提取器：用 Magick.NET 统一读取 jpg/png/tiff/webp/heic 的 EXIF 日期。</summary>
+/// <summary>EXIF 提取器：图片用 Magick.NET 读 EXIF（jpg/png/tiff/webp/heic），视频用 TagLib 读容器元数据（FR-2.3）。</summary>
 public sealed class ExifExtractor(bool enabled, double weight) : IDateExtractor
 {
     public string Name => "Exif";
@@ -15,11 +15,22 @@ public sealed class ExifExtractor(bool enabled, double weight) : IDateExtractor
     private static readonly ExifTag<string>[] DateTags =
         [ExifTag.DateTimeOriginal, ExifTag.DateTimeDigitized, ExifTag.DateTime];
 
+    private static readonly HashSet<string> VideoExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".mp4", ".mov", ".avi", ".mkv", ".wmv", ".flv", ".webm", ".m4v", ".mpg", ".mpeg", ".3gp", ".3g2"
+    };
+
     public DateTimeOffset? Extract(MediaFile file)
+        => VideoExtensions.Contains(Path.GetExtension(file.Path))
+            ? ExtractFromVideo(file.Path)
+            : ExtractFromImage(file.Path);
+
+    private static DateTimeOffset? ExtractFromImage(string path)
     {
         try
         {
-            using var image = new MagickImage(file.Path);
+            using var image = new MagickImage();
+            image.Ping(path);
             var profile = image.GetExifProfile();
             if (profile is null) return null;
 
@@ -40,10 +51,31 @@ public sealed class ExifExtractor(bool enabled, double weight) : IDateExtractor
         }
         catch
         {
-            // 视频/损坏文件/无权限等：一律视为该提取器无结果
+            // 损坏文件/无权限等：一律视为该提取器无结果
         }
         return null;
     }
+
+    private static DateTimeOffset? ExtractFromVideo(string path)
+    {
+        try
+        {
+            using var file = TagLib.File.Create(path);
+            // 容器标签日期（QuickTime ©day / ID3 TDRC 等）；优先取完整日期，退化到年份兜底
+            var dt = file.Tag.DateTagged ?? YearOnly(file.Tag.Year);
+            if (dt is { } d)
+                return new DateTimeOffset(DateTime.SpecifyKind(d, DateTimeKind.Unspecified),
+                    TimeZoneInfo.Local.GetUtcOffset(d));
+        }
+        catch
+        {
+            // 容器无法解析等：视为无结果
+        }
+        return null;
+    }
+
+    private static DateTime? YearOnly(uint year)
+        => year is >= 1970 and <= 2100 ? new DateTime((int)year, 1, 1) : null;
 
     private static bool TryParseExifString(string value, out DateTime dt)
     {

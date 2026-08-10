@@ -14,7 +14,10 @@ public sealed record ArchivePlan(
     IReadOnlyList<PlannedFile> Files);
 
 /// <summary>规划器：日期 → 分级目标路径，未来日期归入 FutureDate/（SRS FR-5.1 / FR-5.4）。</summary>
-public sealed class ArchivePlanner(ClassificationLevel level, DateTimeOffset? now = null)
+/// <param name="level">目录分级。</param>
+/// <param name="futureDateBufferDays">未来缓冲天数，与 DateRangeValidator 同标准（FR-5.4/FR-2.4 一致）。</param>
+/// <param name="now">基准时间（测试注入）。</param>
+public sealed class ArchivePlanner(ClassificationLevel level, int futureDateBufferDays = 0, DateTimeOffset? now = null)
 {
     public ArchivePlan Plan(AnalysisResult result, string outputRoot)
     {
@@ -37,6 +40,7 @@ public sealed class ArchivePlanner(ClassificationLevel level, DateTimeOffset? no
             ClassificationLevel.Month => $"{date.Year:0000}/{date.Month:00}",
             _ => $"{date.Year:0000}/{date.Month:00}/{date.Day:00}"
         };
-        return date.Date > now.Date ? $"FutureDate/{sub}" : sub;
+        // 与校验器一致：仅超出 now+缓冲 的日期归入 FutureDate/
+        return date.Date > now.Date.AddDays(futureDateBufferDays) ? $"FutureDate/{sub}" : sub;
     }
 }
