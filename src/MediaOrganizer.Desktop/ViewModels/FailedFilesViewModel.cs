@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -10,6 +9,7 @@ using MediaOrganizer.Core.Models;
 using MediaOrganizer.Core.Patterns;
 using MediaOrganizer.Desktop.Services;
 using MediaOrganizer.Desktop.Views;
+using System.Collections.ObjectModel;
 
 namespace MediaOrganizer.Desktop.ViewModels;
 

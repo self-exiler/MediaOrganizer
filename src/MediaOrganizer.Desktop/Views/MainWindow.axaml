@@ -14,14 +14,10 @@
 
     <DockPanel>
 
-        <!-- 底部状态栏 -->
+        <!-- 底部状态栏：聚合当前页面操作反馈 -->
         <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource SystemControlBackgroundBaseLowBrush}" BorderThickness="0,1,0,0">
             <DockPanel Margin="14,5" LastChildFill="False">
-                <TextBlock Text="就绪" Classes="muted" FontSize="12" VerticalAlignment="Center"/>
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="18" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding SelectedNav.Title, StringFormat='当前：{0}'}" Classes="muted" FontSize="12" VerticalAlignment="Center"/>
-                    <TextBlock Text="v0.1 · .NET 10 · Avalonia 12" Classes="muted" FontSize="12" VerticalAlignment="Center"/>
-                </StackPanel>
+                <TextBlock Text="{Binding StatusMessage}" Classes="muted" FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
             </DockPanel>
         </Border>
 

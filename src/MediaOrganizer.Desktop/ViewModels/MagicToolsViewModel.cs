@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -7,6 +6,7 @@ using MediaOrganizer.Core.Analysis;
 using MediaOrganizer.Core.Configuration;
 using MediaOrganizer.Core.Models;
 using MediaOrganizer.Core.Patterns;
+using System.Collections.ObjectModel;
 
 namespace MediaOrganizer.Desktop.ViewModels;
 
@@ -51,6 +51,10 @@ public partial class MagicToolsViewModel : ViewModelBase
     /// <summary>时间戳长度：标记时间戳时自动选中该长度的连续数字。</summary>
     [ObservableProperty]
     private int _timestampLength = 13;
+
+    /// <summary>当前标记模式（对应 Python selection_mode）：null=未进入标记模式，点击角色按钮后进入，点击字符时按此角色标记并扩展范围。</summary>
+    [ObservableProperty]
+    private MarkRole? _currentRole;
 
     /// <summary>「生成的正则」展示：模式 / 映射 / 解析三行（对应原型步骤 ②）。</summary>
     [ObservableProperty]
@@ -261,7 +265,9 @@ public partial class MagicToolsViewModel : ViewModelBase
 
     partial void OnSelectedSampleChanged(string value)
     {
-        Fingerprint = string.IsNullOrEmpty(value) ? "" : StructureFingerprint.Compute(value);
+        // 与参考实现 magic_tools.py 一致：指纹/字符分解均基于不含扩展名的主文件名
+        var nameWithoutExt = Path.GetFileNameWithoutExtension(value);
+        Fingerprint = string.IsNullOrEmpty(value) ? "" : StructureFingerprint.Compute(nameWithoutExt);
         RebuildCharCells(value);
         TestRegex();
     }
@@ -269,22 +275,12 @@ public partial class MagicToolsViewModel : ViewModelBase
     partial void OnSelectedCharChanged(MarkableCharVM? value)
     {
         foreach (var c in CharCells) c.IsSelected = ReferenceEquals(c, value);
-        SaveHint = value is null ? "" : $"已选中「{value.Char}」（{RoleLabel(value.Role)}），点下方按钮快速标记";
     }
 
-    /// <summary>chips 快速标记：把选中字符的角色设为指定值（原型「标记为」行）。</summary>
+    /// <summary>chips 快速标记：设置当前标记角色（对应 Python selection_mode）。设好后点击字符即可标记并扩展范围。</summary>
     [RelayCommand]
     private void SetRole(string roleName)
     {
-        if (SelectedChar is null)
-        {
-            SaveHint = "请先点击字符选中要标记的片段";
-            return;
-        }
-
-        var index = CharCells.IndexOf(SelectedChar);
-        if (index < 0) return;
-
         var role = roleName switch
         {
             "年" => MarkRole.Year,
@@ -299,45 +295,107 @@ public partial class MagicToolsViewModel : ViewModelBase
             _ => MarkRole.None
         };
 
-        // 时间戳：按 TimestampLength 自动选中连续数字（与参考实现一致）。
-        if (role == MarkRole.Timestamp)
+        // 时间戳：若已选中字符，立即按 TimestampLength 自动选中连续数字（与参考实现一致）。
+        if (role == MarkRole.Timestamp && SelectedChar is not null)
         {
-            if (!char.IsDigit(SelectedChar.Char))
-            {
-                SaveHint = "时间戳必须从数字开始";
-                return;
-            }
-
-            var start = index;
-            var end = start;
-            while (end < CharCells.Count && char.IsDigit(CharCells[end].Char) && end - start < TimestampLength)
-                end++;
-
-            if (end - start != TimestampLength)
-            {
-                SaveHint = $"从位置 {start} 开始找不到 {TimestampLength} 位连续数字";
-                return;
-            }
-
-            for (var i = start; i < end; i++) CharCells[i].Role = MarkRole.Timestamp;
-            SaveHint = $"已标记 {TimestampLength} 位时间戳（位置 {start}-{end - 1}）；点「从标记生成正则」生成规则";
+            AutoRangeTimestamp(SelectedChar);
             return;
         }
 
-        SelectedChar.Role = role;
-        SaveHint = $"「{SelectedChar.Char}」已标记为 {roleName}；点「从标记生成正则」生成规则";
+        // 再次点击同一角色 → 退出标记模式
+        if (CurrentRole == role)
+        {
+            CurrentRole = null;
+            SaveHint = $"已退出「{roleName}」标记模式";
+            return;
+        }
+
+        CurrentRole = role;
+        SaveHint = role == MarkRole.Timestamp
+            ? $"已进入「时间戳」标记模式，点击数字起始位置将自动选中 {TimestampLength} 位"
+            : $"已进入「{roleName}」标记模式，点击字符标记（可连续点击多个字符扩展范围），再次点击「{roleName}」退出";
+    }
+
+    /// <summary>时间戳自动选段：从指定字符起向后取 TimestampLength 位连续数字。</summary>
+    private void AutoRangeTimestamp(MarkableCharVM cell)
+    {
+        var start = CharCells.IndexOf(cell);
+        if (start < 0) return;
+
+        if (!char.IsDigit(cell.Char))
+        {
+            SaveHint = "时间戳必须从数字开始";
+            return;
+        }
+
+        var end = start;
+        while (end < CharCells.Count && char.IsDigit(CharCells[end].Char) && end - start < TimestampLength)
+            end++;
+
+        if (end - start != TimestampLength)
+        {
+            SaveHint = $"从位置 {start} 开始找不到 {TimestampLength} 位连续数字";
+            return;
+        }
+
+        for (var i = start; i < end; i++) CharCells[i].Role = MarkRole.Timestamp;
+        CurrentRole = null;
+        SaveHint = $"已标记 {TimestampLength} 位时间戳（位置 {start}-{end - 1}）；点「从标记生成正则」生成规则";
     }
 
     private void RebuildCharCells(string fileName)
     {
         CharCells.Clear();
-        foreach (var cell in PatternInferrer.ToCharCells(fileName))
+        // 与参考实现 magic_tools.py 一致：字符分解不含扩展名
+        var nameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
+        foreach (var cell in PatternInferrer.ToCharCells(nameWithoutExt))
             CharCells.Add(new MarkableCharVM(cell.Char, cell.Role));
         SelectedChar = null;
+        CurrentRole = null;
     }
 
+    /// <summary>点击字符：若处于标记模式（CurrentRole 已设置），则按角色标记并扩展范围；否则仅选中该字符。</summary>
     [RelayCommand]
-    private void SelectChar(MarkableCharVM cell) => SelectedChar = cell;
+    private void SelectChar(MarkableCharVM cell)
+    {
+        var index = CharCells.IndexOf(cell);
+        if (index < 0) return;
+
+        SelectedChar = cell;
+
+        // 未进入标记模式：仅选中供显示
+        if (CurrentRole is null) return;
+
+        // 时间戳：自动选段
+        if (CurrentRole == MarkRole.Timestamp)
+        {
+            AutoRangeTimestamp(cell);
+            return;
+        }
+
+        var role = CurrentRole.Value;
+
+        // 冲突检查：该字符已被标记为其他角色
+        if (cell.Role != MarkRole.None && cell.Role != role)
+        {
+            SaveHint = $"位置 {index} 已标记为「{RoleLabel(cell.Role)}」，请先清除标记";
+            return;
+        }
+
+        // 标记当前字符
+        cell.Role = role;
+
+        // 扩展范围：找到所有同角色字符，填充区间内未标记的间隙（对应 Python _handle_date_part_selection 的范围合并）
+        var min = CharCells.Select((c, i) => (c, i)).Where(x => x.c.Role == role).Min(x => x.i);
+        var max = CharCells.Select((c, i) => (c, i)).Where(x => x.c.Role == role).Max(x => x.i);
+        for (var i = min; i <= max; i++)
+        {
+            if (CharCells[i].Role == MarkRole.None)
+                CharCells[i].Role = role;
+        }
+
+        SaveHint = $"已标记「{RoleLabel(role)}」（位置 {min}-{max}）；继续点击扩展，或选下一个角色";
+    }
 
     [RelayCommand]
     private void CycleMark(MarkableCharVM cell)
@@ -365,6 +423,7 @@ public partial class MagicToolsViewModel : ViewModelBase
     private void ClearMarks()
     {
         foreach (var cell in CharCells) cell.ResetRole();
+        CurrentRole = null;
         SaveHint = "已清除全部标记";
     }
 
@@ -404,7 +463,10 @@ public partial class MagicToolsViewModel : ViewModelBase
             return;
         }
 
-        var pattern = PatternInferrer.Infer(RegexText, Samples.ToArray());
+        // 与参考实现 magic_tools.py 一致：测试/推断均基于不含扩展名的主文件名
+        var nameOnlySamples = Samples.Select(s => Path.GetFileNameWithoutExtension(s) ?? s).ToArray();
+
+        var pattern = PatternInferrer.Infer(RegexText, nameOnlySamples);
         if (pattern is null)
         {
             SaveHint = "正则无效：请先通过测试";
@@ -414,7 +476,8 @@ public partial class MagicToolsViewModel : ViewModelBase
 
         foreach (var sample in Samples)
         {
-            var date = PatternEngine.TryExtract(sample, pattern);
+            var nameWithoutExt = Path.GetFileNameWithoutExtension(sample);
+            var date = PatternEngine.TryExtract(nameWithoutExt, pattern);
             TestResults.Add(new RegexTestItem(sample, date is not null,
                 date is { } d ? d.ToString("yyyy-MM-dd HH:mm:ss") : "未命中"));
         }
@@ -453,7 +516,8 @@ public partial class MagicToolsViewModel : ViewModelBase
             return;
         }
 
-        var test = PatternInferrer.Infer(RegexText, Samples.ToArray())
+        var nameOnlySamples = Samples.Select(s => Path.GetFileNameWithoutExtension(s) ?? s).ToArray();
+        var test = PatternInferrer.Infer(RegexText, nameOnlySamples)
                    ?? new PatternDefinition { Pattern = RegexText };
         var existing = _patterns.FirstOrDefault(p => p.Name == PatternName);
         if (existing is not null) _patterns.Remove(existing);

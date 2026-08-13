@@ -25,7 +25,6 @@
             <Button Content="系统应用打开" Command="{Binding OpenWithSystemCommand}"/>
             <ProgressBar Value="{Binding MoveProgress}" Maximum="1" Width="160" VerticalAlignment="Center"
                          IsVisible="{Binding IsMoving}"/>
-            <TextBlock Text="{Binding MoveHint}" Classes="muted" VerticalAlignment="Center"/>
         </StackPanel>
 
         <!-- 文件列表 + 预览（高度随窗口剩余空间约束） -->

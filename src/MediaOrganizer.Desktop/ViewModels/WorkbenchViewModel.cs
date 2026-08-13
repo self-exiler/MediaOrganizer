@@ -34,6 +34,9 @@ public partial class WorkbenchViewModel : ViewModelBase
     private string _outputDir;
 
     [ObservableProperty]
+    private string _pendingDir;
+
+    [ObservableProperty]
     private bool _isBusy;
 
     [ObservableProperty]
@@ -93,6 +96,7 @@ public partial class WorkbenchViewModel : ViewModelBase
 
         _sourceDir = _config.Paths.SourceDir;
         _outputDir = _config.Paths.OutputDir;
+        _pendingDir = _config.Paths.PendingDir;
         _fixMtime = _config.Execute.FixMtime;
         _operationIndex = _config.Execute.Operation == FileOperation.Move ? 1 : 0;
         _existActionIndex = ExistIndex(_config.Execute.ExistAction);
@@ -178,6 +182,32 @@ public partial class WorkbenchViewModel : ViewModelBase
     private async Task BrowseOutputAsync()
     {
         if (await App.PickFolderAsync() is { } dir) OutputDir = dir;
+    }
+
+    [RelayCommand]
+    private async Task BrowsePendingAsync()
+    {
+        if (await App.PickFolderAsync() is { } dir) PendingDir = dir;
+    }
+
+    // ---- 目录变更实时保存 ----
+
+    partial void OnSourceDirChanged(string value)
+    {
+        _config.Paths.SourceDir = value;
+        _state.SaveConfig(notifyChanged: false);
+    }
+
+    partial void OnOutputDirChanged(string value)
+    {
+        _config.Paths.OutputDir = value;
+        _state.SaveConfig(notifyChanged: false);
+    }
+
+    partial void OnPendingDirChanged(string value)
+    {
+        _config.Paths.PendingDir = value;
+        _state.SaveConfig(notifyChanged: false);
     }
 
     [RelayCommand]

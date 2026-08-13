@@ -1,10 +1,10 @@
-using System.Collections.ObjectModel;
-using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MediaOrganizer.Core;
 using MediaOrganizer.Core.Configuration;
 using MediaOrganizer.Desktop.Services;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
 
 namespace MediaOrganizer.Desktop.ViewModels;
 
@@ -96,15 +96,6 @@ public partial class SettingsViewModel : ViewModelBase
     private string _networkHint = "";
 
     [ObservableProperty]
-    private string _sourceDir;
-
-    [ObservableProperty]
-    private string _outputDir;
-
-    [ObservableProperty]
-    private string _pendingDir;
-
-    [ObservableProperty]
     private int _maxYearsPast;
 
     [ObservableProperty]
@@ -129,18 +120,8 @@ public partial class SettingsViewModel : ViewModelBase
     private bool _scanAllFiles;
 
     [ObservableProperty]
-    private int _classificationLevelIndex;
-
-    [ObservableProperty]
-    private int _existActionIndex;
-
-    [ObservableProperty]
     private int _maxDegreeOfParallelism;
 
-    [ObservableProperty]
-    private bool _fixMtime;
-
-    /// <summary>文件执行并行度：0 = 自动（本地 2 / 网络 4）。</summary>
     [ObservableProperty]
     private int _executionParallelism;
 
@@ -150,41 +131,13 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     private string _patternSummary = "";
 
-    public string[] ClassificationLevelOptions { get; } = ["按日 2024/01/15", "按月 2024/01", "按年 2024"];
-    public string[] ExistActionOptions { get; } = ["跳过 skip", "覆盖 overwrite", "重命名 rename（_1、_2…）"];
-
     public SettingsViewModel(AppState state)
     {
         _state = state;
         _config = state.Config;
         _patterns = state.Patterns;
 
-        _sourceDir = _config.Paths.SourceDir;
-        _outputDir = _config.Paths.OutputDir;
-        _pendingDir = _config.Paths.PendingDir;
-        _maxYearsPast = _config.Extraction.MaxYearsPast;
-        _futureDateBufferDays = _config.Extraction.FutureDateBufferDays;
-        _progressInterval = _config.Scan.ProgressInterval;
-        _previewSize = _config.General.PreviewSize;
-        _themeIndex = ThemeIndexFromName(_config.General.Theme);
-        _windowSize = _config.General.WindowSize;
-        _supportedFormatsText = string.Join(", ", _config.Scan.SupportedFormats);
-        _scanAllFiles = _config.Scan.ScanAllFiles;
-        _classificationLevelIndex = _config.Execute.ClassificationLevel switch
-        {
-            ClassificationLevel.Month => 1,
-            ClassificationLevel.Year => 2,
-            _ => 0
-        };
-        _existActionIndex = _config.Execute.ExistAction switch
-        {
-            ExistAction.Overwrite => 1,
-            ExistAction.Rename => 2,
-            _ => 0
-        };
-        _maxDegreeOfParallelism = _config.Scan.MaxDegreeOfParallelism;
-        _fixMtime = _config.Execute.FixMtime;
-        _executionParallelism = _config.Execute.MaxDegreeOfParallelism;
+        LoadFromConfig();
 
         foreach (var s in _config.Extraction.Extractors)
         {
@@ -197,11 +150,78 @@ public partial class SettingsViewModel : ViewModelBase
         RefreshNetworkProfiles();
     }
 
+    private void LoadFromConfig()
+    {
+        _maxYearsPast = _config.Extraction.MaxYearsPast;
+        _futureDateBufferDays = _config.Extraction.FutureDateBufferDays;
+        _progressInterval = _config.Scan.ProgressInterval;
+        _previewSize = _config.General.PreviewSize;
+        _themeIndex = ThemeIndexFromName(_config.General.Theme);
+        _windowSize = _config.General.WindowSize;
+        _supportedFormatsText = string.Join(", ", _config.Scan.SupportedFormats);
+        _scanAllFiles = _config.Scan.ScanAllFiles;
+        _maxDegreeOfParallelism = _config.Scan.MaxDegreeOfParallelism;
+        _executionParallelism = _config.Execute.MaxDegreeOfParallelism;
+    }
+
     private void RefreshNetworkProfiles()
     {
         NetworkProfiles.Clear();
         foreach (var p in _config.NetworkProfiles)
             NetworkProfiles.Add(new NetworkProfileVM { Source = p });
+    }
+
+    // ---- 初始化默认配置 ----
+
+    [RelayCommand]
+    private void Initialize()
+    {
+        ResetConfigToDefaults(_config);
+        RestoreDefaultPatterns();
+        LoadFromConfig();
+        _state.SaveAll();
+        SaveHint = "已恢复默认配置与内置文件名模式";
+        _state.NotifyChanged();
+    }
+
+    private static void ResetConfigToDefaults(AppConfig config)
+    {
+        config.Version = AppConfig.CurrentVersion;
+
+        config.General.Theme = "Default";
+        config.General.WindowSize = "1280x760";
+        config.General.PreviewSize = 320;
+
+        config.Paths.SourceDir = "";
+        config.Paths.OutputDir = "";
+        config.Paths.PendingDir = "";
+        config.Paths.OutputNetworkProfile = "";
+
+        config.Scan.SupportedFormats =
+        [
+            "jpg", "jpeg", "png", "tiff", "tif", "bmp", "webp", "heic", "heif",
+            "mp4", "mov", "avi", "mkv", "wmv", "flv", "webm", "m4v", "mpg", "mpeg", "3gp", "3g2"
+        ];
+        config.Scan.ScanAllFiles = false;
+        config.Scan.ProgressInterval = 10;
+        config.Scan.MaxDegreeOfParallelism = 0;
+
+        config.Extraction.MaxYearsPast = 30;
+        config.Extraction.FutureDateBufferDays = 0;
+        config.Extraction.Extractors =
+        [
+            new() { Name = "Exif", Weight = 1.2 },
+            new() { Name = "FileName", Weight = 1.1 },
+            new() { Name = "FileSystem", Enabled = false, Weight = 0.8 }
+        ];
+
+        config.Execute.Operation = FileOperation.Copy;
+        config.Execute.ExistAction = ExistAction.Skip;
+        config.Execute.ClassificationLevel = ClassificationLevel.Day;
+        config.Execute.FixMtime = false;
+        config.Execute.MaxDegreeOfParallelism = 0;
+
+        // 注意：网络位置不随初始化清除，避免误删用户配置
     }
 
     // ---- 网络位置管理（FR-10）----
@@ -215,7 +235,7 @@ public partial class SettingsViewModel : ViewModelBase
         EditAddress = "";
         EditUsername = "";
         EditPassword = "";
-        NetworkHint = "支持 SMB（UNC 路径）与 WebDAV；FTP 不支持。密码 Windows 以 DPAPI 加密存储。";
+        NetworkHint = "支持 SMB（UNC 路径）与 WebDAV。密码 Windows 以 DPAPI 加密存储。";
         EditingNetwork = true;
     }
 
@@ -313,7 +333,7 @@ public partial class SettingsViewModel : ViewModelBase
     private NetworkProfile? BuildEditProfile()
     {
         if (string.IsNullOrWhiteSpace(EditName)) { NetworkHint = "请填写名称"; return null; }
-        if (string.IsNullOrWhiteSpace(EditAddress)) { NetworkHint = "请填写地址（SMB: \\\\server\\share；WebDAV: https://…）"; return null; }
+        if (string.IsNullOrWhiteSpace(EditAddress)) { NetworkHint = @"请填写地址（SMB: \\server\share；WebDAV: https://…）"; return null; }
         if (string.IsNullOrWhiteSpace(EditPassword) && _editingProfile is null) { NetworkHint = "请填写密码"; return null; }
 
         var isNew = _editingProfile is null;
@@ -348,7 +368,8 @@ public partial class SettingsViewModel : ViewModelBase
     {
         if (sender is not PatternSettingVM vm) return;
         PatternSummary = $"{_patterns.Count} 条 · {_patterns.Count(p => p.Enabled)} 启用";
-        SaveHint = $"「{vm.Name}」启用状态已即时生效；如需保留请点「保存配置」";
+        SaveHint = $"「{vm.Name}」启用状态已即时生效并保存";
+        _state.SavePatterns();
         _state.NotifyChanged(); // 触发工作台链重建提示
     }
 
@@ -358,7 +379,8 @@ public partial class SettingsViewModel : ViewModelBase
         _patterns.RemoveAll(p => p.Name == vm.Name);
         Patterns.Remove(vm);
         RefreshPatterns();
-        SaveHint = $"已删除「{vm.Name}」；点「保存配置」写入 patterns.json";
+        SaveHint = $"已删除「{vm.Name}」并保存";
+        _state.SavePatterns();
         _state.NotifyChanged();
     }
 
@@ -372,7 +394,8 @@ public partial class SettingsViewModel : ViewModelBase
                 _patterns.Add(builtin);
         }
         RefreshPatterns();
-        SaveHint = "已恢复全部内置模式；点「保存配置」写入 patterns.json";
+        SaveHint = "已恢复全部内置模式并保存";
+        _state.SavePatterns();
         _state.NotifyChanged();
     }
 
@@ -388,12 +411,68 @@ public partial class SettingsViewModel : ViewModelBase
 
         setting.Enabled = vm.Enabled;
         setting.Weight = vm.Weight;
-        SaveHint = $"「{vm.Name}」{Describe(e.PropertyName)}已即时生效；如需保留请点「保存配置」";
+        SaveHint = $"「{vm.Name}」{Describe(e.PropertyName)}已即时生效并保存";
+        _state.SaveConfig(notifyChanged: false);
         _state.NotifyChanged(); // 触发工作台链重建提示
     }
 
     private static string Describe(string? property)
         => property == nameof(ExtractorSettingVM.Weight) ? "权重" : "启用状态";
+
+    // ---- 配置项变更实时保存 ----
+
+    partial void OnMaxYearsPastChanged(int value)
+    {
+        _config.Extraction.MaxYearsPast = value;
+        SaveHint = "最多追溯年限已保存";
+        _state.SaveConfig();
+    }
+
+    partial void OnFutureDateBufferDaysChanged(int value)
+    {
+        _config.Extraction.FutureDateBufferDays = value;
+        SaveHint = "未来缓冲天数已保存";
+        _state.SaveConfig();
+    }
+
+    partial void OnProgressIntervalChanged(int value)
+    {
+        _config.Scan.ProgressInterval = value;
+        SaveHint = "进度间隔已保存";
+        _state.SaveConfig(notifyChanged: false);
+    }
+
+    partial void OnMaxDegreeOfParallelismChanged(int value)
+    {
+        _config.Scan.MaxDegreeOfParallelism = value;
+        SaveHint = "扫描并发数已保存";
+        _state.SaveConfig(notifyChanged: false);
+    }
+
+    partial void OnExecutionParallelismChanged(int value)
+    {
+        _config.Execute.MaxDegreeOfParallelism = value;
+        SaveHint = "执行并发数已保存";
+        _state.SaveConfig(notifyChanged: false);
+    }
+
+    partial void OnScanAllFilesChanged(bool value)
+    {
+        _config.Scan.ScanAllFiles = value;
+        SaveHint = "扫描所有文件选项已保存";
+        _state.SaveConfig();
+    }
+
+    partial void OnSupportedFormatsTextChanged(string value)
+    {
+        _config.Scan.SupportedFormats = value
+            .Split(',', '，', ' ', ';')
+            .Select(s => s.Trim().TrimStart('.'))
+            .Where(s => s.Length > 0)
+            .ToList();
+        SaveHint = "扩展名白名单已保存";
+        _state.SaveConfig();
+    }
 
     /// <summary>主题切换即时生效（不等保存）。</summary>
     partial void OnThemeIndexChanged(int value)
@@ -401,6 +480,22 @@ public partial class SettingsViewModel : ViewModelBase
         var theme = ThemeNameFromIndex(value);
         _config.General.Theme = theme;
         ThemeHelper.Apply(theme);
+        SaveHint = "主题已保存";
+        _state.SaveConfig(notifyChanged: false);
+    }
+
+    partial void OnWindowSizeChanged(string value)
+    {
+        _config.General.WindowSize = string.IsNullOrWhiteSpace(value) ? "1280x760" : value.Trim();
+        SaveHint = "窗口尺寸已保存";
+        _state.SaveConfig(notifyChanged: false);
+    }
+
+    partial void OnPreviewSizeChanged(int value)
+    {
+        _config.General.PreviewSize = value;
+        SaveHint = "预览图大小已保存";
+        _state.SaveConfig(notifyChanged: false);
     }
 
     private static string ThemeNameFromIndex(int index) => index switch
@@ -416,71 +511,4 @@ public partial class SettingsViewModel : ViewModelBase
         "Light" => 1,
         _ => 0
     };
-
-    [RelayCommand]
-    private async Task BrowseSourceAsync()
-    {
-        if (await App.PickFolderAsync() is { } dir) SourceDir = dir;
-    }
-
-    [RelayCommand]
-    private async Task BrowseOutputAsync()
-    {
-        if (await App.PickFolderAsync() is { } dir) OutputDir = dir;
-    }
-
-    [RelayCommand]
-    private async Task BrowsePendingAsync()
-    {
-        if (await App.PickFolderAsync() is { } dir) PendingDir = dir;
-    }
-
-    [RelayCommand]
-    private void SaveConfig()
-    {
-        ApplyToConfig();
-
-        _config.Extraction.Extractors = Extractors
-            .Select(e => new ExtractorSetting { Name = e.Name, Enabled = e.Enabled, Weight = e.Weight })
-            .ToList();
-
-        _state.SaveAll();
-        SaveHint = "已保存到 config.json 与 patterns.json";
-        _state.NotifyChanged();
-    }
-
-    /// <summary>保存前的收集：把 VM 状态写回共享 config（SaveConfig 调用）。</summary>
-    private void ApplyToConfig()
-    {
-        _config.Paths.SourceDir = SourceDir;
-        _config.Paths.OutputDir = OutputDir;
-        _config.Paths.PendingDir = PendingDir;
-        _config.Extraction.MaxYearsPast = MaxYearsPast;
-        _config.Extraction.FutureDateBufferDays = FutureDateBufferDays;
-        _config.Scan.ProgressInterval = ProgressInterval;
-        _config.Scan.MaxDegreeOfParallelism = MaxDegreeOfParallelism;
-        _config.Scan.ScanAllFiles = ScanAllFiles;
-        _config.Scan.SupportedFormats = SupportedFormatsText
-            .Split(',', '，', ' ', ';')
-            .Select(s => s.Trim().TrimStart('.'))
-            .Where(s => s.Length > 0)
-            .ToList();
-        _config.Execute.ClassificationLevel = ClassificationLevelIndex switch
-        {
-            1 => ClassificationLevel.Month,
-            2 => ClassificationLevel.Year,
-            _ => ClassificationLevel.Day
-        };
-        _config.Execute.ExistAction = ExistActionIndex switch
-        {
-            1 => ExistAction.Overwrite,
-            2 => ExistAction.Rename,
-            _ => ExistAction.Skip
-        };
-        _config.Execute.FixMtime = FixMtime;
-        _config.Execute.MaxDegreeOfParallelism = ExecutionParallelism;
-        _config.General.PreviewSize = PreviewSize;
-        _config.General.WindowSize = string.IsNullOrWhiteSpace(WindowSize) ? "1280x760" : WindowSize.Trim();
-        _config.General.Theme = ThemeNameFromIndex(ThemeIndex);
-    }
 }

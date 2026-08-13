@@ -11,7 +11,7 @@
                 <TextBlock Classes="muted" Text="{Binding ReportMeta}" Margin="0,4,0,0"/>
             </StackPanel>
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                <Button Classes="accent" Content="另存为…" Command="{Binding SaveReportCommand}"/>
+                <Button Content="另存为…" Command="{Binding SaveReportCommand}"/>
             </StackPanel>
         </DockPanel>
 

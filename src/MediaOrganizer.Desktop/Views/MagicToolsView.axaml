@@ -166,7 +166,6 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
 
-                            <TextBlock Text="{Binding SaveHint}" FontSize="11" Foreground="#0067C0" TextWrapping="Wrap"/>
                             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                                 <TextBlock Grid.Column="0" Text="规则名称" VerticalAlignment="Center" Classes="muted"/>
                                 <TextBox Grid.Column="1" Text="{Binding PatternName}" PlaceholderText="例如：微信导出时间戳"/>

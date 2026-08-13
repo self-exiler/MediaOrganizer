@@ -13,17 +13,15 @@
                     <TextBlock Classes="h1" Text="整理工作台"/>
                     <TextBlock Classes="muted" Text="扫描源目录 → 提取拍摄日期 → 按日期归档" Margin="0,4,0,0"/>
                 </StackPanel>
-                <TextBlock DockPanel.Dock="Right" Text="{Binding StatusText}" Classes="muted"
-                           VerticalAlignment="Bottom" HorizontalAlignment="Right"/>
             </DockPanel>
 
             <!-- 目录与扫描 -->
             <Border Classes="card">
                 <StackPanel Spacing="10">
                     <TextBlock Classes="h2" Text="目录"/>
-                    <Grid ColumnDefinitions="70,*,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="10">
+                    <Grid ColumnDefinitions="70,*,Auto" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="10">
                         <TextBlock Grid.Row="0" Grid.Column="0" Text="源目录" VerticalAlignment="Center" Classes="muted"/>
-                        <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding SourceDir}" PlaceholderText="选择包含照片/视频的文件夹"/>
+                        <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding SourceDir, UpdateSourceTrigger=LostFocus}" PlaceholderText="选择包含照片/视频的文件夹"/>
                         <Button Grid.Row="0" Grid.Column="2" Content="浏览…" Command="{Binding BrowseSourceCommand}"/>
 
                         <TextBlock Grid.Row="1" Grid.Column="0" Text="输出目标" VerticalAlignment="Center" Classes="muted"/>
@@ -33,11 +31,15 @@
                                 IsEnabled="{Binding IsMoveAllowed}"/>
 
                         <TextBlock Grid.Row="2" Grid.Column="0" Text="输出目录" VerticalAlignment="Center" Classes="muted"/>
-                        <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding OutputDir}" PlaceholderText="按日期归档的目标文件夹（本地路径）"
+                        <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding OutputDir, UpdateSourceTrigger=LostFocus}" PlaceholderText="按日期归档的目标文件夹（本地路径）"
                                  IsEnabled="{Binding IsMoveAllowed}"/>
                         <TextBlock Grid.Row="2" Grid.Column="2" Text="网络位置仅支持复制" Classes="muted" FontSize="11"
                                    VerticalAlignment="Center" HorizontalAlignment="Right"
                                    IsVisible="{Binding !IsMoveAllowed}"/>
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="待处理" VerticalAlignment="Center" Classes="muted"/>
+                        <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding PendingDir, UpdateSourceTrigger=LostFocus}" PlaceholderText="失败文件批量移入的文件夹"/>
+                        <Button Grid.Row="3" Grid.Column="2" Content="浏览…" Command="{Binding BrowsePendingCommand}"/>
                     </Grid>
                     <StackPanel Orientation="Horizontal" Spacing="10">
                         <Button Classes="accent" Content="▶ 开始分析" Command="{Binding AnalyzeCommand}" IsEnabled="{Binding !IsBusy}"/>
@@ -97,7 +99,7 @@
                         </StackPanel>
                     </Grid>
 
-                    <CheckBox Content="将目标文件修改时间设为拍摄日期（mtime 矫正）" IsChecked="{Binding FixMtime}"/>
+                    <CheckBox Content="将目标文件修改时间设为拍摄日期" IsChecked="{Binding FixMtime}"/>
 
                     <Border Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
                             CornerRadius="6" Padding="12,8">

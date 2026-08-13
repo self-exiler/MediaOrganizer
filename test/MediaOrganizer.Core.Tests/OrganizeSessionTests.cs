@@ -121,7 +121,8 @@ public class PatternInferrerTests
         };
         var p = PatternInferrer.GenerateFromMarks("mm_20240115", cells);
         Assert.NotNull(p);
-        Assert.Equal(@"mm_(\d{4})(\d{2})(\d{2})", p!.Pattern);
+        // 与参考实现 magic_tools.py 一致：未标记间隙用 (?:.*) 通配，^...$ 锚定
+        Assert.Equal(@"^(?:.*)(\d{4})(\d{2})(\d{2})$", p!.Pattern);
         Assert.Equal(1, p.GroupMapping["year"]);
         Assert.Equal(3, p.GroupMapping["day"]);
     }

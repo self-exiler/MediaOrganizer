@@ -1,4 +1,3 @@
-﻿using System.Collections.ObjectModel;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using MediaOrganizer.Core;
@@ -6,6 +5,7 @@ using MediaOrganizer.Core.Configuration;
 using MediaOrganizer.Core.Logging;
 using MediaOrganizer.Desktop.Icons;
 using MediaOrganizer.Desktop.Services;
+using System.Collections.ObjectModel;
 
 namespace MediaOrganizer.Desktop.ViewModels;
 
@@ -15,6 +15,7 @@ public sealed record NavItem(string Title, Geometry Icon, ViewModelBase ViewMode
 public partial class MainWindowViewModel : ViewModelBase
 {
     private readonly AppLogger _logger;
+    private ViewModelBase? _currentVm;
 
     public AppState State { get; }
     public WorkbenchViewModel Workbench { get; }
@@ -32,11 +33,15 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private NavItem? _selectedNav;
 
+    [ObservableProperty]
+    private string _statusMessage = "就绪";
+
     public MainWindowViewModel()
     {
-        var baseDir = AppContext.BaseDirectory;
-        var configPath = Path.Combine(baseDir, "config.json");
-        var patternsPath = Path.Combine(baseDir, "patterns.json");
+        var appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MediaOrganizer");
+        Directory.CreateDirectory(appData);
+        var configPath = Path.Combine(appData, "config.json");
+        var patternsPath = Path.Combine(appData, "patterns.json");
 
         State = AppState.Load(configPath, patternsPath);
         _logger = new AppLogger();
@@ -77,4 +82,37 @@ public partial class MainWindowViewModel : ViewModelBase
         SelectedNav = NavItems[0];
         _logger.Info("MediaOrganizer 启动完成");
     }
+
+    partial void OnSelectedNavChanged(NavItem? value)
+    {
+        if (_currentVm is not null)
+            _currentVm.PropertyChanged -= OnCurrentVmPropertyChanged;
+
+        _currentVm = value?.ViewModel;
+
+        if (_currentVm is not null)
+        {
+            _currentVm.PropertyChanged += OnCurrentVmPropertyChanged;
+            StatusMessage = GetStatusText(_currentVm);
+        }
+        else
+        {
+            StatusMessage = "就绪";
+        }
+    }
+
+    private void OnCurrentVmPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is "StatusText" or "MoveHint" or "SaveHint")
+            StatusMessage = GetStatusText(_currentVm);
+    }
+
+    private static string GetStatusText(ViewModelBase? vm) => vm switch
+    {
+        WorkbenchViewModel w => string.IsNullOrEmpty(w.StatusText) ? "就绪" : w.StatusText,
+        FailedFilesViewModel f => string.IsNullOrEmpty(f.MoveHint) ? "就绪" : f.MoveHint,
+        MagicToolsViewModel m => string.IsNullOrEmpty(m.SaveHint) ? "就绪" : m.SaveHint,
+        SettingsViewModel s => string.IsNullOrEmpty(s.SaveHint) ? "就绪" : s.SaveHint,
+        _ => "就绪"
+    };
 }

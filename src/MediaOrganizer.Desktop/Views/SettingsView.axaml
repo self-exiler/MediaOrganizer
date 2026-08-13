@@ -11,11 +11,9 @@
                 <TextBlock Classes="muted" Text="提取器链 / 文件名模式 / 系统 / 界面" Margin="0,4,0,0"/>
             </StackPanel>
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                <Button Content="保存配置" Classes="accent" Command="{Binding SaveConfigCommand}"/>
+                <Button Content="初始化默认配置" Command="{Binding InitializeCommand}"/>
             </StackPanel>
         </DockPanel>
-
-        <TextBlock DockPanel.Dock="Top" Text="{Binding SaveHint}" Foreground="#107C10" FontSize="11" Margin="0,-6,0,8"/>
 
         <TabControl Margin="0,8,0,0">
             <TabItem Header="提取器">
@@ -74,7 +72,7 @@
                                     </StackPanel>
                                 </Grid>
                                 <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
-                                           Text="分析时按权重降序依次尝试。勾选/取消即时生效；删除后点「保存配置」写入 patterns.json。"/>
+                                           Text="分析时按权重降序依次尝试。勾选/取消即时生效；删除后自动保存。"/>
                                 <Grid ColumnDefinitions="Auto,140,1*,70,60,56" ColumnSpacing="8" Margin="0,4,0,0">
                                     <TextBlock Grid.Column="0" Text="启用" Classes="muted" FontSize="11"/>
                                     <TextBlock Grid.Column="1" Text="名称" Classes="muted" FontSize="11"/>
@@ -112,31 +110,11 @@
                     <StackPanel Spacing="14" Margin="0,12,0,0">
                         <Border Classes="card">
                             <StackPanel Spacing="10">
-                                <TextBlock Classes="h2" Text="路径"/>
-                                <Grid ColumnDefinitions="90,1*,Auto" ColumnSpacing="8" RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
-                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="源目录" VerticalAlignment="Center" Classes="muted"/>
-                                    <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding SourceDir}"/>
-                                    <Button Grid.Row="0" Grid.Column="2" Content="浏览…" Command="{Binding BrowseSourceCommand}"/>
-
-                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="输出目录" VerticalAlignment="Center" Classes="muted"/>
-                                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding OutputDir}"/>
-                                    <Button Grid.Row="1" Grid.Column="2" Content="浏览…" Command="{Binding BrowseOutputCommand}"/>
-
-                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="待处理" VerticalAlignment="Center" Classes="muted"/>
-                                    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding PendingDir}"/>
-                                    <Button Grid.Row="2" Grid.Column="2" Content="浏览…" Command="{Binding BrowsePendingCommand}"/>
-                                </Grid>
-                            </StackPanel>
-                        </Border>
-                        <Border Classes="card">
-                            <StackPanel Spacing="10">
                                 <Grid ColumnDefinitions="1*,Auto" ColumnSpacing="8">
                                     <TextBlock Classes="h2" Text="网络位置" VerticalAlignment="Center"/>
                                     <Button Grid.Column="1" Content="＋ 添加网络位置" Classes="accent"
                                             Command="{Binding BeginAddNetworkCommand}"/>
                                 </Grid>
-                                <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
-                                           Text="SMB（UNC 路径）与 WebDAV；FTP 不支持。选择网络目标后归档仅支持复制。密码在 Windows 以 DPAPI 加密存储。"/>
                                 <ItemsControl ItemsSource="{Binding NetworkProfiles}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="vm:NetworkProfileVM">
@@ -178,7 +156,7 @@
 
                                             <TextBlock Grid.Row="2" Grid.Column="0" Text="地址" VerticalAlignment="Center" Classes="muted"/>
                                             <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding EditAddress}"
-                                                     PlaceholderText="SMB: \\\\192.168.1.10\\photos　WebDAV: https://dav.xxx.com/dav/photos"
+                                                     PlaceholderText="SMB: \\192.168.1.10\photos　WebDAV: https://dav.xxx.com/dav/photos"
                                                      FontFamily="Cascadia Code, Consolas, monospace"/>
 
                                             <TextBlock Grid.Row="3" Grid.Column="0" Text="用户名" VerticalAlignment="Center" Classes="muted"/>
@@ -200,7 +178,7 @@
                         <Border Classes="card">
                             <StackPanel Spacing="10">
                                 <TextBlock Classes="h2" Text="扫描与执行"/>
-                                <Grid ColumnDefinitions="140,180,Auto" ColumnSpacing="8" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
+                                <Grid ColumnDefinitions="140,180,Auto" ColumnSpacing="8" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
                                     <TextBlock Grid.Row="0" Grid.Column="0" Text="进度间隔" VerticalAlignment="Center" Classes="muted"/>
                                     <NumericUpDown Grid.Row="0" Grid.Column="1" Value="{Binding ProgressInterval}" Minimum="1" Maximum="1000"/>
                                     <TextBlock Grid.Row="0" Grid.Column="2" Text="个文件" VerticalAlignment="Center" Classes="muted"/>
@@ -213,19 +191,10 @@
                                     <NumericUpDown Grid.Row="2" Grid.Column="1" Value="{Binding ExecutionParallelism}" Minimum="0" Maximum="64"/>
                                     <TextBlock Grid.Row="2" Grid.Column="2" Text="0 = 自动（本地2/网络4）" VerticalAlignment="Center" Classes="muted"/>
 
-                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="目录分级" VerticalAlignment="Center" Classes="muted"/>
-                                    <ComboBox Grid.Row="3" Grid.Column="1" ItemsSource="{Binding ClassificationLevelOptions}"
-                                              SelectedIndex="{Binding ClassificationLevelIndex}"/>
-
-                                    <TextBlock Grid.Row="4" Grid.Column="0" Text="同名处理" VerticalAlignment="Center" Classes="muted"/>
-                                    <ComboBox Grid.Row="4" Grid.Column="1" ItemsSource="{Binding ExistActionOptions}"
-                                              SelectedIndex="{Binding ExistActionIndex}"/>
-
-                                    <CheckBox Grid.Row="5" Grid.Column="1" Content="扫描所有文件（忽略扩展名白名单）" IsChecked="{Binding ScanAllFiles}"/>
-                                    <CheckBox Grid.Row="6" Grid.Column="1" Content="矫正文件修改时间为拍摄日期" IsChecked="{Binding FixMtime}"/>
+                                    <CheckBox Grid.Row="3" Grid.Column="1" Content="扫描所有文件（忽略扩展名白名单）" IsChecked="{Binding ScanAllFiles}"/>
                                 </Grid>
                                 <TextBlock Classes="muted" FontSize="11" Text="扩展名白名单（逗号分隔，留空 = 全部）："/>
-                                <TextBox Text="{Binding SupportedFormatsText}" FontSize="11.5"
+                                <TextBox Text="{Binding SupportedFormatsText, UpdateSourceTrigger=LostFocus}" FontSize="11.5"
                                          FontFamily="Cascadia Code, Consolas, monospace"/>
                             </StackPanel>
                         </Border>
@@ -245,12 +214,11 @@
                                               SelectedIndex="{Binding ThemeIndex}"/>
 
                                     <TextBlock Grid.Row="1" Grid.Column="0" Text="窗口尺寸" VerticalAlignment="Center" Classes="muted"/>
-                                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding WindowSize}" PlaceholderText="1280x760"/>
+                                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding WindowSize, UpdateSourceTrigger=LostFocus}" PlaceholderText="1280x760"/>
 
                                     <TextBlock Grid.Row="2" Grid.Column="0" Text="预览图大小" VerticalAlignment="Center" Classes="muted"/>
                                     <NumericUpDown Grid.Row="2" Grid.Column="1" Value="{Binding PreviewSize}" Minimum="100" Maximum="1024"/>
                                 </Grid>
-                                <TextBlock Classes="muted" FontSize="11" Text="首发仅简体中文；文本资源已外置（见 SRS NFR-8），英文将后续补充。"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>

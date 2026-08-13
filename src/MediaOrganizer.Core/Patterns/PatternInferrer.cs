@@ -79,49 +79,57 @@ public static class PatternInferrer
 
     /// <summary>
     /// FR-7.3：从交互圈选标记生成正则与 group_mapping。
-    /// 相邻同类标记合并为捕获组；数字区间生成 \d{n}，其他字符原样转义。
+    /// 与参考实现 magic_tools.py 的 _generate_improved_regex_pattern 一致：
+    ///  - 未标记的间隙用 (?:.*) 非捕获通配（Python 用捕获组 (.*)，此处用非捕获以保持组号正确）
+    ///  - 日期/时间戳段 → (\d{n})；必现段 → (转义文本)；忽略段 → (.*)
+    ///  - 以 ^...$ 锚定整条
     /// 返回 null 表示没有可生成的日期标记。
     /// </summary>
     public static PatternDefinition? GenerateFromMarks(string fileName, IReadOnlyList<CharCell> cells)
     {
         if (cells.Count == 0) return null;
 
-        var sb = new StringBuilder();
-        var map = new Dictionary<string, int>();
-        var ignored = new List<int>();
-        var group = 0;
-
+        // 收集所有已标记段（同角色连续合并）
+        var segments = new List<(int Start, int End, MarkRole Role)>();
         var i = 0;
         while (i < cells.Count)
         {
+            if (cells[i].Role == MarkRole.None) { i++; continue; }
             var role = cells[i].Role;
-            if (role == MarkRole.None)
-            {
-                sb.Append(Regex.Escape(cells[i].Char.ToString()));
-                i++;
-                continue;
-            }
-
-            // 收集同角色连续段
             var start = i;
             while (i < cells.Count && cells[i].Role == role) i++;
-            var segment = new string(cells.Skip(start).Take(i - start).Select(c => c.Char).ToArray());
+            segments.Add((start, i, role));
+        }
+
+        if (segments.Count == 0) return null;
+
+        var sb = new StringBuilder();
+        sb.Append('^');
+
+        var map = new Dictionary<string, int>();
+        var ignored = new List<int>();
+        var group = 0;
+        var currentPos = 0;
+
+        foreach (var (start, end, role) in segments)
+        {
+            // 间隙 → (?:.*) 非捕获通配（不占用组号，保持 group_mapping 正确）
+            if (start > currentPos)
+                sb.Append("(?:.*)");
+
+            var segment = new string(cells.Skip(start).Take(end - start).Select(c => c.Char).ToArray());
             group++;
 
             if (role == MarkRole.Ignore)
             {
                 ignored.Add(group);
                 sb.Append("(.*)");
-                continue;
             }
-
-            if (role == MarkRole.Required)
+            else if (role == MarkRole.Required)
             {
                 sb.Append($"({Regex.Escape(segment)})");
-                continue;
             }
-
-            if (role == MarkRole.Timestamp)
+            else if (role == MarkRole.Timestamp)
             {
                 sb.Append($"(\\d{{{segment.Length}}})");
                 map["timestamp"] = group;
@@ -131,9 +139,15 @@ public static class PatternInferrer
                 sb.Append($"(\\d{{{segment.Length}}})");
                 map[RoleKey(role)] = group;
             }
+
+            currentPos = end;
         }
 
-        if (map.Count == 0) return null;
+        // 尾部间隙 → (?:.*) 容忍扩展名等后缀
+        if (currentPos < cells.Count)
+            sb.Append("(?:.*)");
+
+        sb.Append('$');
 
         var pattern = new PatternDefinition
         {
@@ -143,7 +157,7 @@ public static class PatternInferrer
             GroupMapping = map,
             IgnoredGroups = ignored
         };
-        if (map.TryGetValue("timestamp", out var tsGroup))
+        if (map.TryGetValue("timestamp", out _))
             pattern.TimestampLength = cells.Where(c => c.Role == MarkRole.Timestamp).Count();
         return pattern;
     }

@@ -1,8 +1,7 @@
-using System.Collections.ObjectModel;
 using Avalonia.Threading;
-using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MediaOrganizer.Core.Logging;
+using System.Collections.ObjectModel;
 
 namespace MediaOrganizer.Desktop.ViewModels;
 
