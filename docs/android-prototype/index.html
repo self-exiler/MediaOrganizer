@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediaOrganizer · Android 界面原型</title>
+<style>
+  :root{
+    --accent:#0067c0; --accent-hover:#1975c5; --accent-press:#005a9e;
+    --bg:#f5f5f5; --card:#ffffff; --card-border:#e5e5e5;
+    --text:#1b1b1b; --text-2:#616161; --text-3:#8a8a8a;
+    --success:#107c10; --warning:#ca5010; --error:#c42b1c;
+    --rail:#fafafa; --radius:12px;
+    --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.12);
+    --shadow-lg:0 4px 20px rgba(0,0,0,.15);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:"Roboto","Microsoft YaHei",sans-serif;background:#333;color:var(--text);font-size:14px;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:20px;gap:20px;flex-wrap:wrap}
+
+  /* ===== 手机外框 ===== */
+  .phone{width:390px;height:780px;background:var(--bg);border-radius:32px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.3);position:relative;display:flex;flex-direction:column;border:8px solid #1a1a1a}
+
+  /* ===== AppBar ===== */
+  .appbar{height:56px;background:var(--accent);color:#fff;display:flex;align-items:center;padding:0 4px;flex-shrink:0;z-index:100;box-shadow:0 2px 4px rgba(0,0,0,.1)}
+  .appbar .icon-btn{width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:50%;cursor:pointer;font-size:20px;user-select:none;flex-shrink:0}
+  .appbar .icon-btn:hover{background:rgba(255,255,255,.15)}
+  .appbar .title{flex:1;font-size:18px;font-weight:500;padding-left:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  /* ===== 抽屉 ===== */
+  .drawer-overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:200;display:none}
+  .drawer-overlay.show{display:block}
+  .drawer{position:absolute;top:0;left:0;bottom:0;width:280px;background:var(--rail);z-index:201;transform:translateX(-100%);transition:transform .25s ease;display:flex;flex-direction:column;padding:8px 0;box-shadow:var(--shadow-lg)}
+  .drawer.show{transform:translateX(0)}
+  .drawer-header{display:flex;align-items:center;gap:12px;padding:16px 20px;margin-bottom:8px}
+  .drawer-header .logo{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#0067c0,#4fa3e3);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px}
+  .drawer-header .name{font-weight:600;font-size:15px}
+  .drawer-item{display:flex;align-items:center;gap:16px;padding:14px 20px;cursor:pointer;color:var(--text-2);user-select:none;font-size:14px;position:relative;min-height:48px}
+  .drawer-item:hover{background:rgba(0,0,0,.04)}
+  .drawer-item.active{background:rgba(0,103,192,.08);color:var(--accent);font-weight:500}
+  .drawer-item.active::before{content:"";position:absolute;left:0;top:20%;height:60%;width:3px;background:var(--accent);border-radius:2px}
+  .drawer-item .ico{font-size:20px;width:24px;text-align:center}
+  .drawer-item .badge{margin-left:auto;background:var(--error);color:#fff;font-size:11px;border-radius:10px;padding:2px 8px}
+  .drawer-sep{height:1px;background:var(--card-border);margin:8px 20px}
+  .drawer-footer{margin-top:auto;padding:14px 20px;font-size:11px;color:var(--text-3);border-top:1px solid var(--card-border)}
+
+  /* ===== 内容区 ===== */
+  .content{flex:1;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column}
+  .screen{display:none;flex:1;flex-direction:column;padding:16px}
+  .screen.show{display:flex}
+
+  /* ===== 卡片 ===== */
+  .card{background:var(--card);border:1px solid var(--card-border);border-radius:var(--radius);padding:16px;margin-bottom:12px;box-shadow:var(--shadow)}
+  .card h2{font-size:14px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .card h2 .tag{font-size:11px;font-weight:400;color:var(--text-3)}
+  .card h2 .link{margin-left:auto;font-size:12px;font-weight:400;color:var(--accent);cursor:pointer}
+
+  /* ===== 控件 ===== */
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 20px;border-radius:8px;border:none;font-size:14px;cursor:pointer;user-select:none;min-height:48px;flex:1}
+  .btn.primary{background:var(--accent);color:#fff}
+  .btn.primary:hover{background:var(--accent-hover)}
+  .btn.secondary{background:#f0f0f0;color:var(--text)}
+  .btn.danger{background:transparent;color:var(--error);border:1px solid var(--error)}
+  .btn:disabled{opacity:.4;pointer-events:none}
+  .btn.sm{padding:8px 14px;min-height:40px;font-size:13px;flex:0}
+  .btn-row{display:flex;gap:8px;margin-top:8px}
+
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+  .field:last-child{margin-bottom:0}
+  .field label{font-size:12px;color:var(--text-2);font-weight:500}
+  .input-box{display:flex;align-items:center;background:#f8f8f8;border:1px solid var(--card-border);border-radius:8px;padding:12px 14px;color:var(--text);gap:8px;min-height:48px;font-size:13px}
+  .input-box.mono{font-family:monospace;font-size:11px;word-break:break-all}
+  .input-box .pick-btn{margin-left:auto;color:var(--accent);font-size:12px;white-space:nowrap;cursor:pointer;font-weight:500;padding:6px 4px}
+
+  select{background:#f8f8f8;border:1px solid var(--card-border);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--text);width:100%;min-height:48px;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5l3 3 3-3' stroke='%23666' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;gap:12px}
+  .toggle-row .label{font-size:14px}
+  .toggle-row .sub{font-size:12px;color:var(--text-3)}
+  .toggle{width:44px;height:24px;border-radius:12px;background:#ccc;position:relative;cursor:pointer;transition:.2s;flex-shrink:0}
+  .toggle::after{content:"";position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:3px;left:3px;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+  .toggle.on{background:var(--accent)}
+  .toggle.on::after{left:23px}
+
+  /* 滑块 */
+  .slider-row{display:flex;align-items:center;gap:12px}
+  .slider-row .val{font-size:12px;color:var(--accent);font-weight:600;width:32px;text-align:right}
+  input[type=range]{flex:1;appearance:none;-webkit-appearance:none;height:24px;background:transparent;cursor:pointer}
+  input[type=range]::-webkit-slider-runnable-track{height:4px;background:#e0e0e0;border-radius:2px}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--accent);margin-top:-8px;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+
+  /* 统计 */
+  .stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:8px}
+  .stat{background:#fafafa;border:1px solid var(--card-border);border-radius:10px;padding:14px;text-align:center}
+  .stat .num{font-size:26px;font-weight:700;color:var(--accent)}
+  .stat .num.success{color:var(--success)}
+  .stat .num.error{color:var(--error)}
+  .stat .lbl{font-size:11px;color:var(--text-3);margin-top:2px}
+
+  /* 进度 */
+  .progress{height:6px;background:#e8e8e8;border-radius:3px;overflow:hidden;margin:8px 0}
+  .progress>div{height:100%;background:var(--accent);border-radius:3px;transition:width .3s}
+  .progress.indeterminate>div{width:40%!important;animation:slide 1.2s ease-in-out infinite}
+  @keyframes slide{0%{margin-left:-40%}100%{margin-left:100%}}
+
+  /* 步骤 */
+  .steps{display:flex;gap:0;margin-bottom:16px;padding:0 8px}
+  .step{flex:1;text-align:center;position:relative;color:var(--text-3);font-size:11px;padding-top:28px}
+  .step::before{content:attr(data-n);position:absolute;top:0;left:50%;transform:translateX(-50%);width:22px;height:22px;border-radius:50%;background:#e0e0e0;color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;font-weight:600}
+  .step::after{content:"";position:absolute;top:11px;left:calc(50% + 16px);right:calc(-50% + 16px);height:2px;background:#e0e0e0}
+  .step:last-child::after{display:none}
+  .step.done{color:var(--success)}.step.done::before{background:var(--success)}
+  .step.cur{color:var(--accent);font-weight:600}.step.cur::before{background:var(--accent)}
+
+  /* 原型状态切换（仅演示用） */
+  .seg{display:flex;background:#e9e9e9;border-radius:8px;padding:3px;margin-bottom:12px;gap:2px}
+  .seg button{flex:1;border:none;background:transparent;padding:8px 4px;border-radius:6px;font-size:12px;cursor:pointer;color:var(--text-2);min-height:36px}
+  .seg button.on{background:#fff;box-shadow:var(--shadow);color:var(--accent);font-weight:600}
+
+  /* InfoBar */
+  .infobar{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:8px;border:1px solid;margin-bottom:12px;font-size:13px}
+  .infobar.warn{background:#fff9f5;border-color:#f4d1bc;color:#8a3714}
+  .infobar.info{background:#f3f9fd;border-color:#c3dcf1;color:#0f4e7d}
+  .infobar.ok{background:#f2fbf2;border-color:#bfe6bf;color:#0b5a0b}
+
+  /* 列表 */
+  .group-title{font-size:11px;font-weight:600;color:var(--text-3);letter-spacing:.3px;padding:10px 4px 2px}
+  .list-item{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid #f0f0f0;cursor:pointer;min-height:48px}
+  .list-item:last-child{border-bottom:none}
+  .list-item .icon{width:36px;height:36px;border-radius:8px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+  .list-item .info{flex:1;min-width:0}
+  .list-item .name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .list-item .meta{font-size:11px;color:var(--text-3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .chip{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;margin-top:2px}
+  .chip.exif{background:#e8f2fb;color:#0f4e7d}
+  .chip.fn{background:#e9f7e9;color:#0b5a0b}
+  .chip.err{background:#fdeceb;color:#a4262c}
+  .chip.ok{background:#e9f7e9;color:#0b5a0b}
+  .chip.smb{background:#f3e9f7;color:#5a0b7c}
+
+  /* 勾选 */
+  .check{width:24px;height:24px;border:2px solid #c8c8c8;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;cursor:pointer}
+  .check.on{background:var(--accent);border-color:var(--accent)}
+
+  /* 展开详情 */
+  .detail{display:none;padding:2px 0 10px 36px;font-size:12px;color:var(--text-2);line-height:1.7}
+  .detail.show{display:block}
+  .detail .open-link{color:var(--accent);cursor:pointer;font-weight:500}
+
+  /* 底部操作栏 */
+  .bottom-bar{background:var(--card);border-top:1px solid var(--card-border);padding:12px 16px;display:flex;gap:8px;flex-shrink:0;margin:0 -16px -16px}
+  .bottom-bar .btn{flex:1}
+
+  /* 状态栏 */
+  .statusbar{height:32px;background:var(--card);border-top:1px solid var(--card-border);display:flex;align-items:center;padding:0 16px;gap:12px;font-size:11px;color:var(--text-2);flex-shrink:0}
+  .statusbar .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px}
+  .statusbar .dot.ok{background:var(--success)}.statusbar .dot.busy{background:var(--accent);animation:pulse 1s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+  .muted{color:var(--text-3)}
+  .small{font-size:12px}
+  .section-title{font-size:12px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px;padding:0 4px}
+
+  /* 报告文本 */
+  .report-text{font-family:monospace;font-size:11px;line-height:1.6;white-space:pre-wrap;color:var(--text)}
+</style>
+</head>
+<body>
+
+<!-- ==================== 屏幕组装说明 ==================== -->
+<div style="color:#999;font-size:12px;text-align:center;width:100%;margin-bottom:10px">
+  MediaOrganizer Android 界面原型 v2 · 4 屏 · 汉堡菜单切换页面 · 工作台顶部可切换 空态/进行态/完成态 · 失败文件可点击展开
+</div>
+
+<!-- ==================== 手机原型 ==================== -->
+<div class="phone">
+
+  <!-- AppBar -->
+  <div class="appbar">
+    <div class="icon-btn" onclick="toggleDrawer()">☰</div>
+    <div class="title" id="appbar-title">整理工作台</div>
+  </div>
+
+  <!-- 抽屉 -->
+  <div class="drawer-overlay" id="drawer-overlay" onclick="toggleDrawer()"></div>
+  <nav class="drawer" id="drawer">
+    <div class="drawer-header">
+      <div class="logo">🗂</div>
+      <div class="name">MediaOrganizer</div>
+    </div>
+    <div class="drawer-item active" data-screen="workbench" onclick="switchScreen('workbench')">
+      <span class="ico">🏠</span>整理工作台
+    </div>
+    <div class="drawer-item" data-screen="failed" onclick="switchScreen('failed')">
+      <span class="ico">⚠️</span>失败文件<span class="badge">23</span>
+    </div>
+    <div class="drawer-item" data-screen="report" onclick="switchScreen('report')">
+      <span class="ico">📄</span>分析报告
+    </div>
+    <div class="drawer-sep"></div>
+    <div class="drawer-item" data-screen="settings" onclick="switchScreen('settings')">
+      <span class="ico">⚙️</span>设置
+    </div>
+    <div class="drawer-footer">v1.0-android · 开源 MIT<br>APK 侧载分发（GitHub Release）</div>
+  </nav>
+
+  <!-- 内容区 -->
+  <div class="content">
+
+    <!-- ======== 屏幕 1：整理工作台 ======== -->
+    <div class="screen show" id="screen-workbench">
+      <div class="steps" id="wb-steps">
+        <div class="step done" data-n="1">选目录</div>
+        <div class="step done" data-n="2">分析</div>
+        <div class="step cur" data-n="3">执行</div>
+      </div>
+
+      <!-- 原型状态切换（仅演示） -->
+      <div class="seg">
+        <button onclick="setWbState('empty',this)">空态</button>
+        <button onclick="setWbState('running',this)">分析中</button>
+        <button class="on" onclick="setWbState('done',this)">完成态</button>
+      </div>
+
+      <!-- 目录设置 -->
+      <div class="card">
+        <h2>📁 目录</h2>
+        <div class="field">
+          <label>源目录（SAF）</label>
+          <div class="input-box mono">
+            content://com.android.externalstorage.documents/tree/primary%3APhotos
+            <span class="pick-btn">选取</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>输出目标</label>
+          <div class="input-box" style="padding:0;background:none;border:none;min-height:48px">
+            <select id="output-target" onchange="onTargetChange()">
+              <option value="local">本地目录（SAF）</option>
+              <option value="smb">SMB · 家里的NAS</option>
+              <option value="webdav">WebDAV · 坚果云</option>
+              <option value="add">+ 添加网络位置…</option>
+            </select>
+          </div>
+        </div>
+        <div class="infobar info" id="net-infobar" style="display:none;margin-bottom:14px">
+          ℹ️ 网络目标（SMB / WebDAV）仅支持「复制」，已自动切换并禁用移动。
+        </div>
+        <div class="field">
+          <label>待处理目录（失败文件）</label>
+          <div class="input-box mono">
+            content://.../tree/primary%3APending
+            <span class="pick-btn">选取</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 执行参数 -->
+      <div class="card">
+        <h2>⚙️ 执行参数</h2>
+        <div class="field">
+          <label>分级目录</label>
+          <select>
+            <option>按天（2024/01/15/）</option>
+            <option>按月（2024/01/）</option>
+            <option>按年（2024/）</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>操作类型</label>
+          <select id="op-select">
+            <option value="copy">复制（copy）</option>
+            <option value="move" id="op-move">移动（move）</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>同名处理</label>
+          <select>
+            <option>跳过（skip）</option>
+            <option>覆盖（overwrite）</option>
+            <option>重命名（rename）</option>
+          </select>
+        </div>
+        <div class="toggle-row">
+          <div>
+            <div class="label">mtime 矫正</div>
+            <div class="sub">将目标文件修改时间设为拍摄日期</div>
+          </div>
+          <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+        </div>
+      </div>
+
+      <!-- 空态 -->
+      <div class="wb-state" id="wb-empty" style="display:none">
+        <div class="infobar info">
+          👆 目录就绪。点击底部「开始分析」扫描源目录并提取拍摄日期；分析完成确认计划后再执行归档。
+        </div>
+      </div>
+
+      <!-- 分析中 -->
+      <div class="wb-state" id="wb-running" style="display:none">
+        <div class="card">
+          <h2>⏳ 正在分析…</h2>
+          <div class="progress indeterminate"><div></div></div>
+          <div class="small muted">已处理 642 / 1,247 · 成功 631 · 失败 11</div>
+          <div class="btn-row">
+            <button class="btn danger">✕ 取消分析</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 完成态：统计摘要 -->
+      <div class="wb-state" id="wb-done">
+        <div class="card">
+          <h2>📊 分析结果 <span class="tag">2026-08-13 14:30</span> <span class="link" onclick="switchScreen('failed')">查看 23 个失败 →</span></h2>
+          <div class="stat-grid">
+            <div class="stat"><div class="num">1,247</div><div class="lbl">总计</div></div>
+            <div class="stat"><div class="num success">1,224</div><div class="lbl">成功</div></div>
+            <div class="stat"><div class="num error">23</div><div class="lbl">失败</div></div>
+            <div class="stat"><div class="num">98.2%</div><div class="lbl">成功率</div></div>
+          </div>
+          <div class="progress"><div style="width:98%"></div></div>
+          <div class="small muted" style="margin-top:6px">来源：Exif 1,156 · FileName 68 · FileSystem 0</div>
+          <div class="infobar ok" style="margin:10px 0 0">
+            ✓ 计划：将对 1,224 个文件执行「复制」到 SMB · 家里的NAS（仅复制）
+          </div>
+        </div>
+      </div>
+
+      <div style="flex:1"></div>
+      <!-- 底部固定操作栏 -->
+      <div class="bottom-bar">
+        <button class="btn secondary" id="wb-btn-reanalyze" onclick="setWbState('running')">↻ 重新分析</button>
+        <button class="btn primary" id="wb-btn-main" onclick="onWbMain()">▶ 执行归档</button>
+      </div>
+    </div>
+
+    <!-- ======== 屏幕 2：失败文件 ======== -->
+    <div class="screen" id="screen-failed">
+      <div class="infobar warn">
+        ⚠️ 23 个文件未能提取日期，已按文件名结构指纹聚类。可批量移动到待处理目录，或在桌面版用魔术工具添加规则后重新分析。
+      </div>
+
+      <div class="card" style="padding:4px 16px 8px">
+        <div class="group-title">指纹 LDDD*.tif · 扫描件类（2）</div>
+        <div class="list-item" onclick="toggleDetail(this)">
+          <div class="check" onclick="event.stopPropagation();this.classList.toggle('on')"></div>
+          <div class="info">
+            <div class="name">scan001.tif</div>
+            <div class="meta">.../Photos/scan001.tif · 2.1MB</div>
+            <span class="chip err">NoValidDate</span>
+          </div>
+          <div class="icon">›</div>
+        </div>
+        <div class="detail">完整路径：content://.../Photos/scan001.tif<br>大小：2.1MB · 失败原因：所有提取器均未得到有效日期<br><span class="open-link">↗ 用系统应用打开</span></div>
+        <div class="list-item" onclick="toggleDetail(this)">
+          <div class="check" onclick="event.stopPropagation();this.classList.toggle('on')"></div>
+          <div class="info">
+            <div class="name">scan002.tif</div>
+            <div class="meta">.../Photos/scan002.tif · 1.9MB</div>
+            <span class="chip err">NoValidDate</span>
+          </div>
+          <div class="icon">›</div>
+        </div>
+        <div class="detail">完整路径：content://.../Photos/scan002.tif<br>大小：1.9MB · 失败原因：所有提取器均未得到有效日期<br><span class="open-link">↗ 用系统应用打开</span></div>
+
+        <div class="group-title">指纹 LLDL* · 相机导出类（2）</div>
+        <div class="list-item" onclick="toggleDetail(this)">
+          <div class="check" onclick="event.stopPropagation();this.classList.toggle('on')"></div>
+          <div class="info">
+            <div class="name">IMG_0001.HEIC</div>
+            <div class="meta">.../DCIM/IMG_0001.HEIC · 4.5MB</div>
+            <span class="chip err">NoValidDate</span>
+          </div>
+          <div class="icon">›</div>
+        </div>
+        <div class="detail">完整路径：content://.../DCIM/IMG_0001.HEIC<br>大小：4.5MB · 失败原因：EXIF 缺失且文件名无日期模式<br><span class="open-link">↗ 用系统应用打开</span></div>
+        <div class="list-item" onclick="toggleDetail(this)">
+          <div class="check" onclick="event.stopPropagation();this.classList.toggle('on')"></div>
+          <div class="info">
+            <div class="name">VID_export.mp4</div>
+            <div class="meta">.../Movies/VID_export.mp4 · 12.8MB</div>
+            <span class="chip err">NoValidDate</span>
+          </div>
+          <div class="icon">›</div>
+        </div>
+        <div class="detail">完整路径：content://.../Movies/VID_export.mp4<br>大小：12.8MB · 失败原因：容器元数据无拍摄日期<br><span class="open-link">↗ 用系统应用打开</span></div>
+
+        <div class="group-title">其余 19 个 · 已按指纹折叠</div>
+        <div class="list-item" onclick="toggleDetail(this)">
+          <div class="check" onclick="event.stopPropagation();this.classList.toggle('on')"></div>
+          <div class="info">
+            <div class="name">screenshot_edit.png 等 19 个文件</div>
+            <div class="meta">点击展开完整列表</div>
+            <span class="chip err">NoValidDate</span>
+          </div>
+          <div class="icon">›</div>
+        </div>
+        <div class="detail">screenshot_edit.png · document_scan.jpg · …（演示从略）</div>
+      </div>
+
+      <!-- 批量移动确认（点击后显示） -->
+      <div class="infobar warn" id="move-confirm" style="display:none;align-items:center">
+        <span style="flex:1">确认将选中的 5 个文件移动到待处理目录？（SAF 移动 = 复制 + 删除源）</span>
+        <button class="btn sm secondary" onclick="hideMoveConfirm()">取消</button>
+        <button class="btn sm primary" onclick="confirmMove()">确认</button>
+      </div>
+      <div class="infobar ok" id="move-done" style="display:none">
+        ✓ 已移动 5 个文件到待处理目录。
+      </div>
+
+      <div style="flex:1"></div>
+      <div class="bottom-bar">
+        <button class="btn secondary" onclick="selectAll(this)">全选</button>
+        <button class="btn primary" onclick="showMoveConfirm()">📁 批量移动到待处理</button>
+      </div>
+    </div>
+
+    <!-- ======== 屏幕 3：分析报告 ======== -->
+    <div class="screen" id="screen-report">
+      <div class="card">
+        <h2>📄 分析报告 <span class="tag">2026-08-13 14:30</span></h2>
+        <div class="report-text">媒体文件分析报告
+==================
+源目录:    content://.../Photos
+输出目标:  SMB · 家里的NAS（仅复制）
+分析时间:  2026-08-13 14:30:00
+
+总计: 1247  成功: 1224 (98.2%)  失败: 23
+
+按来源:
+  Exif        1156  (92.7%)
+  FileName      68  ( 5.5%)
+
+按年份:
+  2024  ████████████████  892
+  2023  ████████          234
+  2022  ██                 98
+
+按月分布:
+  2024-01  ████       156
+  2024-02  ██████     203
+  2024-03  ███        112
+
+失败文件（23）:
+  scan001.tif           NoValidDate
+  IMG_0001.HEIC         NoValidDate
+  VID_export.mp4        NoValidDate
+  ... 其余 20 个略</div>
+      </div>
+      <div class="small muted" style="margin-bottom:8px">报告自动保存于应用专有目录，可另存为或分享导出。</div>
+      <div style="flex:1"></div>
+      <div class="bottom-bar">
+        <button class="btn secondary">📥 另存为（SAF）</button>
+        <button class="btn primary">📤 分享</button>
+      </div>
+    </div>
+
+    <!-- ======== 屏幕 4：设置 ======== -->
+    <div class="screen" id="screen-settings">
+
+      <div class="section-title">提取器</div>
+      <div class="card">
+        <div class="toggle-row">
+          <div>
+            <div class="label">EXIF 提取器</div>
+            <div class="sub">照片 EXIF（ExifInterface）/ 视频容器元数据（TagLib）</div>
+          </div>
+          <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+        </div>
+        <div class="field">
+          <label>权重</label>
+          <div class="slider-row">
+            <input type="range" min="0" max="20" value="12" oninput="this.nextElementSibling.textContent=(this.value/10).toFixed(1)">
+            <span class="val">1.2</span>
+          </div>
+        </div>
+        <div class="toggle-row">
+          <div>
+            <div class="label">文件名提取器</div>
+            <div class="sub">用正则模式从文件名解析日期</div>
+          </div>
+          <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+        </div>
+        <div class="field">
+          <label>权重</label>
+          <div class="slider-row">
+            <input type="range" min="0" max="20" value="11" oninput="this.nextElementSibling.textContent=(this.value/10).toFixed(1)">
+            <span class="val">1.1</span>
+          </div>
+        </div>
+        <div class="toggle-row">
+          <div>
+            <div class="label">文件系统提取器</div>
+            <div class="sub">用文件修改时间兜底（默认禁用）</div>
+          </div>
+          <div class="toggle" onclick="this.classList.toggle('on')"></div>
+        </div>
+        <div class="field">
+          <label>最大年份回溯（max_years_past）</label>
+          <select><option>20 年</option><option selected>30 年</option><option>50 年</option></select>
+        </div>
+        <div class="field">
+          <label>未来日期缓冲（future_date_buffer_days）</label>
+          <select><option selected>0 天（未来日期归入 FutureDate/）</option><option>1 天</option><option>7 天</option></select>
+        </div>
+      </div>
+
+      <div class="section-title">文件名模式</div>
+      <div class="card" style="padding:8px 16px">
+        <div class="list-item">
+          <div class="icon" style="background:#e9f7e9">✓</div>
+          <div class="info">
+            <div class="name">微信导出</div>
+            <div class="meta">mm_export(\d{13}) · 内置</div>
+          </div>
+          <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+        </div>
+        <div class="list-item">
+          <div class="icon" style="background:#e9f7e9">✓</div>
+          <div class="info">
+            <div class="name">通用日期时间</div>
+            <div class="meta">(\d{4})[-_.](\d{1,2})... · 内置</div>
+          </div>
+          <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+        </div>
+        <div class="list-item">
+          <div class="icon" style="background:#e9f7e9">✓</div>
+          <div class="info">
+            <div class="name">小红书</div>
+            <div class="meta">(\d{4})(\d{2})(\d{2})... · 内置</div>
+          </div>
+          <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+        </div>
+        <div class="list-item">
+          <div class="icon" style="background:#f0f0f0">✓</div>
+          <div class="info">
+            <div class="name">OPPO 相机</div>
+            <div class="meta">IMG_(\d{4})(\d{2})... · 内置</div>
+          </div>
+          <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+        </div>
+        <div class="infobar info" style="margin:8px 0 0">
+          ℹ️ 如需新增自定义模式，请在桌面版魔术工具中编辑后把 patterns.json 复制到手机。
+        </div>
+      </div>
+
+      <div class="section-title">网络位置</div>
+      <div class="card" style="padding:8px 16px">
+        <div class="list-item">
+          <div class="icon">🖥</div>
+          <div class="info">
+            <div class="name">家里的 NAS</div>
+            <div class="meta"><span class="chip smb">SMB</span> \\192.168.1.10\photos</div>
+          </div>
+          <span class="chip ok" id="test-result-1" style="display:none;margin-right:6px">✓ 正常</span>
+          <button class="btn sm secondary" onclick="testConn(1)">测试</button>
+        </div>
+        <div class="list-item">
+          <div class="icon">🌐</div>
+          <div class="info">
+            <div class="name">坚果云</div>
+            <div class="meta"><span class="chip exif">WebDAV</span> https://dav.jianguoyun.com/dav</div>
+          </div>
+          <span class="chip ok" id="test-result-2" style="display:none;margin-right:6px">✓ 正常</span>
+          <button class="btn sm secondary" onclick="testConn(2)">测试</button>
+        </div>
+        <div class="btn-row" style="margin-top:8px">
+          <button class="btn secondary">+ 添加 SMB</button>
+          <button class="btn secondary">+ 添加 WebDAV</button>
+        </div>
+        <div class="infobar info" style="margin:8px 0 0">
+          ℹ️ 网络目标仅支持复制（copy）；SMB 首版需账号密码认证（不支持匿名）。
+        </div>
+      </div>
+
+      <div class="section-title">扫描参数</div>
+      <div class="card">
+        <div class="toggle-row">
+          <div>
+            <div class="label">扫描所有文件</div>
+            <div class="sub">忽略扩展名白名单</div>
+          </div>
+          <div class="toggle" onclick="this.classList.toggle('on')"></div>
+        </div>
+        <div class="field">
+          <label>扩展名白名单（逗号分隔）</label>
+          <div class="input-box mono">jpg, jpeg, png, heic, webp, mp4, mov</div>
+        </div>
+        <div class="field">
+          <label>扫描并行度</label>
+          <select><option selected>自动（8 核）</option><option>1（串行）</option><option>2</option><option>4</option><option>8</option></select>
+        </div>
+        <div class="field">
+          <label>执行并行度</label>
+          <select><option selected>自动（本地 2 / 网络 4）</option><option>1</option><option>2</option><option>4</option></select>
+        </div>
+      </div>
+
+      <div style="height:16px"></div>
+    </div>
+
+  </div><!-- /content -->
+
+  <!-- 状态栏 -->
+  <div class="statusbar">
+    <span><span class="dot ok" id="status-dot"></span><span id="status-text">就绪</span></span>
+    <span class="muted" id="status-detail">上次分析: 1,247 文件 · 成功 1,224</span>
+  </div>
+
+</div><!-- /phone -->
+
+<script>
+var wbState = 'done';
+
+function toggleDrawer(){
+  document.getElementById('drawer').classList.toggle('show');
+  document.getElementById('drawer-overlay').classList.toggle('show');
+}
+function switchScreen(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('show'));
+  document.getElementById('screen-'+name).classList.add('show');
+  document.querySelectorAll('.drawer-item').forEach(d=>d.classList.remove('active'));
+  document.querySelector('.drawer-item[data-screen="'+name+'"]').classList.add('active');
+  var titles={workbench:'整理工作台',failed:'失败文件',report:'分析报告',settings:'设置'};
+  document.getElementById('appbar-title').textContent=titles[name];
+  var d = document.getElementById('drawer');
+  if(d.classList.contains('show')) toggleDrawer();
+}
+
+/* 工作台三态演示 */
+function setWbState(state, btn){
+  wbState = state;
+  ['empty','running','done'].forEach(s=>{
+    document.getElementById('wb-'+s).style.display = (s===state)?'block':'none';
+  });
+  document.querySelectorAll('#screen-workbench .seg button').forEach(b=>b.classList.remove('on'));
+  if(btn) btn.classList.add('on');
+  else document.querySelectorAll('#screen-workbench .seg button')[['empty','running','done'].indexOf(state)].classList.add('on');
+
+  var main = document.getElementById('wb-btn-main');
+  var re = document.getElementById('wb-btn-reanalyze');
+  var steps = document.getElementById('wb-steps').children;
+  var dot = document.getElementById('status-dot');
+  var txt = document.getElementById('status-text');
+  var detail = document.getElementById('status-detail');
+  if(state==='empty'){
+    main.textContent='▶ 开始分析'; main.disabled=false; re.style.display='none';
+    steps[0].className='step cur'; steps[1].className='step'; steps[2].className='step';
+    dot.className='dot ok'; txt.textContent='就绪'; detail.textContent='尚未分析';
+  }else if(state==='running'){
+    main.textContent='分析中…'; main.disabled=true; re.style.display='none';
+    steps[0].className='step done'; steps[1].className='step cur'; steps[2].className='step';
+    dot.className='dot busy'; txt.textContent='正在分析'; detail.textContent='642 / 1,247';
+  }else{
+    main.textContent='▶ 执行归档'; main.disabled=false; re.style.display='';
+    steps[0].className='step done'; steps[1].className='step done'; steps[2].className='step cur';
+    dot.className='dot ok'; txt.textContent='就绪'; detail.textContent='上次分析: 1,247 文件 · 成功 1,224';
+  }
+}
+function onWbMain(){
+  if(wbState==='empty') setWbState('running');
+}
+
+/* 网络目标联动：禁用 move */
+function onTargetChange(){
+  var v = document.getElementById('output-target').value;
+  var isNet = (v==='smb'||v==='webdav');
+  document.getElementById('net-infobar').style.display = isNet?'flex':'none';
+  var moveOpt = document.getElementById('op-move');
+  moveOpt.disabled = isNet;
+  var op = document.getElementById('op-select');
+  if(isNet) op.value='copy';
+  if(v==='add'){ switchScreen('settings'); document.getElementById('output-target').value='local'; }
+}
+
+/* 失败文件交互 */
+function toggleDetail(item){
+  var d = item.nextElementSibling;
+  if(d && d.classList.contains('detail')) d.classList.toggle('show');
+}
+function selectAll(btn){
+  var checks = document.querySelectorAll('#screen-failed .check');
+  var allOn = Array.prototype.every.call(checks, c=>c.classList.contains('on'));
+  checks.forEach(c=>c.classList.toggle('on', !allOn));
+  btn.textContent = allOn ? '全选' : '取消全选';
+}
+function showMoveConfirm(){
+  document.getElementById('move-confirm').style.display='flex';
+  document.getElementById('move-done').style.display='none';
+}
+function hideMoveConfirm(){
+  document.getElementById('move-confirm').style.display='none';
+}
+function confirmMove(){
+  document.getElementById('move-confirm').style.display='none';
+  document.getElementById('move-done').style.display='flex';
+}
+
+/* 测试连接演示 */
+function testConn(n){
+  var chip = document.getElementById('test-result-'+n);
+  chip.style.display = chip.style.display==='none' ? 'inline-block' : 'none';
+}
+</script>
+</body>
+</html>

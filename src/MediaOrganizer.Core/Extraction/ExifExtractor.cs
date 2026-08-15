@@ -1,19 +1,24 @@
+#if !ANDROID
 using ImageMagick;
+#endif
 using MediaOrganizer.Core.Models;
 
 namespace MediaOrganizer.Core.Extraction;
 
-/// <summary>EXIF 提取器：图片用 Magick.NET 读 EXIF（jpg/png/tiff/webp/heic），视频用 TagLib 读容器元数据（FR-2.3）。</summary>
+/// <summary>EXIF 提取器：图片用 Magick.NET 读 EXIF（jpg/png/tiff/webp/heic），视频用 TagLib 读容器元数据（FR-2.3）。
+/// Android 下图片 EXIF 走 Android.Media.ExifInterface（由 Android 项目提供本类型的替代实现）。</summary>
 public sealed class ExifExtractor(bool enabled, double weight) : IDateExtractor
 {
     public string Name => "Exif";
     public bool Enabled { get; } = enabled;
     public double Weight { get; } = weight;
 
+#if !ANDROID
     // 按 EXIF 规范优先级：DateTimeOriginal → DateTimeDigitized → DateTime
     // 注：Magick.NET 14 中这些标签为 ExifTag<string>（值形如 "yyyy:MM:dd HH:mm:ss"）
     private static readonly ExifTag<string>[] DateTags =
         [ExifTag.DateTimeOriginal, ExifTag.DateTimeDigitized, ExifTag.DateTime];
+#endif
 
     private static readonly HashSet<string> VideoExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -25,6 +30,10 @@ public sealed class ExifExtractor(bool enabled, double weight) : IDateExtractor
             ? ExtractFromVideo(file.Path)
             : ExtractFromImage(file.Path);
 
+#if ANDROID
+    /// <summary>Android 不含 Magick.NET：图片 EXIF 由 Android 项目侧的 ExifInterface 实现接管，此处返回 null。</summary>
+    private static DateTimeOffset? ExtractFromImage(string path) => null;
+#else
     private static DateTimeOffset? ExtractFromImage(string path)
     {
         try
@@ -55,6 +64,7 @@ public sealed class ExifExtractor(bool enabled, double weight) : IDateExtractor
         }
         return null;
     }
+#endif
 
     private static DateTimeOffset? ExtractFromVideo(string path)
     {

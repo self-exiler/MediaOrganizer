@@ -152,11 +152,6 @@ public partial class MagicToolsViewModel : ViewModelBase
         SaveHint = $"已从失败文件载入 {names.Length} 个文件名样本";
     }
 
-    /// <summary>按钮入口：用最近一次分析结果作样本。</summary>
-    [RelayCommand]
-    private void LoadFromAnalysisResult()
-        => LoadFromAnalysisResult(_lastResult);
-
     /// <summary>手动选择 JSON 文件加载样本（参考实现 magic_tools.py）。</summary>
     [RelayCommand]
     private async Task BrowseJsonFile()
@@ -395,14 +390,6 @@ public partial class MagicToolsViewModel : ViewModelBase
         }
 
         SaveHint = $"已标记「{RoleLabel(role)}」（位置 {min}-{max}）；继续点击扩展，或选下一个角色";
-    }
-
-    [RelayCommand]
-    private void CycleMark(MarkableCharVM cell)
-    {
-        cell.AdvanceRole();
-        if (cell.Role != MarkRole.None)
-            SaveHint = $"已标记「{cell.Char}」为 {RoleLabel(cell.Role)}；点「从标记生成正则」";
     }
 
     private static string RoleLabel(MarkRole r) => r switch

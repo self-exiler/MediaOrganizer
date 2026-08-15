@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -8,8 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="14.16.0" />
+    <!-- Magick.NET 是原生库，不支持 Android；Android TFM 下自动排除，ExifExtractor 用 #if ANDROID 切换实现 -->
+    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="14.16.0" Condition="'$(TargetFramework)' != 'net10.0-android'" />
     <PackageReference Include="TagLibSharp" Version="2.3.0" />
+    <PackageReference Include="SMBLibrary" Version="1.5.7.1" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.0" />
     <PackageReference Include="WebDAVClient" Version="2.7.0" />
   </ItemGroup>

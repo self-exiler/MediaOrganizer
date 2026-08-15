@@ -1,6 +1,7 @@
 using MediaOrganizer.Core.Configuration;
 using MediaOrganizer.Core.Security;
 using MediaOrganizer.Core.Storage;
+using WebDAVClient.Helpers;
 
 namespace MediaOrganizer.Core;
 
@@ -45,6 +46,12 @@ public static class StorageFactory
             {
                 if (File.Exists(probe)) File.Delete(probe);
             }
+        }
+        catch (WebDAVException ex)
+        {
+            var code = ex.GetHttpCode();
+            var codeStr = code > 0 ? $" [HTTP {code}]" : "";
+            return (false, $"连接失败{codeStr}：{ex.Message}");
         }
         catch (Exception ex)
         {

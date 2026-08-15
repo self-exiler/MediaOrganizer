@@ -22,7 +22,7 @@ public sealed class WebDavFileStorage : IFileStorage
     }
 
     private string Resolve(string relativePath)
-        => _basePath + "/" + relativePath.TrimStart('/');
+        => _basePath.TrimEnd('/') + "/" + relativePath.TrimStart('/');
 
     private static string ParentOf(string relativePath)
     {
@@ -37,8 +37,9 @@ public sealed class WebDavFileStorage : IFileStorage
             var item = await _client.GetFile(Resolve(relativePath), ct);
             return item is not null;
         }
-        catch (WebDAVException)
+        catch (WebDAVException ex) when (ex.GetHttpCode() is 404 or 0)
         {
+            // 404 = 不存在；0 = 非 HTTP 错误（解析失败等）
             return false;
         }
         catch (HttpRequestException)
@@ -60,7 +61,8 @@ public sealed class WebDavFileStorage : IFileStorage
             {
                 try
                 {
-                    await _client.CreateDir(ParentOf(current), seg, ct);
+                    // 传入完整父路径（含 basePath），避免库内部拼接产生双斜杠
+                    await _client.CreateDir(Resolve(ParentOf(current)), seg, ct);
                 }
                 catch (WebDAVConflictException)
                 {

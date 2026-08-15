@@ -27,11 +27,6 @@
                 <Border x:Name="SamplePanel" Classes="card">
                     <DockPanel>
                         <TextBlock DockPanel.Dock="Top" Classes="h2" Text="样本"/>
-                        <StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="0,10,0,0">
-                            <Button Content="从失败文件载入" Command="{Binding LoadFromFailedFilesCommand}"/>
-                            <Button Content="从源目录载入" Command="{Binding LoadFromSourceDirCommand}"/>
-                            <Button Content="选择 JSON 文件" Command="{Binding BrowseJsonFileCommand}"/>
-                        </StackPanel>
                         <ListBox ItemsSource="{Binding Samples}" SelectedItem="{Binding SelectedSample}"
                                  BorderThickness="0" Background="Transparent" MinHeight="140">
                             <ListBox.ItemTemplate>
