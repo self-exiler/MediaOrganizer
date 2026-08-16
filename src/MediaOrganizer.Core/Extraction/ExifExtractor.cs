@@ -1,24 +1,17 @@
-#if !ANDROID
-using ImageMagick;
-#endif
 using MediaOrganizer.Core.Models;
+using MediaOrganizer.Core.Platforms;
 
 namespace MediaOrganizer.Core.Extraction;
 
-/// <summary>EXIF 提取器：图片用 Magick.NET 读 EXIF（jpg/png/tiff/webp/heic），视频用 TagLib 读容器元数据（FR-2.3）。
-/// Android 下图片 EXIF 走 Android.Media.ExifInterface（由 Android 项目提供本类型的替代实现）。</summary>
-public sealed class ExifExtractor(bool enabled, double weight) : IDateExtractor
+/// <summary>
+/// EXIF 提取器（FR-A2.1/FR-A2.3）：图片走注入的 IExifReader 读流（桌面 Magick.NET / Android ExifInterface），
+/// 视频走 TagLib# 经 StreamFileAbstraction 从 IMediaSource 流读容器元数据——提取器本体双端共享（ADR-0006 决策 2）。
+/// </summary>
+public sealed class ExifExtractor(bool enabled, double weight, IExifReader? exifReader) : IDateExtractor
 {
     public string Name => "Exif";
     public bool Enabled { get; } = enabled;
     public double Weight { get; } = weight;
-
-#if !ANDROID
-    // 按 EXIF 规范优先级：DateTimeOriginal → DateTimeDigitized → DateTime
-    // 注：Magick.NET 14 中这些标签为 ExifTag<string>（值形如 "yyyy:MM:dd HH:mm:ss"）
-    private static readonly ExifTag<string>[] DateTags =
-        [ExifTag.DateTimeOriginal, ExifTag.DateTimeDigitized, ExifTag.DateTime];
-#endif
 
     private static readonly HashSet<string> VideoExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -26,53 +19,37 @@ public sealed class ExifExtractor(bool enabled, double weight) : IDateExtractor
     };
 
     public DateTimeOffset? Extract(MediaFile file)
-        => VideoExtensions.Contains(Path.GetExtension(file.Path))
-            ? ExtractFromVideo(file.Path)
-            : ExtractFromImage(file.Path);
-
-#if ANDROID
-    /// <summary>Android 不含 Magick.NET：图片 EXIF 由 Android 项目侧的 ExifInterface 实现接管，此处返回 null。</summary>
-    private static DateTimeOffset? ExtractFromImage(string path) => null;
-#else
-    private static DateTimeOffset? ExtractFromImage(string path)
     {
+        var ext = Path.GetExtension(file.FileName);
+        return VideoExtensions.Contains(ext)
+            ? ExtractFromVideo(file)
+            : ExtractFromImage(file);
+    }
+
+    private DateTimeOffset? ExtractFromImage(MediaFile file)
+    {
+        if (exifReader is null || file.Source is null) return null;
         try
         {
-            using var image = new MagickImage();
-            image.Ping(path);
-            var profile = image.GetExifProfile();
-            if (profile is null) return null;
-
-            foreach (var tag in DateTags)
-            {
-                var value = profile.GetValue(tag);
-                if (value?.Value is string s && TryParseExifString(s, out var dt))
-                    return new DateTimeOffset(dt, TimeZoneInfo.Local.GetUtcOffset(dt));
-            }
-
-            // 兼容性兜底：部分文件 EXIF 值以字符串属性存储
-            foreach (var tag in DateTags)
-            {
-                var attr = image.GetAttribute($"exif:{tag}");
-                if (attr is not null && TryParseExifString(attr, out var dt2))
-                    return new DateTimeOffset(dt2, TimeZoneInfo.Local.GetUtcOffset(dt2));
-            }
+            using var stream = file.Source.OpenRead();
+            return exifReader.ReadImageExif(stream);
         }
         catch
         {
             // 损坏文件/无权限等：一律视为该提取器无结果
+            return null;
         }
-        return null;
     }
-#endif
 
-    private static DateTimeOffset? ExtractFromVideo(string path)
+    private static DateTimeOffset? ExtractFromVideo(MediaFile file)
     {
+        if (file.Source is null) return null;
         try
         {
-            using var file = TagLib.File.Create(path);
+            var abstraction = new TagLibStreamFileAbstraction(file.FileName, file.Source.OpenRead);
+            using var tagFile = TagLib.File.Create(abstraction);
             // 容器标签日期（QuickTime ©day / ID3 TDRC 等）；优先取完整日期，退化到年份兜底
-            var dt = file.Tag.DateTagged ?? YearOnly(file.Tag.Year);
+            var dt = tagFile.Tag.DateTagged ?? YearOnly(tagFile.Tag.Year);
             if (dt is { } d)
                 return new DateTimeOffset(DateTime.SpecifyKind(d, DateTimeKind.Unspecified),
                     TimeZoneInfo.Local.GetUtcOffset(d));
@@ -86,17 +63,4 @@ public sealed class ExifExtractor(bool enabled, double weight) : IDateExtractor
 
     private static DateTime? YearOnly(uint year)
         => year is >= 1970 and <= 2100 ? new DateTime((int)year, 1, 1) : null;
-
-    private static bool TryParseExifString(string value, out DateTime dt)
-    {
-        // EXIF 日期格式 "yyyy:MM:dd HH:mm:ss"
-        if (DateTime.TryParseExact(value.Trim(), "yyyy:MM:dd HH:mm:ss",
-                System.Globalization.CultureInfo.InvariantCulture,
-                System.Globalization.DateTimeStyles.None, out dt))
-            return true;
-        // 兼容 "yyyy:MM:dd"
-        return DateTime.TryParseExact(value.Trim(), "yyyy:MM:dd",
-            System.Globalization.CultureInfo.InvariantCulture,
-            System.Globalization.DateTimeStyles.None, out dt);
-    }
 }

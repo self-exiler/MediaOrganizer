@@ -2,16 +2,19 @@ using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using MediaOrganizer.Core;
 using MediaOrganizer.Core.Configuration;
+using MediaOrganizer.Core.Extraction;
 using MediaOrganizer.Core.Logging;
+using MediaOrganizer.Core.Platforms;
 using MediaOrganizer.Desktop.Icons;
 using MediaOrganizer.Desktop.Services;
+using MediaOrganizer.Shared.ViewModels;
 using System.Collections.ObjectModel;
 
 namespace MediaOrganizer.Desktop.ViewModels;
 
 public sealed record NavItem(string Title, Geometry Icon, ViewModelBase ViewModel);
 
-/// <summary>主窗口：左侧导航 + 各功能页。</summary>
+/// <summary>主窗口：左侧导航 + 各功能页。共享 VM（工作台/失败文件/报告/设置）来自 MediaOrganizer.Shared。</summary>
 public partial class MainWindowViewModel : ViewModelBase
 {
     private readonly AppLogger _logger;
@@ -47,11 +50,17 @@ public partial class MainWindowViewModel : ViewModelBase
         _logger = new AppLogger();
         ThemeHelper.Apply(State.Config.General.Theme);
 
-        Workbench = new WorkbenchViewModel(State, _logger);
-        FailedFiles = new FailedFilesViewModel(State, _logger);
+        // 桌面平台服务注入共享 VM（ADR-0006 决策 4）：目录选取/另存为/确认/系统打开/缩略图
+        var folderPicker = new DesktopFolderPicker();
+        Workbench = new WorkbenchViewModel(
+            State, _logger, folderPicker,
+            () => CoreFactory.CreateAnalyzer(State.Config, State.Patterns, null, new MagickExifReader()),
+            appData);
+        FailedFiles = new FailedFilesViewModel(State, _logger,
+            new DesktopConfirmDialog(), new DesktopSystemFileOpener(), new DesktopImageLoader());
         MagicTools = new MagicToolsViewModel(State);
-        Settings = new SettingsViewModel(State);
-        Report = new ReportViewModel();
+        Settings = new SettingsViewModel(State, ThemeHelper.Apply);
+        Report = new ReportViewModel(new DesktopFileSaver());
         Logs = new LogsViewModel(_logger);
 
         // 事件总线：分析完成 → 失败文件/报告刷新；规则或配置变更 → 工作台重建提取链

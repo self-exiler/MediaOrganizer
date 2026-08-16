@@ -25,5 +25,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MediaOrganizer.Core\MediaOrganizer.Core.csproj" />
+    <ProjectReference Include="..\MediaOrganizer.Shared\MediaOrganizer.Shared.csproj" />
   </ItemGroup>
 </Project>

@@ -1,0 +1,48 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:MediaOrganizer.Shared.ViewModels"
+             x:Class="MediaOrganizer.Android.Views.ReportView"
+             x:DataType="vm:ReportViewModel">
+    <UserControl.Resources>
+        <SolidColorBrush x:Key="AccentBrush" Color="#0067C0"/>
+        <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="DividerBrush" Color="#E5E5E5"/>
+        <SolidColorBrush x:Key="MutedBrush" Color="#8A8A8A"/>
+        <SolidColorBrush x:Key="TextBrush" Color="#1B1B1B"/>
+    </UserControl.Resources>
+
+    <Grid RowDefinitions="*,Auto" Background="#F5F5F5">
+        <ScrollViewer>
+            <StackPanel Margin="16,12" Spacing="10">
+                <Border Background="{StaticResource CardBrush}" CornerRadius="12" Padding="16"
+                        BorderBrush="{StaticResource DividerBrush}" BorderThickness="1">
+                    <StackPanel Spacing="10">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="分析报告" FontSize="14" FontWeight="SemiBold"
+                                       Foreground="{StaticResource TextBrush}"/>
+                            <TextBlock Text="{Binding ReportMeta}" FontSize="11"
+                                       Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis" MaxWidth="220"/>
+                        </StackPanel>
+                        <!-- 等宽文本报告（FR-A4 展示 / FR-A4.3 导出） -->
+                        <TextBlock Text="{Binding ReportText}" FontSize="11" LineHeight="18"
+                                   FontFamily="Consolas, monospace" TextWrapping="Wrap"
+                                   Foreground="{StaticResource TextBrush}"/>
+                    </StackPanel>
+                </Border>
+                <TextBlock Text="报告自动保存于应用专有目录，可另存为或分享导出。"
+                           FontSize="11" Foreground="{StaticResource MutedBrush}" Margin="4,0"/>
+            </StackPanel>
+        </ScrollViewer>
+
+        <Border Grid.Row="1" Background="{StaticResource CardBrush}"
+                BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,1,0,0" Padding="16,10">
+            <Grid ColumnDefinitions="*,*">
+                <Button Grid.Column="0" Content="📥 另存为（SAF）" Command="{Binding SaveReportCommand}"
+                        Background="#F0F0F0" Foreground="{StaticResource TextBrush}" Margin="0,0,4,0"/>
+                <Button Grid.Column="1" Content="📤 分享" Command="{Binding ShareReportCommand}"
+                        Background="{StaticResource AccentBrush}" Foreground="White" Margin="4,0,0,0"/>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

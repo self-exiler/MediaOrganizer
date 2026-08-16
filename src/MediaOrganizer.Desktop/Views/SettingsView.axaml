@@ -1,8 +1,9 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:MediaOrganizer.Desktop.ViewModels"
+             xmlns:svm="using:MediaOrganizer.Shared.ViewModels"
              x:Class="MediaOrganizer.Desktop.Views.SettingsView"
-             x:DataType="vm:SettingsViewModel">
+             x:DataType="svm:SettingsViewModel">
 
     <DockPanel Margin="24,20">
         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4" LastChildFill="False">
@@ -24,7 +25,7 @@
                                 <TextBlock Classes="h2" Text="提取器加权链（按权重降序依次尝试）"/>
                                 <ItemsControl ItemsSource="{Binding Extractors}">
                                     <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="vm:ExtractorSettingVM">
+                                        <DataTemplate x:DataType="svm:ExtractorSettingVM">
                                             <Grid ColumnDefinitions="Auto,100,1*,80" ColumnSpacing="12" Margin="0,4">
                                                 <CheckBox Grid.Column="0" IsChecked="{Binding Enabled, Mode=TwoWay}" VerticalAlignment="Center"/>
                                                 <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" FontWeight="SemiBold"/>
@@ -83,7 +84,7 @@
                                 </Grid>
                                 <ItemsControl ItemsSource="{Binding Patterns}">
                                     <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="vm:PatternSettingVM">
+                                        <DataTemplate x:DataType="svm:PatternSettingVM">
                                             <Grid ColumnDefinitions="Auto,140,1*,70,60,56" ColumnSpacing="8" Margin="0,4">
                                                 <CheckBox Grid.Column="0" IsChecked="{Binding Enabled, Mode=TwoWay}" VerticalAlignment="Center"/>
                                                 <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
@@ -117,7 +118,7 @@
                                 </Grid>
                                 <ItemsControl ItemsSource="{Binding NetworkProfiles}">
                                     <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="vm:NetworkProfileVM">
+                                        <DataTemplate x:DataType="svm:NetworkProfileVM">
                                             <Grid ColumnDefinitions="Auto,140,1*,110,150" ColumnSpacing="8" Margin="0,4">
                                                 <Border Grid.Column="0" Classes="chip" VerticalAlignment="Center">
                                                     <TextBlock Text="{Binding TypeLabel}" FontSize="11"/>

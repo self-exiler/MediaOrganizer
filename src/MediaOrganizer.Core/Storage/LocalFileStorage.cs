@@ -1,8 +1,9 @@
 using System.Buffers;
+using MediaOrganizer.Core.Sources;
 
 namespace MediaOrganizer.Core.Storage;
 
-/// <summary>本地文件系统存储（也覆盖 SMB UNC 路径，Windows）。</summary>
+/// <summary>本地文件系统存储。</summary>
 public class LocalFileStorage(string rootPath) : IFileStorage
 {
     protected readonly string Root = Path.GetFullPath(rootPath);
@@ -26,11 +27,11 @@ public class LocalFileStorage(string rootPath) : IFileStorage
     public virtual Task<long> GetLengthAsync(string relativePath, CancellationToken ct = default)
         => Task.FromResult(new FileInfo(Resolve(relativePath)).Length);
 
-    public virtual async Task CopyFromAsync(string localSourcePath, string relativeTarget, IProgress<long>? progress = null, CancellationToken ct = default)
+    public virtual async Task CopyFromAsync(IMediaSource source, string relativeTarget, IProgress<long>? progress = null, CancellationToken ct = default)
     {
         var target = Resolve(relativeTarget);
         Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-        await using var src = new FileStream(localSourcePath, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 20, useAsync: true);
+        await using var src = source.OpenRead();
         await using var dst = new FileStream(target, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 20, useAsync: true);
         var buffer = ArrayPool<byte>.Shared.Rent(8 * 1024 * 1024);
         try

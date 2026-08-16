@@ -1,0 +1,117 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:MediaOrganizer.Shared.ViewModels"
+             xmlns:views="using:MediaOrganizer.Android.Views"
+             x:Class="MediaOrganizer.Android.Views.FailedFilesView"
+             x:DataType="vm:FailedFilesViewModel">
+    <UserControl.Resources>
+        <SolidColorBrush x:Key="AccentBrush" Color="#0067C0"/>
+        <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="DividerBrush" Color="#E5E5E5"/>
+        <SolidColorBrush x:Key="MutedBrush" Color="#8A8A8A"/>
+        <SolidColorBrush x:Key="TextBrush" Color="#1B1B1B"/>
+        <SolidColorBrush x:Key="ErrBrush" Color="#C42B1C"/>
+        <SolidColorBrush x:Key="WarnBgBrush" Color="#FFF9F5"/>
+        <SolidColorBrush x:Key="WarnBorderBrush" Color="#F4D1BC"/>
+        <SolidColorBrush x:Key="WarnTextBrush" Color="#8A3714"/>
+        <SolidColorBrush x:Key="ErrChipBgBrush" Color="#FDECEB"/>
+    </UserControl.Resources>
+
+    <Grid RowDefinitions="*,Auto" Background="#F5F5F5">
+        <ScrollViewer>
+            <StackPanel Margin="16,12" Spacing="10">
+
+                <!-- 指纹聚类提示（FR-A6.1） -->
+                <Border Background="{StaticResource WarnBgBrush}" BorderBrush="{StaticResource WarnBorderBrush}"
+                        BorderThickness="1" CornerRadius="8" Padding="12,10">
+                    <TextBlock FontSize="12" Foreground="{StaticResource WarnTextBrush}" TextWrapping="Wrap">
+                        <Run Text="{Binding Items.Count}"/><Run Text=" 个文件未能提取日期，已按文件名结构指纹聚类。可勾选后批量移动到待处理目录（移动 = 复制 + 删除源）。"/>
+                    </TextBlock>
+                </Border>
+
+                <TextBlock x:Name="EmptyHint" Text="暂无失败文件。完成一次分析后，未能提取日期的文件会显示在这里。"
+                           IsVisible="False" FontSize="12" Foreground="{StaticResource MutedBrush}"
+                           TextWrapping="Wrap" Margin="4,8"/>
+
+                <ProgressBar Minimum="0" Maximum="100" Value="{Binding MoveProgress}" Height="6"
+                             IsVisible="{Binding IsMoving}"/>
+                <TextBlock Text="{Binding MoveHint}" FontSize="11" Foreground="{StaticResource MutedBrush}"
+                           TextWrapping="Wrap" IsVisible="{Binding MoveHint, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                <!-- 指纹分组列表 -->
+                <ItemsControl x:Name="GroupsList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="views:FailedGroupVM">
+                            <StackPanel Margin="0,4,0,0">
+                                <TextBlock Text="{Binding Title}" FontSize="11" FontWeight="SemiBold"
+                                           Foreground="{StaticResource MutedBrush}" Margin="4,10,4,4"/>
+                                <ItemsControl ItemsSource="{Binding Rows}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="views:FailedRowVM">
+                                            <Border Background="{StaticResource CardBrush}" CornerRadius="10"
+                                                    BorderBrush="{StaticResource DividerBrush}" BorderThickness="1"
+                                                    Padding="12,8" Margin="0,3">
+                                                <StackPanel>
+                                                    <!-- 行：勾选 + 信息 + 展开箭头 -->
+                                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                                        <CheckBox Grid.Column="0" IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                                                  MinWidth="44" MinHeight="44" VerticalAlignment="Center"/>
+                                                        <Button Grid.Column="1" Click="OnRowTapped"
+                                                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                                                Background="Transparent" BorderThickness="0" Padding="0">
+                                                            <StackPanel Spacing="2">
+                                                                <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="Medium"
+                                                                           Foreground="{StaticResource TextBrush}" TextTrimming="CharacterEllipsis"/>
+                                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                                    <TextBlock Text="{Binding Meta}" FontSize="11"
+                                                                               Foreground="{StaticResource MutedBrush}" TextTrimming="CharacterEllipsis"/>
+                                                                    <Border Background="{StaticResource ErrChipBgBrush}" CornerRadius="8" Padding="6,1" VerticalAlignment="Center">
+                                                                        <TextBlock Text="NoValidDate" FontSize="10" Foreground="{StaticResource ErrBrush}"/>
+                                                                    </Border>
+                                                                </StackPanel>
+                                                            </StackPanel>
+                                                        </Button>
+                                                        <TextBlock Grid.Column="2" Text="›" FontSize="18"
+                                                                   Foreground="{StaticResource MutedBrush}"
+                                                                   VerticalAlignment="Center" Margin="8,0,4,0"/>
+                                                    </Grid>
+
+                                                    <!-- 展开详情 -->
+                                                    <Border IsVisible="{Binding IsExpanded}" Margin="4,6,4,2"
+                                                            Background="#FAFAFA" CornerRadius="8" Padding="10,8">
+                                                        <StackPanel Spacing="4">
+                                                            <TextBlock Text="{Binding FullPath}" FontSize="11" FontFamily="Consolas, monospace"
+                                                                       Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap"/>
+                                                            <TextBlock FontSize="11" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap"
+                                                                       Text="{Binding Reason, StringFormat=失败原因：{0}}"/>
+                                                            <Button Click="OnOpenWithSystem" HorizontalAlignment="Left"
+                                                                    Background="Transparent" BorderThickness="0" Padding="0" MinHeight="44">
+                                                                <TextBlock Text="↗ 用系统应用打开" FontSize="12" Foreground="{StaticResource AccentBrush}"/>
+                                                            </Button>
+                                                        </StackPanel>
+                                                    </Border>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- 底部批量操作栏 -->
+        <Border Grid.Row="1" Background="{StaticResource CardBrush}"
+                BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,1,0,0" Padding="16,10">
+            <Grid ColumnDefinitions="*,*">
+                <Button Grid.Column="0" Content="全选 / 取消全选" Click="OnToggleAll"
+                        Background="#F0F0F0" Foreground="{StaticResource TextBrush}" Margin="0,0,4,0"/>
+                <Button Grid.Column="1" Content="📁 批量移动到待处理" Click="OnMove"
+                        IsEnabled="{Binding !IsMoving}"
+                        Background="{StaticResource AccentBrush}" Foreground="White" Margin="4,0,0,0"/>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

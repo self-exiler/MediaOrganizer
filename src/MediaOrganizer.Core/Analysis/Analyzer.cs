@@ -7,15 +7,15 @@ namespace MediaOrganizer.Core.Analysis;
 
 public sealed record AnalysisProgress(int Processed, int Total, int Succeeded, int Failed);
 
-/// <summary>分析编排：扫描 → 并行提取 → 汇总（SRS FR-4）。</summary>
+/// <summary>分析编排：扫描 → 并行提取 → 汇总（SRS FR-4 / FR-A4）。扫描器面向 IFileScanner 接口，Android 可注入 SAF 实现。</summary>
 public sealed class Analyzer
 {
-    private readonly FileScanner _scanner;
+    private readonly IFileScanner _scanner;
     private readonly ExtractorChain _chain;
     private readonly int _maxDegreeOfParallelism;
     private readonly int _progressInterval;
 
-    public Analyzer(FileScanner scanner, ExtractorChain chain, int maxDegreeOfParallelism = 0, int progressInterval = 10)
+    public Analyzer(IFileScanner scanner, ExtractorChain chain, int maxDegreeOfParallelism = 0, int progressInterval = 10)
     {
         _scanner = scanner;
         _chain = chain;

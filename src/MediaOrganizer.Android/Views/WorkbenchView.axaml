@@ -1,0 +1,109 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:MediaOrganizer.Shared.ViewModels"
+             x:Class="MediaOrganizer.Android.Views.WorkbenchView"
+             x:DataType="vm:WorkbenchViewModel">
+    <UserControl.Resources>
+        <SolidColorBrush x:Key="AccentBrush" Color="#0067C0"/>
+        <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="DividerBrush" Color="#E5E5E5"/>
+        <SolidColorBrush x:Key="MutedBrush" Color="#8A8A8A"/>
+        <SolidColorBrush x:Key="TextBrush" Color="#1B1B1B"/>
+        <SolidColorBrush x:Key="ErrBrush" Color="#C42B1C"/>
+        <SolidColorBrush x:Key="OkBrush" Color="#107C10"/>
+    </UserControl.Resources>
+
+    <Grid RowDefinitions="*,Auto" Background="#F5F5F5">
+        <ScrollViewer>
+            <StackPanel Margin="16" Spacing="12">
+
+                <Border Background="{StaticResource CardBrush}" CornerRadius="12" Padding="16"
+                        BorderBrush="{StaticResource DividerBrush}" BorderThickness="1">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="目录" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}"/>
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Command="{Binding BrowseSourceCommand}"
+                                    Background="Transparent" Foreground="{StaticResource AccentBrush}" Content="选取" FontSize="12"/>
+                            <TextBox Text="{Binding SourceDir, Mode=TwoWay}" IsReadOnly="True" FontSize="11"
+                                     Foreground="{StaticResource MutedBrush}" Watermark="源目录（SAF）"/>
+                        </DockPanel>
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Command="{Binding BrowseOutputCommand}"
+                                    Background="Transparent" Foreground="{StaticResource AccentBrush}" Content="选取" FontSize="12"/>
+                            <ComboBox ItemsSource="{Binding OutputTargetOptions}" SelectedIndex="{Binding OutputTargetIndex, Mode=TwoWay}"
+                                      HorizontalAlignment="Stretch"/>
+                        </DockPanel>
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Command="{Binding BrowsePendingCommand}"
+                                    Background="Transparent" Foreground="{StaticResource AccentBrush}" Content="选取" FontSize="12"/>
+                            <TextBox Text="{Binding PendingDir, Mode=TwoWay}" IsReadOnly="True" FontSize="11"
+                                     Foreground="{StaticResource MutedBrush}" Watermark="待处理目录（失败文件）"/>
+                        </DockPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border Background="{StaticResource CardBrush}" CornerRadius="12" Padding="16"
+                        BorderBrush="{StaticResource DividerBrush}" BorderThickness="1">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="执行参数" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}"/>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="分级目录" FontSize="12" Foreground="{StaticResource MutedBrush}"/>
+                            <ComboBox ItemsSource="{Binding LevelOptions}" SelectedIndex="{Binding LevelIndex, Mode=TwoWay}"/>
+                        </StackPanel>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="操作类型" FontSize="12" Foreground="{StaticResource MutedBrush}"/>
+                            <ComboBox ItemsSource="{Binding OperationOptions}" SelectedIndex="{Binding OperationIndex, Mode=TwoWay}"
+                                      IsEnabled="{Binding IsMoveAllowed}"/>
+                        </StackPanel>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="同名处理" FontSize="12" Foreground="{StaticResource MutedBrush}"/>
+                            <ComboBox ItemsSource="{Binding ExistActionOptions}" SelectedIndex="{Binding ExistActionIndex, Mode=TwoWay}"/>
+                        </StackPanel>
+                        <CheckBox Content="mtime 矫正（将目标文件修改时间设为拍摄日期）"
+                                  IsChecked="{Binding FixMtime, Mode=TwoWay}" FontSize="12"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Background="{StaticResource CardBrush}" CornerRadius="12" Padding="16"
+                        BorderBrush="{StaticResource DividerBrush}" BorderThickness="1"
+                        IsVisible="{Binding HasResult}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="分析结果" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}"/>
+                        <Grid ColumnDefinitions="*,*,*,*">
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="{Binding TotalFiles}" FontSize="20" FontWeight="Bold" Foreground="{StaticResource AccentBrush}"/>
+                                <TextBlock Text="总计" FontSize="11" Foreground="{StaticResource MutedBrush}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="{Binding SuccessFiles}" FontSize="20" FontWeight="Bold" Foreground="{StaticResource OkBrush}"/>
+                                <TextBlock Text="成功" FontSize="11" Foreground="{StaticResource MutedBrush}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="{Binding FailedFiles}" FontSize="20" FontWeight="Bold" Foreground="{StaticResource ErrBrush}"/>
+                                <TextBlock Text="失败" FontSize="11" Foreground="{StaticResource MutedBrush}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="3">
+                                <TextBlock Text="{Binding SuccessRate}" FontSize="20" FontWeight="Bold" Foreground="{StaticResource AccentBrush}"/>
+                                <TextBlock Text="成功率" FontSize="11" Foreground="{StaticResource MutedBrush}"/>
+                            </StackPanel>
+                        </Grid>
+                        <ProgressBar Minimum="0" Maximum="100" Value="{Binding Progress}" Height="6"/>
+                        <TextBlock Text="{Binding PlanText}" FontSize="11" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <Border Grid.Row="1" Background="{StaticResource CardBrush}"
+                BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,1,0,0" Padding="16,10">
+            <Grid ColumnDefinitions="*,*">
+                <Button Grid.Column="0" Content="重新分析" Command="{Binding AnalyzeCommand}"
+                        IsVisible="{Binding HasResult}" Background="#F0F0F0" Foreground="{StaticResource TextBrush}"/>
+                <Button Grid.Column="1" Content="开始分析" Command="{Binding AnalyzeCommand}"
+                        IsVisible="{Binding !HasResult}" Background="{StaticResource AccentBrush}" Foreground="White"/>
+                <Button Grid.Column="1" Content="执行归档" Command="{Binding ExecuteFilesCommand}"
+                        IsVisible="{Binding HasResult}" Background="{StaticResource AccentBrush}" Foreground="White"/>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

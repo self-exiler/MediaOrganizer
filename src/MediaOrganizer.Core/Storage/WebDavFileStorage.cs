@@ -1,4 +1,5 @@
 using System.Net;
+using MediaOrganizer.Core.Sources;
 using WebDAVClient;
 using WebDAVClient.Helpers;
 
@@ -86,16 +87,16 @@ public sealed class WebDavFileStorage : IFileStorage
         }
     }
 
-    public Task CopyFromAsync(string localSourcePath, string relativeTarget, IProgress<long>? progress = null, CancellationToken ct = default)
+    public Task CopyFromAsync(IMediaSource source, string relativeTarget, IProgress<long>? progress = null, CancellationToken ct = default)
     {
         var parent = ParentOf(relativeTarget);
         var name = relativeTarget[(relativeTarget.LastIndexOf('/') + 1)..];
         return Task.Run(async () =>
         {
-            await using var src = new FileStream(localSourcePath, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 20, useAsync: true);
+            await using var src = source.OpenRead();
             var ok = await _client.Upload(Resolve(parent), src, name, null, ct);
             if (!ok) throw new IOException($"WebDAV 上传失败：{relativeTarget}");
-            progress?.Report(src.Length);
+            progress?.Report(source.Length);
         }, ct);
     }
 

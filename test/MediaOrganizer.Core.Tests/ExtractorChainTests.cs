@@ -1,6 +1,7 @@
 using MediaOrganizer.Core.Configuration;
 using MediaOrganizer.Core.Extraction;
 using MediaOrganizer.Core.Models;
+using MediaOrganizer.Core.Sources;
 
 namespace MediaOrganizer.Core.Tests;
 
@@ -88,14 +89,16 @@ public class ExtractorChainTests
             var path = Path.Combine(dir, "scan_no_date.tif");
             File.WriteAllText(path, "x");
             File.SetLastWriteTimeUtc(path, new DateTime(2024, 5, 6, 7, 8, 9, DateTimeKind.Utc));
+            // 文件系统提取器读 IMediaSource.ModifiedTime（扫描时预取），需携带源端抽象
+            var media = new MediaFile(path, 1, "tif") { Source = new LocalMediaSource(path) };
 
-            var result = chain.TryExtract(new MediaFile(path, 1, "tif"));
+            var result = chain.TryExtract(media);
             Assert.Null(result);
 
             // 启用后应命中 mtime
             cfg.Extractors.First(e => e.Name == "FileSystem").Enabled = true;
             var chain2 = ExtractorChain.FromConfig(cfg, PatternsStore.GetBuiltinPatterns());
-            var result2 = chain2.TryExtract(new MediaFile(path, 1, "tif"));
+            var result2 = chain2.TryExtract(media);
             Assert.NotNull(result2);
             Assert.Equal("FileSystem", result2!.Source);
             Assert.Equal(2024, result2.Date.Year);

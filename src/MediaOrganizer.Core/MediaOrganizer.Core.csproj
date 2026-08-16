@@ -1,18 +1,21 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <!-- ADR-0006 决策 8：多目标编译，#if ANDROID 切换平台实现，桌面版不受影响 -->
+    <TargetFrameworks>net10.0;net10.0-android</TargetFrameworks>
     <RootNamespace>MediaOrganizer.Core</RootNamespace>
     <AssemblyName>MediaOrganizer.Core</AssemblyName>
     <Description>MediaOrganizer 核心逻辑库（跨平台，零 UI 依赖）</Description>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Magick.NET 是原生库，不支持 Android；Android TFM 下自动排除，ExifExtractor 用 #if ANDROID 切换实现 -->
+    <!-- Magick.NET 是原生库，不支持 Android：Android TFM 下排除，EXIF 读取由 Android 项目注入 IExifReader（ExifInterface） -->
     <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="14.16.0" Condition="'$(TargetFramework)' != 'net10.0-android'" />
     <PackageReference Include="TagLibSharp" Version="2.3.0" />
+    <!-- SMBLibrary 纯托管 SMB1/2/3 客户端，双端统一保留（ADR-0007） -->
     <PackageReference Include="SMBLibrary" Version="1.5.7.1" />
-    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.0" />
+    <!-- DPAPI 仅 Windows 桌面用（CA1416 噪音）：Android TFM 下排除，Keystore 实现在 Android 项目 -->
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.0" Condition="'$(TargetFramework)' != 'net10.0-android'" />
     <PackageReference Include="WebDAVClient" Version="2.7.0" />
   </ItemGroup>
 

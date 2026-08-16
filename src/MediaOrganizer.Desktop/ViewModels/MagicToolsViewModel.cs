@@ -6,6 +6,7 @@ using MediaOrganizer.Core.Analysis;
 using MediaOrganizer.Core.Configuration;
 using MediaOrganizer.Core.Models;
 using MediaOrganizer.Core.Patterns;
+using MediaOrganizer.Shared.ViewModels;
 using System.Collections.ObjectModel;
 
 namespace MediaOrganizer.Desktop.ViewModels;

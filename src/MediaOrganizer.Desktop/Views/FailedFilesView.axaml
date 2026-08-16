@@ -1,9 +1,10 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:MediaOrganizer.Desktop.ViewModels"
+             xmlns:svm="using:MediaOrganizer.Shared.ViewModels"
              xmlns:cv="using:Avalonia.Data.Converters"
              x:Class="MediaOrganizer.Desktop.Views.FailedFilesView"
-             x:DataType="vm:FailedFilesViewModel">
+             x:DataType="svm:FailedFilesViewModel">
 
     <Grid Margin="24,20" RowDefinitions="Auto,Auto,*" ColumnDefinitions="*">
 
@@ -46,7 +47,7 @@
                             <CornerRadius x:Key="ListBoxItemCornerRadius">6</CornerRadius>
                         </ListBox.Resources>
                         <ListBox.ItemTemplate>
-                            <DataTemplate x:DataType="vm:FailedItem">
+                            <DataTemplate x:DataType="svm:FailedItem">
                                 <StackPanel Margin="6,2" Spacing="2">
                                     <TextBlock Text="{Binding Name}" FontSize="12.5"
                                                FontFamily="Cascadia Code, Consolas, monospace" TextTrimming="CharacterEllipsis"/>

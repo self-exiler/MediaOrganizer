@@ -2,11 +2,10 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MediaOrganizer.Core;
 using MediaOrganizer.Core.Configuration;
-using MediaOrganizer.Desktop.Services;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 
-namespace MediaOrganizer.Desktop.ViewModels;
+namespace MediaOrganizer.Shared.ViewModels;
 
 public partial class ExtractorSettingVM : ObservableObject
 {
@@ -19,7 +18,7 @@ public partial class ExtractorSettingVM : ObservableObject
     private double _weight;
 }
 
-/// <summary>网络位置列表项（FR-10）。</summary>
+/// <summary>网络位置列表项（FR-10/FR-A8.3）。</summary>
 public sealed class NetworkProfileVM
 {
     public required NetworkProfile Source { get; init; }
@@ -29,7 +28,7 @@ public sealed class NetworkProfileVM
     public string VerifiedLabel => Source.LastVerifiedAt is { } t ? $"✓ {t:yyyy-MM-dd HH:mm}" : "未验证";
 }
 
-/// <summary>文件名模式列表项（对应原型「设置 → 文件名模式」Tab）。</summary>
+/// <summary>文件名模式列表项（设置 → 文件名模式）。</summary>
 public partial class PatternSettingVM : ObservableObject
 {
     private readonly PatternDefinition _source;
@@ -54,12 +53,16 @@ public partial class PatternSettingVM : ObservableObject
     }
 }
 
-/// <summary>设置：提取器 / 文件名模式 / 系统 / 界面 四个 Tab（对应原型「设置」页）。</summary>
+/// <summary>
+/// 设置：提取器 / 文件名模式 / 网络位置 / 扫描参数（双端共享，ADR-0006 决策 4）。
+/// 主题应用经注入委托（桌面 ThemeHelper；Android 侧可为空）。
+/// </summary>
 public partial class SettingsViewModel : ViewModelBase
 {
     private readonly AppState _state;
     private readonly AppConfig _config;
     private readonly List<PatternDefinition> _patterns;
+    private readonly Action<string>? _applyTheme;
 
     // 变更通知统一走 _state.NotifyChanged()
     public event Action? NavigateToMagic;
@@ -69,7 +72,7 @@ public partial class SettingsViewModel : ViewModelBase
     public ObservableCollection<NetworkProfileVM> NetworkProfiles { get; } = [];
 
     public string[] ThemeOptions { get; } = ["跟随系统", "浅色", "深色"];
-    public string[] NetworkTypeOptions { get; } = ["SMB（Windows UNC 路径）", "WebDAV（全平台）"];
+    public string[] NetworkTypeOptions { get; } = ["SMB（\\\\服务器\\共享名）", "WebDAV（https://…）"];
 
     // ---- 网络位置内联编辑表单状态 ----
     private NetworkProfile? _editingProfile; // null = 新建
@@ -131,11 +134,12 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     private string _patternSummary = "";
 
-    public SettingsViewModel(AppState state)
+    public SettingsViewModel(AppState state, Action<string>? applyTheme = null)
     {
         _state = state;
         _config = state.Config;
         _patterns = state.Patterns;
+        _applyTheme = applyTheme;
 
         LoadFromConfig();
 
@@ -177,7 +181,7 @@ public partial class SettingsViewModel : ViewModelBase
     private void Initialize()
     {
         ResetConfigToDefaults(_config);
-        RestoreDefaultPatterns();
+        RestoreDefaultPatternsCommand.Execute(null);
         LoadFromConfig();
         _state.SaveAll();
         SaveHint = "已恢复默认配置与内置文件名模式";
@@ -224,7 +228,7 @@ public partial class SettingsViewModel : ViewModelBase
         // 注意：网络位置不随初始化清除，避免误删用户配置
     }
 
-    // ---- 网络位置管理（FR-10）----
+    // ---- 网络位置管理（FR-10/FR-A8.3）----
 
     [RelayCommand]
     private void BeginAddNetwork()
@@ -235,7 +239,7 @@ public partial class SettingsViewModel : ViewModelBase
         EditAddress = "";
         EditUsername = "";
         EditPassword = "";
-        NetworkHint = "支持 SMB（UNC 路径）与 WebDAV。密码 Windows 以 DPAPI 加密存储。";
+        NetworkHint = "支持 SMB 与 WebDAV。密码加密存储（Windows DPAPI / Android Keystore）。";
         EditingNetwork = true;
     }
 
@@ -474,12 +478,12 @@ public partial class SettingsViewModel : ViewModelBase
         _state.SaveConfig();
     }
 
-    /// <summary>主题切换即时生效（不等保存）。</summary>
+    /// <summary>主题切换即时生效（不等保存）。桌面注入 ThemeHelper.Apply；Android 侧可为空。</summary>
     partial void OnThemeIndexChanged(int value)
     {
         var theme = ThemeNameFromIndex(value);
         _config.General.Theme = theme;
-        ThemeHelper.Apply(theme);
+        _applyTheme?.Invoke(theme);
         SaveHint = "主题已保存";
         _state.SaveConfig(notifyChanged: false);
     }

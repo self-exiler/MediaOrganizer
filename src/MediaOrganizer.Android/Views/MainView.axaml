@@ -1,0 +1,73 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:MediaOrganizer.Android.ViewModels"
+             x:Class="MediaOrganizer.Android.Views.MainView"
+             x:DataType="vm:MainViewModel">
+    <UserControl.Resources>
+        <SolidColorBrush x:Key="AccentBrush" Color="#0067C0"/>
+        <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="BgBrush" Color="#F5F5F5"/>
+        <SolidColorBrush x:Key="DividerBrush" Color="#E5E5E5"/>
+        <SolidColorBrush x:Key="MutedBrush" Color="#8A8A8A"/>
+        <SolidColorBrush x:Key="TextBrush" Color="#1B1B1B"/>
+        <SolidColorBrush x:Key="DrawerBg" Color="#FAFAFA"/>
+    </UserControl.Resources>
+
+    <Grid Background="{StaticResource BgBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- AppBar -->
+        <Border Grid.Row="0" Background="{StaticResource AccentBrush}" Padding="4,0">
+            <DockPanel>
+                <Button DockPanel.Dock="Left" Command="{Binding ToggleDrawerCommand}"
+                        Background="Transparent" BorderThickness="0" Foreground="White"
+                        Width="48" Height="48" FontSize="22" Content="&#x2630;"/>
+                <TextBlock Text="{Binding AppTitle}" Foreground="White" FontSize="18" FontWeight="Medium"
+                           VerticalAlignment="Center" Margin="4,0,0,0"/>
+            </DockPanel>
+        </Border>
+
+        <!-- 内容区：ViewLocator 按 CurrentPage 解析页面视图 -->
+        <ContentControl Grid.Row="1" Content="{Binding CurrentPage}"
+                        Background="{StaticResource BgBrush}"/>
+
+        <!-- 底部状态栏 -->
+        <Border Grid.Row="2" Background="{StaticResource CardBrush}"
+                BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,1,0,0">
+            <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{StaticResource MutedBrush}" Margin="16,8"/>
+        </Border>
+
+        <!-- 抽屉遮罩 + 抽屉（覆盖全屏） -->
+        <Panel Grid.Row="0" Grid.RowSpan="3" IsHitTestVisible="{Binding DrawerOpen}" ZIndex="100">
+            <Border Background="#66000000" IsVisible="{Binding DrawerOpen}" Tapped="OnOverlayTapped"/>
+            <Border HorizontalAlignment="Left" Width="280" Background="{StaticResource DrawerBg}"
+                    IsVisible="{Binding DrawerOpen}" Padding="0,0,0,16">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Top" Margin="20,20,20,12">
+                        <TextBlock Text="MediaOrganizer" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}"/>
+                    </StackPanel>
+                    <TextBlock DockPanel.Dock="Bottom" Text="v1.0-android · 开源 MIT&#10;APK 侧载分发（GitHub Release）"
+                               FontSize="11" Foreground="{StaticResource MutedBrush}" Margin="20,8"/>
+                    <ListBox Background="Transparent" BorderThickness="0"
+                             SelectedIndex="{Binding SelectedPage}" SelectionMode="Single">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" FontSize="14" Margin="8,2"/>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                        <ListBox.Items>
+                            <x:String>整理工作台</x:String>
+                            <x:String>失败文件</x:String>
+                            <x:String>分析报告</x:String>
+                            <x:String>设置</x:String>
+                        </ListBox.Items>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+        </Panel>
+    </Grid>
+</UserControl>

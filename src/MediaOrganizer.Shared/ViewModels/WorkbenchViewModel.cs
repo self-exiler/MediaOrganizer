@@ -3,15 +3,18 @@ using CommunityToolkit.Mvvm.Input;
 using MediaOrganizer.Core;
 using MediaOrganizer.Core.Analysis;
 using MediaOrganizer.Core.Configuration;
-using MediaOrganizer.Core.Extraction;
 using MediaOrganizer.Core.Logging;
 using MediaOrganizer.Core.Models;
 using MediaOrganizer.Core.Planning;
-using MediaOrganizer.Core.Scanning;
+using MediaOrganizer.Shared.Services;
 
-namespace MediaOrganizer.Desktop.ViewModels;
+namespace MediaOrganizer.Shared.ViewModels;
 
-/// <summary>整理工作台：选目录 → 分析 → 确认计划 → 执行归档。</summary>
+/// <summary>
+/// 整理工作台：选目录 → 分析 → 确认计划 → 执行归档（双端共享，ADR-0006 决策 4）。
+/// 平台差异经注入抽象：目录选取走 IFolderPicker；分析器由组合根工厂构建（桌面本地扫描 + Magick EXIF，
+/// Android SAF 扫描 + ExifInterface）；分析结果与报告落盘到应用专有目录（决策 6，不写源目录）。
+/// </summary>
 public partial class WorkbenchViewModel : ViewModelBase
 {
     private readonly AppConfig _config;
@@ -19,6 +22,9 @@ public partial class WorkbenchViewModel : ViewModelBase
     private readonly AppLogger _logger;
     private readonly AppState _state;
     private readonly OrganizeSession _session;
+    private readonly IFolderPicker _folderPicker;
+    private readonly Func<Analyzer> _analyzerFactory;
+    private readonly string _dataDir;
     private CancellationTokenSource? _cts;
 
     public event Action<AnalysisResult>? AnalysisCompleted;
@@ -87,12 +93,20 @@ public partial class WorkbenchViewModel : ViewModelBase
     /// <summary>输出目标选项：第 0 项为本地目录，其余为网络位置（FR-10）。</summary>
     public string[] OutputTargetOptions { get; private set; } = ["本地目录"];
 
-    public WorkbenchViewModel(AppState state, AppLogger logger)
+    public WorkbenchViewModel(
+        AppState state,
+        AppLogger logger,
+        IFolderPicker folderPicker,
+        Func<Analyzer> analyzerFactory,
+        string dataDir)
     {
         _state = state;
         _config = state.Config;
         _patterns = state.Patterns;
         _logger = logger;
+        _folderPicker = folderPicker;
+        _analyzerFactory = analyzerFactory;
+        _dataDir = dataDir;
 
         _sourceDir = _config.Paths.SourceDir;
         _outputDir = _config.Paths.OutputDir;
@@ -113,7 +127,7 @@ public partial class WorkbenchViewModel : ViewModelBase
         ReloadOutputTargets();
     }
 
-    /// <summary>网络位置列表变化后刷新目标下拉并恢复选择（由 MainWindow 接线 State.Changed）。</summary>
+    /// <summary>网络位置列表变化后刷新目标下拉并恢复选择（由主 VM 接线 State.Changed）。</summary>
     public void ReloadOutputTargets()
     {
         var selected = _config.Paths.OutputNetworkProfile;
@@ -175,19 +189,19 @@ public partial class WorkbenchViewModel : ViewModelBase
     [RelayCommand]
     private async Task BrowseSourceAsync()
     {
-        if (await App.PickFolderAsync() is { } dir) SourceDir = dir;
+        if (await _folderPicker.PickFolderAsync() is { } dir) SourceDir = dir;
     }
 
     [RelayCommand]
     private async Task BrowseOutputAsync()
     {
-        if (await App.PickFolderAsync() is { } dir) OutputDir = dir;
+        if (await _folderPicker.PickFolderAsync() is { } dir) OutputDir = dir;
     }
 
     [RelayCommand]
     private async Task BrowsePendingAsync()
     {
-        if (await App.PickFolderAsync() is { } dir) PendingDir = dir;
+        if (await _folderPicker.PickFolderAsync() is { } dir) PendingDir = dir;
     }
 
     // ---- 目录变更实时保存 ----
@@ -223,11 +237,7 @@ public partial class WorkbenchViewModel : ViewModelBase
         _cts = new CancellationTokenSource();
         try
         {
-            var analyzer = new Analyzer(
-                FileScanner.FromConfig(_config),
-                ExtractorChain.FromConfig(_config.Extraction, _patterns),
-                _config.Scan.MaxDegreeOfParallelism,
-                _config.Scan.ProgressInterval);
+            var analyzer = _analyzerFactory();
             var progress = new Progress<AnalysisProgress>(p =>
             {
                 TotalFiles = p.Total;
@@ -245,12 +255,12 @@ public partial class WorkbenchViewModel : ViewModelBase
             _logger.Info(StatusText);
             HasResult = true;
 
-            // 落盘：analysis-result.json + TXT 报告
+            // 落盘到应用专有目录（ADR-0006 决策 6）：analysis-result.json + TXT 报告，不写源目录
             try
             {
-                AnalysisResultStore.Save(Path.Combine(SourceDir, "analysis-result.json"), result);
+                AnalysisResultStore.Save(Path.Combine(_dataDir, "analysis-result.json"), result);
                 var report = AnalysisReportGenerator.Generate(result, OutputDir);
-                File.WriteAllText(Path.Combine(SourceDir, "analysis-report.txt"), report);
+                File.WriteAllText(Path.Combine(_dataDir, "analysis-report.txt"), report);
             }
             catch (Exception ex)
             {
@@ -350,7 +360,7 @@ public partial class WorkbenchViewModel : ViewModelBase
         _ => ClassificationLevel.Day
     };
 
-    /// <summary>规则或配置变更后重建提取链（由 MainWindow 事件接线）。</summary>
+    /// <summary>规则或配置变更后重建提取链（由主 VM 事件接线）。</summary>
     public void RebuildChain()
     {
         _logger.Info("配置/规则已变更，提取链已重建");

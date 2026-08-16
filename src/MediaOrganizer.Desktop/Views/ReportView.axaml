@@ -1,8 +1,9 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:MediaOrganizer.Desktop.ViewModels"
+             xmlns:svm="using:MediaOrganizer.Shared.ViewModels"
              x:Class="MediaOrganizer.Desktop.Views.ReportView"
-             x:DataType="vm:ReportViewModel">
+             x:DataType="svm:ReportViewModel">
 
     <DockPanel Margin="24,20">
         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,14" LastChildFill="False">

@@ -1,9 +1,10 @@
 using MediaOrganizer.Core.Models;
+using MediaOrganizer.Core.Sources;
 
 namespace MediaOrganizer.Core.Scanning;
 
 /// <summary>递归扫描源目录，按扩展名白名单过滤；ScanAllFiles 或空白名单 = 全收（SRS FR-1）。</summary>
-public sealed class FileScanner
+public sealed class FileScanner : IFileScanner
 {
     private readonly HashSet<string> _formats;
     private readonly bool _scanAllFiles;
@@ -37,7 +38,7 @@ public sealed class FileScanner
             if (!_scanAllFiles && _formats.Count > 0 && !_formats.Contains(ext)) continue;
             try
             {
-                list.Add(new MediaFile(fi.FullName, fi.Length, ext));
+                list.Add(new MediaFile(fi.FullName, fi.Length, ext) { Source = new LocalMediaSource(fi.FullName) });
             }
             catch
             {

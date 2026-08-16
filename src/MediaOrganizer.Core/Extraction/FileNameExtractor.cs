@@ -12,9 +12,11 @@ public sealed class FileNameExtractor(IReadOnlyList<Configuration.PatternDefinit
 
     public DateTimeOffset? Extract(MediaFile file)
     {
+        // SAF 下 URI 字符串不保证含可读文件名/扩展名 → 统一取源端 DisplayName（ADR-0006 决策 2）
+        var name = file.FileName;
         // 快速年份预扫描：文件名无合理年份且无时间戳模式时直接跳过全部正则（SRS FR-3.3）
-        if (!PatternEngine.ContainsLikelyDate(file.FileName, patterns))
+        if (!PatternEngine.ContainsLikelyDate(name, patterns))
             return null;
-        return PatternEngine.TryExtract(file.FileName, patterns);
+        return PatternEngine.TryExtract(name, patterns);
     }
 }

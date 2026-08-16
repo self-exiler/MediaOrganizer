@@ -2,6 +2,7 @@ using MediaOrganizer.Core.Configuration;
 using MediaOrganizer.Core.Execution;
 using MediaOrganizer.Core.Models;
 using MediaOrganizer.Core.Planning;
+using MediaOrganizer.Core.Sources;
 using MediaOrganizer.Core.Storage;
 
 namespace MediaOrganizer.Core.Tests;
@@ -27,7 +28,10 @@ public class FileOperatorTests : IDisposable
     private ArchivePlan Plan(params (string Name, DateTimeOffset Date)[] items)
     {
         var parsed = items.Select((x, i) => new ParsedFile(
-            new MediaFile(Path.Combine(_src, x.Name), i + 100, Path.GetExtension(x.Name).TrimStart('.')),
+            new MediaFile(Path.Combine(_src, x.Name), i + 100, Path.GetExtension(x.Name).TrimStart('.'))
+            {
+                Source = new LocalMediaSource(Path.Combine(_src, x.Name))
+            },
             x.Date, "FileName")).ToArray();
         var result = new AnalysisResult(_src, DateTimeOffset.Now, parsed, []);
         return new ArchivePlanner(ClassificationLevel.Day).Plan(result, _out);
@@ -167,7 +171,9 @@ public class FileOperatorTests : IDisposable
             var sub = Path.Combine(_src, $"sub{i}");
             Directory.CreateDirectory(sub);
             WriteFile(Path.Combine(sub, "base.jpg"), $"v{i}");
-            parsed.Add(new ParsedFile(new MediaFile(Path.Combine(sub, "base.jpg"), i + 100, "jpg"), date, "FileName"));
+            parsed.Add(new ParsedFile(
+                new MediaFile(Path.Combine(sub, "base.jpg"), i + 100, "jpg") { Source = new LocalMediaSource(Path.Combine(sub, "base.jpg")) },
+                date, "FileName"));
         }
         var result = new AnalysisResult(_src, DateTimeOffset.Now, parsed, []);
         var plan = new ArchivePlanner(ClassificationLevel.Day).Plan(result, _out);
@@ -197,7 +203,9 @@ public class FileOperatorTests : IDisposable
             var sub = Path.Combine(_src, $"skip{i}");
             Directory.CreateDirectory(sub);
             WriteFile(Path.Combine(sub, "base.jpg"), $"v{i}");
-            parsed.Add(new ParsedFile(new MediaFile(Path.Combine(sub, "base.jpg"), i + 100, "jpg"), date, "FileName"));
+            parsed.Add(new ParsedFile(
+                new MediaFile(Path.Combine(sub, "base.jpg"), i + 100, "jpg") { Source = new LocalMediaSource(Path.Combine(sub, "base.jpg")) },
+                date, "FileName"));
         }
         var result = new AnalysisResult(_src, DateTimeOffset.Now, parsed, []);
         var plan = new ArchivePlanner(ClassificationLevel.Day).Plan(result, _out);

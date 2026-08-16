@@ -25,6 +25,8 @@ public sealed class FileOperator
     private readonly ExistAction _existAction;
     private readonly bool _fixMtime;
     private readonly int _maxDegreeOfParallelism;
+    // 同一原始目标路径的碰撞检查 + 传输必须串行：并行下 Exists 检查与临时文件落盘交错会漏判同名（覆盖丢文件/漏计 Skipped）
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _targetGates = new();
 
     public FileOperator(IFileStorage target, FileOperation operation, ExistAction existAction, bool fixMtime, int maxDegreeOfParallelism = 2)
     {
@@ -52,6 +54,8 @@ public sealed class FileOperator
         {
             token.ThrowIfCancellationRequested();
 
+            var gate = _targetGates.GetOrAdd(f.RelativeTarget, _ => new SemaphoreSlim(1, 1));
+            await gate.WaitAsync(token);
             try
             {
                 var resolution = await ResolveCollisionAsync(f.RelativeTarget, token);
@@ -73,8 +77,9 @@ public sealed class FileOperator
                     await TransferWithRetryAsync(f, temp, resolution.Target, token);
 
                     // move 语义：目标确认落盘后删除源（网络目标下 GUI 已禁用 move，此处防御性生效）
-                    if (_operation == FileOperation.Move && File.Exists(f.Source.Path))
-                        File.Delete(f.Source.Path);
+                    // SAF→SAF / SAF→网络的移动 = 流式复制 + 删除源，由 IMediaSource.Delete 保证（ADR-0006 决策 3）
+                    if (_operation == FileOperation.Move)
+                        f.Source.Source?.Delete();
 
                     Interlocked.Increment(ref ok);
                 }
@@ -87,6 +92,10 @@ public sealed class FileOperator
             {
                 Interlocked.Increment(ref fail);
                 errors.Add($"{f.Source.FileName} -> {f.RelativeTarget}: {ex.Message}");
+            }
+            finally
+            {
+                gate.Release();
             }
             var done = Interlocked.Increment(ref processed);
             progress?.Report((double)done / files.Count);
@@ -124,10 +133,10 @@ public sealed class FileOperator
             try
             {
                 await _target.CreateDirectoryAsync(Path.GetDirectoryName(finalTarget)?.Replace('\\', '/') ?? "", ct);
-                await _target.CopyFromAsync(f.Source.Path, temp, null, ct);
+                await _target.CopyFromAsync(f.Source.Source!, temp, null, ct);
 
-                // 大小校验（WebDAV 获取不到长度时跳过）
-                var expected = new FileInfo(f.Source.Path).Length;
+                // 大小校验（目标获取不到长度时跳过）；长度取源端抽象（SAF 下 FileInfo(path) 不可用）
+                var expected = f.Source.Source?.Length ?? f.Source.Size;
                 var actual = await _target.GetLengthAsync(temp, ct);
                 if (actual >= 0 && actual != expected)
                     throw new IOException($"大小校验失败：期望 {expected}，实际 {actual}");

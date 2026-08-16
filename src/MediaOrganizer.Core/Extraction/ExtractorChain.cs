@@ -1,9 +1,10 @@
 using MediaOrganizer.Core.Configuration;
 using MediaOrganizer.Core.Models;
+using MediaOrganizer.Core.Platforms;
 
 namespace MediaOrganizer.Core.Extraction;
 
-/// <summary>加权链：按权重降序依次尝试启用的提取器，取第一个通过校验的结果（SRS FR-2.2）。</summary>
+/// <summary>加权链：按权重降序依次尝试启用的提取器，取第一个通过校验的结果（SRS FR-2.2 / FR-A2.2）。</summary>
 public sealed class ExtractorChain
 {
     private readonly DateRangeValidator _validator;
@@ -15,8 +16,9 @@ public sealed class ExtractorChain
         _extractors = extractors.OrderByDescending(e => e.Weight).ToArray();
     }
 
-    /// <summary>按配置 + 模式集合构建标准三条提取器链。</summary>
-    public static ExtractorChain FromConfig(ExtractionConfig cfg, IReadOnlyList<PatternDefinition> patterns, DateTimeOffset? now = null)
+    /// <summary>按配置 + 模式集合构建标准三条提取器链。exifReader 为平台图片 EXIF 实现（桌面 MagickExifReader / Android AndroidExifReader）。</summary>
+    public static ExtractorChain FromConfig(ExtractionConfig cfg, IReadOnlyList<PatternDefinition> patterns,
+        IExifReader? exifReader = null, DateTimeOffset? now = null)
     {
         var settings = cfg.Extractors.ToDictionary(s => s.Name, s => s);
         var validator = new DateRangeValidator(cfg.MaxYearsPast, cfg.FutureDateBufferDays, now);
@@ -32,7 +34,7 @@ public sealed class ExtractorChain
 
         IDateExtractor[] list =
         [
-            new ExifExtractor(exifOn, exifW),
+            new ExifExtractor(exifOn, exifW, exifReader),
             new FileNameExtractor(patterns, fnOn, fnW),
             new FileSystemExtractor(fsOn, fsW)
         ];

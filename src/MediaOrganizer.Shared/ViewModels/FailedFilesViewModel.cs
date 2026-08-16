@@ -7,11 +7,10 @@ using MediaOrganizer.Core.Execution;
 using MediaOrganizer.Core.Logging;
 using MediaOrganizer.Core.Models;
 using MediaOrganizer.Core.Patterns;
-using MediaOrganizer.Desktop.Services;
-using MediaOrganizer.Desktop.Views;
+using MediaOrganizer.Shared.Services;
 using System.Collections.ObjectModel;
 
-namespace MediaOrganizer.Desktop.ViewModels;
+namespace MediaOrganizer.Shared.ViewModels;
 
 public sealed record FailedItem(UnparsedFile File)
 {
@@ -22,12 +21,19 @@ public sealed record FailedItem(UnparsedFile File)
     public string Reason => File.Reason;
 }
 
-/// <summary>失败文件：列表 + 预览 + 批量移动 + 打开系统应用/魔术工具。</summary>
+/// <summary>
+/// 失败文件：列表 + 预览 + 批量移动 + 打开系统应用（双端共享，ADR-0006 决策 4/5）。
+/// 批量移动下沉 Core PendingFileMover（流式复制 + 删除源，SAF/本地统一语义）；
+/// 确认弹窗 / 系统打开 / 缩略图预览经注入抽象（桌面实现齐全；Android 无预览、其余走系统 Intent）。
+/// </summary>
 public partial class FailedFilesViewModel : ViewModelBase
 {
     private readonly AppConfig _config;
     private readonly AppLogger _logger;
     private readonly AppState _state;
+    private readonly IConfirmDialog _confirm;
+    private readonly ISystemFileOpener _opener;
+    private readonly IImageLoader _imageLoader;
 
     public event Action<IEnumerable<string>>? NavigateToMagic;
 
@@ -54,11 +60,19 @@ public partial class FailedFilesViewModel : ViewModelBase
     [ObservableProperty]
     private string _moveHint = "";
 
-    public FailedFilesViewModel(AppState state, AppLogger logger)
+    public FailedFilesViewModel(
+        AppState state,
+        AppLogger logger,
+        IConfirmDialog confirm,
+        ISystemFileOpener opener,
+        IImageLoader imageLoader)
     {
         _state = state;
         _config = state.Config;
         _logger = logger;
+        _confirm = confirm;
+        _opener = opener;
+        _imageLoader = imageLoader;
         _pendingDir = state.Config.Paths.PendingDir;
     }
 
@@ -67,7 +81,7 @@ public partial class FailedFilesViewModel : ViewModelBase
         Items.Clear();
         Preview = null;
         if (result is null) return;
-        // FR-6.1：按结构指纹聚类排序（指纹一致的相邻）
+        // FR-A6.1：按结构指纹聚类排序（指纹一致的相邻）
         foreach (var u in result.Unparsed
                      .OrderBy(f => StructureFingerprint.Compute(f.File.FileName))
                      .ThenBy(f => f.File.FileName))
@@ -85,7 +99,7 @@ public partial class FailedFilesViewModel : ViewModelBase
 
     private async Task LoadPreviewAsync(FailedItem item)
     {
-        var bmp = await Task.Run(() => ThumbnailService.Load(item.Path, _config.General.PreviewSize));
+        var bmp = await Task.Run(() => _imageLoader.LoadThumbnail(item.Path, _config.General.PreviewSize));
         if (ReferenceEquals(Selected, item) && bmp is not null)
         {
             Preview = bmp;
@@ -97,12 +111,13 @@ public partial class FailedFilesViewModel : ViewModelBase
     private async Task OpenWithSystem()
     {
         if (Selected is null) return;
-        await ThumbnailService.OpenWithSystemAppAsync(Selected.Path);
+        await _opener.OpenAsync(Selected.Path);
     }
 
     [RelayCommand]
     private void OpenMagicTools()
     {
+        // 桌面端接线导航到魔术工具；Android 无魔术工具，不订阅此事件（FR-A6.4）
         var names = (Selected is not null
                 ? new[] { Selected.Name }
                 : Items.Select(i => i.Name))
@@ -116,56 +131,46 @@ public partial class FailedFilesViewModel : ViewModelBase
     [RelayCommand]
     private async Task MoveToPending()
     {
-        if (Items.Count == 0 || IsMoving) return;
+        var items = Items.ToArray();
+        if (items.Length == 0 || IsMoving) return;
 
-        // FR-6.5：目标目录必须由用户指定，不自动落盘兜底
+        // FR-A6.5：目标目录必须由用户指定，不自动落盘兜底
         if (string.IsNullOrWhiteSpace(PendingDir))
         {
-            MoveHint = "请先在设置中指定「待处理文件夹」";
+            MoveHint = "请先指定「待处理目录」";
             return;
         }
         var targetDir = PendingDir;
 
-        // FR-6.5：移动前确认
-        var owner = App.MainWindow;
-        var confirmed = owner is null || await ConfirmDialog.AskAsync(owner,
-            "移入待处理文件夹",
-            $"将把 {Items.Count} 个文件移动到：\n{targetDir}\n\n确定继续吗？");
+        // FR-A6.5：移动前确认（SAF 移动 = 复制 + 删除源）
+        var confirmed = await _confirm.ConfirmAsync(
+            "移入待处理目录",
+            $"将把 {items.Length} 个文件移动到：\n{targetDir}\n\n（移动 = 复制 + 删除源）确定继续吗？");
         if (!confirmed) return;
 
-        Directory.CreateDirectory(targetDir);
         IsMoving = true;
         MoveProgress = 0;
         MoveHint = "";
-        int moved = 0, failed = 0;
-        var items = Items.ToArray();
         try
         {
-            await Task.Run(() =>
-            {
-                for (var i = 0; i < items.Length; i++)
-                {
-                    var item = items[i];
-                    try
-                    {
-                        var target = Path.Combine(targetDir, item.Name);
-                        if (File.Exists(target))
-                            target = FileOperator.FindFreeLocalPath(target);
-                        File.Move(item.Path, target);
-                        moved++;
-                    }
-                    catch (Exception ex)
-                    {
-                        failed++;
-                        _logger.Warn($"{item.Name} 移动失败：{ex.Message}");
-                    }
-                    MoveProgress = (double)(i + 1) / items.Length;
-                }
-            });
-            foreach (var item in items.Where(i => !File.Exists(i.Path))) Items.Remove(item);
-            _state.Config.Paths.PendingDir = targetDir;
-            MoveHint = $"移动完成：成功 {moved}，失败 {failed}";
+            var target = StorageFactory.CreateLocalStorage(targetDir);
+            var progress = new Progress<double>(p => MoveProgress = p * 100);
+            var result = await new PendingFileMover()
+                .MoveAsync(items.Select(i => i.File.File).ToArray(), target, progress);
+
+            // 从列表移除已移动的条目
+            foreach (var item in items.Where(i => result.MovedNames.Contains(i.Name)))
+                Items.Remove(item);
+
+            MoveHint = $"移动完成：成功 {result.Moved}，失败 {result.Failed}";
             _logger.Info(MoveHint);
+            foreach (var err in result.Errors.Take(10))
+                _logger.Warn(err);
+        }
+        catch (Exception ex)
+        {
+            MoveHint = $"移动失败：{ex.Message}";
+            _logger.Error(MoveHint);
         }
         finally
         {
