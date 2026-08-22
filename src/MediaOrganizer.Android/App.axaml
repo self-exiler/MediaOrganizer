@@ -5,6 +5,7 @@
              RequestedThemeVariant="Light">
     <Application.Styles>
         <FluentTheme />
+        <local:AppTheme />
     </Application.Styles>
     <Application.DataTemplates>
         <local:ViewLocator />

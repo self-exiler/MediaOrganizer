@@ -11,6 +11,15 @@ public partial class ExtractorSettingVM : ObservableObject
 {
     public required string Name { get; init; }
 
+    /// <summary>展示名（移动端设置页用；桌面亦可用）。</summary>
+    public string DisplayLabel => Name switch
+    {
+        "Exif" => "EXIF 提取器",
+        "FileName" => "文件名提取器",
+        "FileSystem" => "文件系统提取器",
+        _ => Name
+    };
+
     [ObservableProperty]
     private bool _enabled;
 

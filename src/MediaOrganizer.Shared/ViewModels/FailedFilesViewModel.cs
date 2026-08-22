@@ -12,13 +12,24 @@ using System.Collections.ObjectModel;
 
 namespace MediaOrganizer.Shared.ViewModels;
 
-public sealed record FailedItem(UnparsedFile File)
+/// <summary>失败文件列表项。IsChecked 为批量移动的目标选择（Android 触屏勾选；桌面单选不受影响）。</summary>
+public partial class FailedItem : ObservableObject
 {
+    public FailedItem(UnparsedFile file)
+    {
+        File = file;
+        Fingerprint = StructureFingerprint.Compute(file.File.FileName);
+    }
+
+    public UnparsedFile File { get; }
     public string Name => File.File.FileName;
     public string Path => File.File.Path;
     public long Size => File.File.Size;
-    public string Fingerprint { get; } = StructureFingerprint.Compute(File.File.FileName);
+    public string Fingerprint { get; }
     public string Reason => File.Reason;
+
+    [ObservableProperty]
+    private bool _isChecked;
 }
 
 /// <summary>
@@ -108,10 +119,20 @@ public partial class FailedFilesViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private async Task OpenWithSystem()
+    private async Task OpenWithSystem(FailedItem? item = null)
     {
-        if (Selected is null) return;
-        await _opener.OpenAsync(Selected.Path);
+        var target = item ?? Selected;
+        if (target is null) return;
+        await _opener.OpenAsync(target.Path);
+    }
+
+    /// <summary>全选/取消全选（Android 触屏批量操作）：有未勾选项时全部勾选，否则全部取消。</summary>
+    [RelayCommand]
+    private void ToggleSelectAll()
+    {
+        var check = Items.Any(i => !i.IsChecked);
+        foreach (var i in Items)
+            i.IsChecked = check;
     }
 
     [RelayCommand]
@@ -131,8 +152,11 @@ public partial class FailedFilesViewModel : ViewModelBase
     [RelayCommand]
     private async Task MoveToPending()
     {
-        var items = Items.ToArray();
-        if (items.Length == 0 || IsMoving) return;
+        if (Items.Count == 0 || IsMoving) return;
+
+        // 有勾选项时仅移动勾选的（Android 批量选择语义）；全部未勾选则移动全部（桌面语义保持不变）
+        var items = Items.Where(i => i.IsChecked).ToArray();
+        if (items.Length == 0) items = Items.ToArray();
 
         // FR-A6.5：目标目录必须由用户指定，不自动落盘兜底
         if (string.IsNullOrWhiteSpace(PendingDir))

@@ -1,13 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-  <!-- 注意：MainActivity 的 <activity> 条目由 C# [Activity] 特性自动生成（Java stub 为 crc64 哈希包名，
-       手写条目若用 .MainActivity 相对名会指向不存在的 org.mediaorganizer.android.MainActivity，
-       导致启动 ClassNotFoundException）。此处只保留权限等清单级声明。 -->
-  <application android:label="MediaOrganizer" android:allowBackup="true" />
+  <!-- MainActivity 的 <activity> 条目由 C# [Activity] 特性自动生成（含 CRC 包名的 Java stub），
+       手写相对名条目会指向不存在的类导致 ClassNotFoundException，此处勿手写。 -->
+  <application android:label="MediaOrganizer" android:icon="@drawable/icon" android:allowBackup="true" />
 
-  <!-- SAF 目录/文件访问走 DocumentProvider，无需存储权限；网络输出目标需要 -->
+  <!-- SAF 目录/文件访问走 DocumentProvider，无需存储权限；网络输出目标与 WakeLock 需要以下权限 -->
   <uses-permission android:name="android.permission.INTERNET" />
   <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-  <!-- 分析/执行期间持 WakeLock 防止息屏中断（NFR-A9） -->
   <uses-permission android:name="android.permission.WAKE_LOCK" />
 </manifest>

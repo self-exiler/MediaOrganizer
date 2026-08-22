@@ -10,7 +10,35 @@
         <SolidColorBrush x:Key="DividerBrush" Color="#E5E5E5"/>
         <SolidColorBrush x:Key="MutedBrush" Color="#8A8A8A"/>
         <SolidColorBrush x:Key="TextBrush" Color="#1B1B1B"/>
-        <SolidColorBrush x:Key="DrawerBg" Color="#FAFAFA"/>
+        <SolidColorBrush x:Key="SuccessBrush" Color="#107C10"/>
+
+        <!-- 抽屉导航项（FR-A7.1）：48dp 热区、选中态左侧高亮条 + 淡色底 -->
+        <ControlTheme x:Key="NavListItem" TargetType="ListBoxItem">
+            <Setter Property="Padding" Value="20,0"/>
+            <Setter Property="MinHeight" Value="48"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Panel>
+                        <Border x:Name="RootB" Background="Transparent" CornerRadius="0,24,24,0" Margin="0,2"/>
+                        <Border x:Name="ActiveBar" Width="3" HorizontalAlignment="Left" CornerRadius="2"
+                                Background="{StaticResource AccentBrush}" Margin="0,14" IsVisible="False"/>
+                        <ContentPresenter Content="{TemplateBinding Content}"
+                                          ContentTemplate="{TemplateBinding ContentTemplate}"
+                                          Margin="{TemplateBinding Padding}" VerticalAlignment="Center"/>
+                    </Panel>
+                </ControlTemplate>
+            </Setter>
+            <Style Selector="^:pointerover /template/ Border#RootB">
+                <Setter Property="Background" Value="#0A000000"/>
+            </Style>
+            <Style Selector="^:selected /template/ Border#RootB">
+                <Setter Property="Background" Value="#140067C0"/>
+            </Style>
+            <Style Selector="^:selected /template/ Border#ActiveBar">
+                <Setter Property="IsVisible" Value="True"/>
+            </Style>
+        </ControlTheme>
     </UserControl.Resources>
 
     <Grid Background="{StaticResource BgBrush}">
@@ -20,51 +48,81 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- AppBar -->
-        <Border Grid.Row="0" Background="{StaticResource AccentBrush}" Padding="4,0">
+        <!-- AppBar（FR-A7.1）：汉堡菜单 + 页面标题 -->
+        <Border Grid.Row="0" Background="{StaticResource AccentBrush}" Padding="4,0" MinHeight="56">
             <DockPanel>
                 <Button DockPanel.Dock="Left" Command="{Binding ToggleDrawerCommand}"
                         Background="Transparent" BorderThickness="0" Foreground="White"
-                        Width="48" Height="48" FontSize="22" Content="&#x2630;"/>
+                        Width="48" Height="48" FontSize="22" Content="&#x2630;"
+                        VerticalAlignment="Center"/>
                 <TextBlock Text="{Binding AppTitle}" Foreground="White" FontSize="18" FontWeight="Medium"
-                           VerticalAlignment="Center" Margin="4,0,0,0"/>
+                           VerticalAlignment="Center" Margin="4,0,12,0"/>
             </DockPanel>
         </Border>
 
         <!-- 内容区：ViewLocator 按 CurrentPage 解析页面视图 -->
-        <ContentControl Grid.Row="1" Content="{Binding CurrentPage}"
-                        Background="{StaticResource BgBrush}"/>
+        <ContentControl Grid.Row="1" Content="{Binding CurrentPage}"/>
 
-        <!-- 底部状态栏 -->
+        <!-- 底部状态栏（FR-A7.2）：忙碌圆点 + 状态文本 + 上次分析摘要 -->
         <Border Grid.Row="2" Background="{StaticResource CardBrush}"
-                BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,1,0,0">
-            <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{StaticResource MutedBrush}" Margin="16,8"/>
+                BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,1,0,0" MinHeight="32">
+            <DockPanel Margin="16,6">
+                <Panel DockPanel.Dock="Left" Width="12" VerticalAlignment="Center">
+                    <Ellipse Width="8" Height="8" Fill="{StaticResource SuccessBrush}"
+                             IsVisible="{Binding !IsBusy}"/>
+                    <Ellipse Width="8" Height="8" Fill="{StaticResource AccentBrush}"
+                             IsVisible="{Binding IsBusy}"/>
+                </Panel>
+                <TextBlock DockPanel.Dock="Right" Text="{Binding StatusDetail}" FontSize="11"
+                           Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding StatusText}" FontSize="11"
+                           Foreground="#616161" VerticalAlignment="Center" Margin="4,0,8,0" TextTrimming="CharacterEllipsis"/>
+            </DockPanel>
         </Border>
 
-        <!-- 抽屉遮罩 + 抽屉（覆盖全屏） -->
-        <Panel Grid.Row="0" Grid.RowSpan="3" IsHitTestVisible="{Binding DrawerOpen}" ZIndex="100">
+        <!-- 抽屉遮罩 + 抽屉（覆盖全屏，点遮罩关闭） -->
+        <Panel Grid.Row="0" Grid.RowSpan="3" ZIndex="100">
             <Border Background="#66000000" IsVisible="{Binding DrawerOpen}" Tapped="OnOverlayTapped"/>
-            <Border HorizontalAlignment="Left" Width="280" Background="{StaticResource DrawerBg}"
-                    IsVisible="{Binding DrawerOpen}" Padding="0,0,0,16">
+            <Border HorizontalAlignment="Left" Width="280" Background="#FAFAFA"
+                    IsVisible="{Binding DrawerOpen}">
                 <DockPanel>
-                    <StackPanel DockPanel.Dock="Top" Margin="20,20,20,12">
-                        <TextBlock Text="MediaOrganizer" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}"/>
+                    <!-- 抽屉头部：logo + 应用名 -->
+                    <StackPanel DockPanel.Dock="Top" Margin="20,18,20,10" Orientation="Horizontal" Spacing="12">
+                        <Border Width="36" Height="36" CornerRadius="8">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                                    <GradientStop Color="#0067C0" Offset="0"/>
+                                    <GradientStop Color="#4FA3E3" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                            <TextBlock Text="🗂" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="MediaOrganizer" FontSize="15" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextBrush}" VerticalAlignment="Center"/>
                     </StackPanel>
-                    <TextBlock DockPanel.Dock="Bottom" Text="v1.0-android · 开源 MIT&#10;APK 侧载分发（GitHub Release）"
-                               FontSize="11" Foreground="{StaticResource MutedBrush}" Margin="20,8"/>
-                    <ListBox Background="Transparent" BorderThickness="0"
-                             SelectedIndex="{Binding SelectedPage}" SelectionMode="Single">
+                    <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,1,0,0" Padding="20,10">
+                        <TextBlock Text="v1.0-android · 开源 MIT&#x0a;APK 侧载分发（GitHub Release）"
+                                   FontSize="11" Foreground="{StaticResource MutedBrush}"/>
+                    </Border>
+
+                    <ListBox Background="Transparent" BorderThickness="0" Padding="0,4"
+                             SelectedIndex="{Binding SelectedPage, Mode=TwoWay}"
+                             ItemsSource="{Binding NavItems}"
+                             ItemContainerTheme="{StaticResource NavListItem}">
                         <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding}" FontSize="14" Margin="8,2"/>
+                            <DataTemplate x:DataType="vm:NavItem">
+                                <Grid ColumnDefinitions="24,8,*,Auto" MinHeight="48">
+                                    <TextBlock Grid.Column="0" Text="{Binding Icon}" FontSize="18" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding Label}" FontSize="14"
+                                               Foreground="{StaticResource TextBrush}" VerticalAlignment="Center"/>
+                                    <!-- 失败文件角标（Badge=0 时隐藏） -->
+                                    <Border Grid.Column="3" IsVisible="{Binding HasBadge}"
+                                            Background="#C42B1C" CornerRadius="10" Padding="8,2" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Badge}" FontSize="11" Foreground="White"/>
+                                    </Border>
+                                </Grid>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
-                        <ListBox.Items>
-                            <x:String>整理工作台</x:String>
-                            <x:String>失败文件</x:String>
-                            <x:String>分析报告</x:String>
-                            <x:String>设置</x:String>
-                        </ListBox.Items>
                     </ListBox>
                 </DockPanel>
             </Border>

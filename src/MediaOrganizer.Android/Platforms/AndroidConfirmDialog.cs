@@ -1,24 +1,33 @@
 using Android.App;
-using Android.OS;
+using Android.Content;
 using MediaOrganizer.Shared.Services;
 
 namespace MediaOrganizer.Android.Platforms;
 
-/// <summary>确认对话框（FR-A6.5 批量移动确认）：Android AlertDialog。</summary>
+/// <summary>系统 AlertDialog 确认弹窗（执行前确认 / 批量移动确认），UI 线程回调转 Task。</summary>
 public sealed class AndroidConfirmDialog : IConfirmDialog
 {
     public Task<bool> ConfirmAsync(string title, string message)
     {
+        var activity = MainActivity.Instance;
+        if (activity is null) return Task.FromResult(false);
+
         var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        new Handler(Looper.MainLooper!).Post(() =>
+        activity.RunOnUiThread(() =>
         {
-            new AlertDialog.Builder(MainActivity.Instance!)
+            new AlertDialog.Builder(activity)
                 .SetTitle(title)
                 .SetMessage(message)
-                .SetPositiveButton("确认", (_, _) => tcs.TrySetResult(true))
+                .SetPositiveButton("确定", (_, _) => tcs.TrySetResult(true))
                 .SetNegativeButton("取消", (_, _) => tcs.TrySetResult(false))
+                .SetOnCancelListener(new CancelListener(() => tcs.TrySetResult(false)))
                 .Show();
         });
         return tcs.Task;
+    }
+
+    private sealed class CancelListener(Action onCanceled) : Java.Lang.Object, IDialogInterfaceOnCancelListener
+    {
+        public void OnCancel(IDialogInterface? dialog) => onCanceled();
     }
 }

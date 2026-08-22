@@ -1,8 +1,6 @@
-using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.Markup.Xaml;
+using MediaOrganizer.Android.ViewModels;
 
 namespace MediaOrganizer.Android.Views;
 
@@ -13,9 +11,6 @@ public partial class MainView : UserControl
         InitializeComponent();
     }
 
-    private void OnOverlayTapped(object? sender, TappedEventArgs e)
-    {
-        if (DataContext is ViewModels.MainViewModel vm)
-            vm.CloseDrawerCommand.Execute(null);
-    }
+    private void OnOverlayTapped(object? sender, RoutedEventArgs e)
+        => (DataContext as MainViewModel)?.CloseDrawerCommand.Execute(null);
 }

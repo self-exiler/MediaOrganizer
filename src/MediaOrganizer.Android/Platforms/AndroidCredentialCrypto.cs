@@ -1,69 +1,79 @@
-using System.Security.Cryptography;
 using System.Text;
-using Android.Runtime;
 using Android.Security.Keystore;
 using Java.Security;
 using Javax.Crypto;
 using Javax.Crypto.Spec;
 using MediaOrganizer.Core.Platforms;
-using AesCipher = Javax.Crypto.Cipher;
+using MediaOrganizer.Core.Security;
 
 namespace MediaOrganizer.Android.Platforms;
 
 /// <summary>
-/// Android Keystore 凭据加密（FR-A10，ADR-0005 §7）：AES/GCM/NoPadding 密钥由 Android Keystore 生成，
-/// 硬件-backed、不可导出、设备绑定。存储格式：KS:&lt;base64(iv|密文含tag)&gt;。
-/// 遇到 DPAPI:/B64:/旧明文时按原样返回（无密钥可解），交由网络层处理。
+/// Android Keystore 凭据加密（FR-A10，ADR-0005 §7）：AES-256-GCM，密钥由 Keystore 生成且不可导出（硬件 backed，设备绑定）。
+/// 存储格式 KS:base64(IV ‖ 密文)，与 CredentialCrypto 的 DPAPI:/B64: 前缀约定并存。
 /// </summary>
 public sealed class AndroidCredentialCrypto : ICredentialCrypto
 {
-    private const string KeyAlias = "mediaorganizer-credential";
-    private const string AndroidKeyStore = "AndroidKeyStore";
-    private const string Prefix = Core.Security.CredentialCrypto.KeystorePrefix;
+    private const string KeyAlias = "mediaorganizer_master";
+    private const string Transformation = "AES/GCM/NoPadding";
+    private const int GcmIvLength = 12;
 
     public string Encrypt(string plain)
     {
         if (string.IsNullOrEmpty(plain)) return "";
-        var cipher = AesCipher.GetInstance("AES/GCM/NoPadding");
-        cipher.Init(Javax.Crypto.CipherMode.EncryptMode, GetOrCreateKey());
-        var iv = cipher.GetIV();
-        var encrypted = cipher.DoFinal(Encoding.UTF8.GetBytes(plain));
-        var payload = new byte[iv.Length + encrypted.Length];
-        Buffer.BlockCopy(iv, 0, payload, 0, iv.Length);
-        Buffer.BlockCopy(encrypted, 0, payload, iv.Length, encrypted.Length);
-        return Prefix + Convert.ToBase64String(payload);
+        try
+        {
+            var cipher = Cipher.GetInstance(Transformation)!;
+            cipher.Init(CipherMode.EncryptMode, GetOrCreateKey());
+            var cipherText = cipher.DoFinal(Encoding.UTF8.GetBytes(plain));
+            var iv = cipher.GetIV()!;
+            var buf = new byte[iv.Length + cipherText.Length];
+            Buffer.BlockCopy(iv, 0, buf, 0, iv.Length);
+            Buffer.BlockCopy(cipherText, 0, buf, iv.Length, cipherText.Length);
+            return CredentialCrypto.KeystorePrefix + Convert.ToBase64String(buf);
+        }
+        catch (Exception)
+        {
+            // Keystore 异常时宁可不保存凭据，也不能明文落盘（FR-A10.4）
+            return "";
+        }
     }
 
     public string Decrypt(string stored)
     {
         if (string.IsNullOrEmpty(stored)) return "";
-        if (!stored.StartsWith(Prefix, StringComparison.Ordinal))
-            return stored; // 非 Keystore 密文：旧明文/B64/DPAPI 原样透传
-        var payload = Convert.FromBase64String(stored[Prefix.Length..]);
-        var iv = new byte[12];
-        Buffer.BlockCopy(payload, 0, iv, 0, iv.Length);
-        var encrypted = new byte[payload.Length - iv.Length];
-        Buffer.BlockCopy(payload, iv.Length, encrypted, 0, encrypted.Length);
-        var cipher = AesCipher.GetInstance("AES/GCM/NoPadding");
-        cipher.Init(Javax.Crypto.CipherMode.DecryptMode, GetOrCreateKey(), new GCMParameterSpec(128, iv));
-        return Encoding.UTF8.GetString(cipher.DoFinal(encrypted));
+        if (!stored.StartsWith(CredentialCrypto.KeystorePrefix, StringComparison.Ordinal))
+            return stored; // 兼容旧明文/其他前缀：交给上层按原值处理
+
+        try
+        {
+            var buf = Convert.FromBase64String(stored[CredentialCrypto.KeystorePrefix.Length..]);
+            var spec = new GCMParameterSpec(128, buf, 0, GcmIvLength);
+            var cipher = Cipher.GetInstance(Transformation)!;
+            cipher.Init(CipherMode.DecryptMode, GetOrCreateKey(), spec);
+            var plain = cipher.DoFinal(buf, GcmIvLength, buf.Length - GcmIvLength);
+            return Encoding.UTF8.GetString(plain);
+        }
+        catch
+        {
+            return "";
+        }
     }
 
-    private static ISecretKey GetOrCreateKey()
+    private static IKey GetOrCreateKey()
     {
-        var ks = KeyStore.GetInstance(AndroidKeyStore);
-        ks.Load(null);
-        if (ks.GetKey(KeyAlias, null) is ISecretKey key)
-            return key;
+        var keyStore = KeyStore.GetInstance("AndroidKeyStore")!;
+        keyStore.Load(null);
+        if (keyStore.GetKey(KeyAlias, null) is IKey existing)
+            return existing;
 
-        var spec = new KeyGenParameterSpec.Builder(KeyAlias,
-                KeyStorePurpose.Encrypt | KeyStorePurpose.Decrypt)
+        var generator = KeyGenerator.GetInstance(KeyProperties.KeyAlgorithmAes, "AndroidKeyStore")!;
+        var spec = new KeyGenParameterSpec.Builder(KeyAlias, KeyStorePurpose.Encrypt | KeyStorePurpose.Decrypt)
             .SetBlockModes(KeyProperties.BlockModeGcm)
             .SetEncryptionPaddings(KeyProperties.EncryptionPaddingNone)
             .SetKeySize(256)
             .Build();
-        var kg = KeyGenerator.GetInstance(KeyProperties.KeyAlgorithmAes, AndroidKeyStore);
-        kg.Init(spec);
-        return kg.GenerateKey();
+        generator.Init(spec);
+        return generator.GenerateKey()!;
     }
 }

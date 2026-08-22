@@ -13,27 +13,16 @@
     <AndroidManifest>Properties\AndroidManifest.xml</AndroidManifest>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
+    <!-- aapt2 daemon 模式在部分机器上挂死（dotnet/android 已知问题）：改用一次性调用，跨机可移植 -->
+    <AndroidUseDaemonAapt2>false</AndroidUseDaemonAapt2>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
-
-  <!-- WORKAROUND(2026-08-16)：本机 aapt2 daemon 模式挂死（_CompileResources 永久等待，dotnet/android 已知顽疾），
-       用 one-shot shim 替代 daemon：每个命令单独调用 aapt2-real.exe。
-       shim 源码见 D:\Projects\aapt2-shim\src；仅在 shim 存在时生效，其他机器不受影响。 -->
-  <PropertyGroup Condition="Exists('D:\Projects\aapt2-shim\app\aapt2.exe')">
-    <Aapt2ToolPath>D:\Projects\aapt2-shim\app\</Aapt2ToolPath>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <AndroidResource Include="Resources\values\styles.xml" />
-    <AndroidResource Include="Resources\drawable\icon.png" />
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.1.1" />
     <PackageReference Include="Avalonia.Android" Version="12.1.1" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.1" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.1" />
-    <PackageReference Include="Xamarin.AndroidX.Core.SplashScreen" Version="1.2.0.2" />
     <PackageReference Include="Xamarin.AndroidX.DocumentFile" Version="1.0.1.4" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.1" />
   </ItemGroup>

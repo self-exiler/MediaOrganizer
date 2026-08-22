@@ -1,47 +1,39 @@
-using Android.App;
 using Android.Content;
 using MediaOrganizer.Shared.Services;
 
 namespace MediaOrganizer.Android.Platforms;
 
 /// <summary>
-/// 文件导出（FR-A4.3 报告「另存为/分享」）：另存为走 SAF ACTION_CREATE_DOCUMENT；
-/// 分享走系统分享面板（ACTION_SEND text/plain）。
+/// 文件导出 / 分享（FR-A 报告页）：另存为走 ACTION_CREATE_DOCUMENT（SAF）；
+/// 分享走系统分享面板（ACTION_SEND 纯文本）。
 /// </summary>
-public sealed class AndroidFileSaver : IFileSaver
+public sealed class AndroidFileSaver(MainActivity activity) : IFileSaver
 {
-    private readonly MainActivity _activity;
-
-    public AndroidFileSaver(MainActivity activity)
-    {
-        _activity = activity;
-    }
-
     public async Task<bool> SaveTextAsync(string suggestedName, string content)
     {
         var intent = new Intent(Intent.ActionCreateDocument);
-        intent.AddCategory(Intent.CategoryOpenable);
         intent.SetType("text/plain");
+        intent.AddCategory(Intent.CategoryOpenable);
         intent.PutExtra(Intent.ExtraTitle, suggestedName);
 
-        var data = await _activity.StartForResultAsync(intent, RequestCodes.CreateDocument);
+        var data = await activity.StartForResultAsync(intent, RequestCodes.CreateDocument);
         var uri = data?.Data;
         if (uri is null) return false;
 
-        using var stream = _activity.ContentResolverInstance.OpenOutputStream(uri);
-        using var writer = new System.IO.StreamWriter(stream);
+        await using var stream = activity.Resolver.OpenOutputStream(uri)
+                                  ?? throw new IOException("无法打开输出流");
+        await using var writer = new StreamWriter(stream);
         await writer.WriteAsync(content);
-        await writer.FlushAsync();
         return true;
     }
 
     public Task ShareTextAsync(string title, string content)
     {
-        var intent = new Intent(Intent.ActionSend);
-        intent.SetType("text/plain");
-        intent.PutExtra(Intent.ExtraSubject, title);
-        intent.PutExtra(Intent.ExtraText, content);
-        _activity.StartActivity(Intent.CreateChooser(intent, title));
+        var send = new Intent(Intent.ActionSend);
+        send.SetType("text/plain");
+        send.PutExtra(Intent.ExtraSubject, title);
+        send.PutExtra(Intent.ExtraText, content);
+        activity.StartActivity(Intent.CreateChooser(send, title));
         return Task.CompletedTask;
     }
 }

@@ -4,222 +4,246 @@
              x:Class="MediaOrganizer.Android.Views.SettingsView"
              x:DataType="vm:SettingsViewModel">
     <UserControl.Resources>
-        <SolidColorBrush x:Key="AccentBrush" Color="#0067C0"/>
         <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF"/>
         <SolidColorBrush x:Key="DividerBrush" Color="#E5E5E5"/>
         <SolidColorBrush x:Key="MutedBrush" Color="#8A8A8A"/>
         <SolidColorBrush x:Key="TextBrush" Color="#1B1B1B"/>
-        <SolidColorBrush x:Key="ErrBrush" Color="#C42B1C"/>
-        <SolidColorBrush x:Key="InfoBgBrush" Color="#F3F9FD"/>
-        <SolidColorBrush x:Key="InfoBorderBrush" Color="#C3DCF1"/>
-        <SolidColorBrush x:Key="InfoTextBrush" Color="#0F4E7D"/>
-        <SolidColorBrush x:Key="ChipSmbBgBrush" Color="#F3E9F7"/>
-        <SolidColorBrush x:Key="ChipSmbTextBrush" Color="#5A0B7C"/>
-        <SolidColorBrush x:Key="ChipExifBgBrush" Color="#E8F2FB"/>
-        <SolidColorBrush x:Key="ChipExifTextBrush" Color="#0F4E7D"/>
+        <SolidColorBrush x:Key="AccentBrush" Color="#0067C0"/>
     </UserControl.Resources>
 
-    <Grid Background="#F5F5F5">
-        <ScrollViewer>
-            <StackPanel Margin="16,12,16,24" Spacing="8">
+    <UserControl.Styles>
+        <Style Selector="TextBlock.sectionTitle">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#616161"/>
+            <Setter Property="Margin" Value="4,8,4,0"/>
+        </Style>
+        <Style Selector="Border.card">
+            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="BorderBrush" Value="#E5E5E5"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BoxShadow" Value="0 1 3 0 #14000000"/>
+        </Style>
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="#0067C0"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="MinHeight" Value="44"/>
+        </Style>
+        <Style Selector="Button.primary:pointerover">
+            <Setter Property="Background" Value="#1975C5"/>
+        </Style>
+        <Style Selector="Button.sm">
+            <Setter Property="MinHeight" Value="36"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Padding" Value="12,6"/>
+        </Style>
+    </UserControl.Styles>
 
-                <!-- ======== 提取器 ======== -->
-                <TextBlock Text="提取器" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}" Margin="4,4,4,0"/>
-                <Border Background="{StaticResource CardBrush}" CornerRadius="12" Padding="16"
-                        BorderBrush="{StaticResource DividerBrush}" BorderThickness="1">
-                    <StackPanel Spacing="10">
-                        <ItemsControl ItemsSource="{Binding Extractors}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="vm:ExtractorSettingVM">
-                                    <StackPanel Spacing="4" Margin="0,2">
-                                        <Grid ColumnDefinitions="*,Auto">
-                                            <TextBlock Grid.Column="0" Text="{Binding Name, StringFormat={}{0} 提取器}"
-                                                       FontSize="14" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center"/>
-                                            <CheckBox Grid.Column="1" IsChecked="{Binding Enabled, Mode=TwoWay}" MinHeight="44"/>
-                                        </Grid>
-                                        <Grid ColumnDefinitions="*,Auto">
-                                            <TextBlock Grid.Column="0" Text="权重" FontSize="12" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
-                                            <TextBlock Grid.Column="1" Text="{Binding Weight, StringFormat={}{0:0.0}}" FontSize="12"
-                                                       Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                        </Grid>
+    <ScrollViewer>
+        <StackPanel Margin="16" Spacing="12">
+
+            <!-- ===== 提取器（FR-A8.1） ===== -->
+            <TextBlock Classes="sectionTitle" Text="提取器"/>
+            <Border Classes="card">
+                <StackPanel Spacing="14">
+                    <ItemsControl ItemsSource="{Binding Extractors}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ExtractorSettingVM">
+                                <StackPanel Spacing="6" Margin="0,4">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="{Binding DisplayLabel}" FontSize="14"
+                                                   Foreground="{StaticResource TextBrush}" VerticalAlignment="Center"/>
+                                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding Enabled}"/>
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
                                         <Slider Minimum="0" Maximum="2" SmallChange="0.1" LargeChange="0.5"
-                                                Value="{Binding Weight, Mode=TwoWay}"/>
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                        <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Grid.Column="0" Text="最大年份回溯（max_years_past）" FontSize="12"
-                                       Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" TextWrapping="Wrap"/>
-                            <NumericUpDown Grid.Column="1" Value="{Binding MaxYearsPast, Mode=TwoWay}" Minimum="1" Maximum="60"/>
-                        </Grid>
-                        <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Grid.Column="0" Text="未来日期缓冲（future_date_buffer_days）" FontSize="12"
-                                       Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" TextWrapping="Wrap"/>
-                            <NumericUpDown Grid.Column="1" Value="{Binding FutureDateBufferDays, Mode=TwoWay}" Minimum="0" Maximum="365"/>
-                        </Grid>
-                    </StackPanel>
-                </Border>
+                                                Value="{Binding Weight}" MinHeight="36"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Weight, StringFormat='{}{0:F1}'}"
+                                                   FontSize="12" Foreground="{StaticResource AccentBrush}"
+                                                   FontWeight="SemiBold" Width="36" TextAlignment="Right"
+                                                   VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <Separator Background="#F0F0F0"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
 
-                <!-- ======== 文件名模式 ======== -->
-                <TextBlock Text="文件名模式" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}" Margin="4,8,4,0"/>
-                <Border Background="{StaticResource CardBrush}" CornerRadius="12" Padding="8,8"
-                        BorderBrush="{StaticResource DividerBrush}" BorderThickness="1">
-                    <StackPanel Spacing="4">
-                        <ItemsControl ItemsSource="{Binding Patterns}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="vm:PatternSettingVM">
-                                    <Grid ColumnDefinitions="Auto,*,Auto" MinHeight="48">
-                                        <Border Grid.Column="0" Width="28" Height="28" CornerRadius="8" Background="#E9F7E9"
-                                                VerticalAlignment="Center" Margin="4,0">
-                                            <TextBlock Text="✓" FontSize="13" Foreground="#0B5A0B"
-                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </Border>
-                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="最大年份回溯（max_years_past）" FontSize="12" Foreground="#616161"/>
+                        <ComboBox x:Name="MaxYearsCombo" SelectionChanged="OnMaxYearsChanged">
+                            <ComboBoxItem Content="20 年"/>
+                            <ComboBoxItem Content="30 年"/>
+                            <ComboBoxItem Content="50 年"/>
+                        </ComboBox>
+                    </StackPanel>
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="未来日期缓冲（future_date_buffer_days）" FontSize="12" Foreground="#616161"/>
+                        <ComboBox x:Name="FutureBufferCombo" SelectionChanged="OnFutureBufferChanged">
+                            <ComboBoxItem Content="0 天（未来日期归入 FutureDate/）"/>
+                            <ComboBoxItem Content="1 天"/>
+                            <ComboBoxItem Content="7 天"/>
+                        </ComboBox>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- ===== 文件名模式（FR-A8.2） ===== -->
+            <TextBlock Classes="sectionTitle" Text="文件名模式"/>
+            <Border Classes="card" Padding="8,8,16,8">
+                <StackPanel Spacing="4">
+                    <ItemsControl ItemsSource="{Binding Patterns}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:PatternSettingVM">
+                                <Grid ColumnDefinitions="*,Auto" MinHeight="52">
+                                    <StackPanel Spacing="2" VerticalAlignment="Center" Margin="8,0">
+                                        <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="Medium"
+                                                   Foreground="{StaticResource TextBrush}"/>
+                                        <TextBlock FontSize="11" Foreground="{StaticResource MutedBrush}"
+                                                   TextTrimming="CharacterEllipsis" MaxWidth="230">
+                                            <Run Text="{Binding Regex}"/><Run Text=" · "/><Run Text="{Binding Source}"/>
+                                        </TextBlock>
+                                    </StackPanel>
+                                    <ToggleSwitch Grid.Column="1" IsChecked="{Binding Enabled}" VerticalAlignment="Center"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Border Background="#F3F9FD" BorderBrush="#C3DCF1" BorderThickness="1" CornerRadius="8"
+                            Padding="12,8" Margin="8,4">
+                        <TextBlock Text="ℹ️ 如需新增自定义模式，请在桌面版魔术工具中编辑后把 patterns.json 复制到手机。"
+                                   FontSize="12" Foreground="#0F4E7D" TextWrapping="Wrap"/>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <!-- ===== 网络位置（FR-A8.3，FR-A9） ===== -->
+            <TextBlock Classes="sectionTitle" Text="网络位置"/>
+            <Border Classes="card" Padding="8,8,16,8">
+                <StackPanel Spacing="4">
+                    <ItemsControl ItemsSource="{Binding NetworkProfiles}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:NetworkProfileVM">
+                                <Grid ColumnDefinitions="*,Auto,Auto,Auto" MinHeight="56" Margin="8,0">
+                                    <StackPanel Spacing="2" VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
                                             <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="Medium"
                                                        Foreground="{StaticResource TextBrush}"/>
-                                            <TextBlock FontSize="11" Foreground="{StaticResource MutedBrush}"
-                                                       TextTrimming="CharacterEllipsis">
-                                                <TextBlock.Text>
-                                                    <MultiBinding StringFormat="{}{0} · {1}">
-                                                        <Binding Path="Regex"/>
-                                                        <Binding Path="Source"/>
-                                                    </MultiBinding>
-                                                </TextBlock.Text>
-                                            </TextBlock>
+                                            <Border Background="#E8F2FB" CornerRadius="10" Padding="8,1">
+                                                <TextBlock Text="{Binding TypeLabel}" FontSize="10" Foreground="#0F4E7D"/>
+                                            </Border>
                                         </StackPanel>
-                                        <CheckBox Grid.Column="2" IsChecked="{Binding Enabled, Mode=TwoWay}" MinHeight="44"/>
-                                    </Grid>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                        <Button Content="↻ 恢复全部内置模式" Command="{Binding RestoreDefaultPatternsCommand}"
-                                Background="#F0F0F0" Foreground="{StaticResource TextBrush}" Margin="8,6,8,2"/>
-                        <Border Background="{StaticResource InfoBgBrush}" BorderBrush="{StaticResource InfoBorderBrush}"
-                                BorderThickness="1" CornerRadius="8" Padding="10,8" Margin="8,4">
-                            <TextBlock Text="ℹ️ 如需新增自定义模式，请在桌面版魔术工具中编辑后把 patterns.json 复制到手机。"
-                                       FontSize="11" Foreground="{StaticResource InfoTextBrush}" TextWrapping="Wrap"/>
-                        </Border>
-                    </StackPanel>
-                </Border>
-
-                <!-- ======== 网络位置 ======== -->
-                <TextBlock Text="网络位置" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}" Margin="4,8,4,0"/>
-                <Border Background="{StaticResource CardBrush}" CornerRadius="12" Padding="8,8"
-                        BorderBrush="{StaticResource DividerBrush}" BorderThickness="1">
-                    <StackPanel Spacing="4">
-                        <ItemsControl ItemsSource="{Binding NetworkProfiles}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="vm:NetworkProfileVM">
-                                    <Grid ColumnDefinitions="*,Auto,Auto,Auto" MinHeight="48">
-                                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="1" Margin="4,0">
-                                            <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="Medium"
-                                                       Foreground="{StaticResource TextBrush}" TextTrimming="CharacterEllipsis"/>
-                                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                                <Border Background="{StaticResource ChipSmbBgBrush}" CornerRadius="8" Padding="6,1">
-                                                    <TextBlock Text="{Binding TypeLabel}" FontSize="10" Foreground="{StaticResource ChipSmbTextBrush}"/>
-                                                </Border>
-                                                <TextBlock Text="{Binding Address}" FontSize="11" Foreground="{StaticResource MutedBrush}"
-                                                           TextTrimming="CharacterEllipsis" MaxWidth="140"/>
-                                            </StackPanel>
-                                            <TextBlock Text="{Binding VerifiedLabel}" FontSize="10" Foreground="{StaticResource MutedBrush}"/>
-                                        </StackPanel>
-                                        <Button Grid.Column="1" Content="测试" Click="OnTestProfile" Background="#F0F0F0"
-                                                Foreground="{StaticResource TextBrush}" MinHeight="40" Margin="2,0"/>
-                                        <Button Grid.Column="2" Content="编辑" Click="OnEditNetwork" Background="Transparent"
-                                                Foreground="{StaticResource AccentBrush}" MinHeight="40" Margin="2,0"/>
-                                        <Button Grid.Column="3" Content="删除" Click="OnDeleteNetwork" Background="Transparent"
-                                                Foreground="{StaticResource ErrBrush}" MinHeight="40" Margin="2,0"/>
-                                    </Grid>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-
-                        <Button Content="+ 添加网络位置" Command="{Binding BeginAddNetworkCommand}"
-                                Background="#F0F0F0" Foreground="{StaticResource TextBrush}" Margin="8,6,8,2"/>
-
-                        <!-- 内联编辑表单 -->
-                        <Border IsVisible="{Binding EditingNetwork}" Background="#FAFAFA" CornerRadius="10"
-                                BorderBrush="{StaticResource DividerBrush}" BorderThickness="1" Padding="12,8" Margin="8,4">
-                            <StackPanel Spacing="8">
-                                <StackPanel Spacing="4">
-                                    <TextBlock Text="名称" FontSize="12" Foreground="{StaticResource MutedBrush}"/>
-                                    <TextBox Text="{Binding EditName, Mode=TwoWay}" Watermark="如：家里的 NAS" MinHeight="44"/>
-                                </StackPanel>
-                                <StackPanel Spacing="4">
-                                    <TextBlock Text="类型" FontSize="12" Foreground="{StaticResource MutedBrush}"/>
-                                    <ComboBox ItemsSource="{Binding NetworkTypeOptions}" SelectedIndex="{Binding EditTypeIndex, Mode=TwoWay}" MinHeight="44"/>
-                                </StackPanel>
-                                <StackPanel Spacing="4">
-                                    <TextBlock Text="地址" FontSize="12" Foreground="{StaticResource MutedBrush}"/>
-                                    <TextBox Text="{Binding EditAddress, Mode=TwoWay}" FontSize="11" MinHeight="44"
-                                             Watermark="SMB: \\server\share&#10;WebDAV: https://…"/>
-                                </StackPanel>
-                                <StackPanel Spacing="4">
-                                    <TextBlock Text="用户名" FontSize="12" Foreground="{StaticResource MutedBrush}"/>
-                                    <TextBox Text="{Binding EditUsername, Mode=TwoWay}" MinHeight="44"/>
-                                </StackPanel>
-                                <StackPanel Spacing="4">
-                                    <TextBlock Text="密码" FontSize="12" Foreground="{StaticResource MutedBrush}"/>
-                                    <TextBox Text="{Binding EditPassword, Mode=TwoWay}" MinHeight="44"
-                                             Watermark="编辑已有位置时留空表示不修改"/>
-                                </StackPanel>
-                                <TextBlock Text="{Binding NetworkHint}" FontSize="11" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap"/>
-                                <Grid ColumnDefinitions="*,*,*">
-                                    <Button Grid.Column="0" Content="测试" Command="{Binding TestNetworkCommand}"
-                                            Background="#F0F0F0" Foreground="{StaticResource TextBrush}" Margin="0,0,4,0"/>
-                                    <Button Grid.Column="1" Content="保存" Command="{Binding SaveNetworkCommand}"
-                                            Background="{StaticResource AccentBrush}" Foreground="White" Margin="0,0,4,0"/>
-                                    <Button Grid.Column="2" Content="取消" Command="{Binding CancelNetworkCommand}"
-                                            Background="Transparent" Foreground="{StaticResource MutedBrush}"/>
+                                        <TextBlock Text="{Binding Address}" FontSize="11"
+                                                   Foreground="{StaticResource MutedBrush}"
+                                                   TextTrimming="CharacterEllipsis" MaxWidth="170"/>
+                                        <TextBlock Text="{Binding VerifiedLabel}" FontSize="10"
+                                                   Foreground="{StaticResource MutedBrush}"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Content="编辑" Classes="sm" Margin="4,0"
+                                            Click="OnEditProfile" VerticalAlignment="Center"/>
+                                    <Button Grid.Column="2" Content="删除" Classes="sm" Margin="4,0"
+                                            Click="OnDeleteProfile" VerticalAlignment="Center"/>
+                                    <Button Grid.Column="3" Content="测试" Classes="sm"
+                                            Click="OnTestProfile" VerticalAlignment="Center"/>
                                 </Grid>
-                            </StackPanel>
-                        </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
 
-                        <Border Background="{StaticResource InfoBgBrush}" BorderBrush="{StaticResource InfoBorderBrush}"
-                                BorderThickness="1" CornerRadius="8" Padding="10,8" Margin="8,4">
-                            <TextBlock Text="ℹ️ 网络目标仅支持复制（copy）；SMB 需账号密码认证（不支持匿名）。密码经 Android Keystore 加密存储。"
-                                       FontSize="11" Foreground="{StaticResource InfoTextBrush}" TextWrapping="Wrap"/>
-                        </Border>
-                    </StackPanel>
-                </Border>
+                    <Grid ColumnDefinitions="*" Margin="8,6">
+                        <Button Content="+ 添加网络位置" Command="{Binding BeginAddNetworkCommand}"/>
+                    </Grid>
 
-                <!-- ======== 扫描参数 ======== -->
-                <TextBlock Text="扫描参数" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}" Margin="4,8,4,0"/>
-                <Border Background="{StaticResource CardBrush}" CornerRadius="12" Padding="16"
-                        BorderBrush="{StaticResource DividerBrush}" BorderThickness="1">
-                    <StackPanel Spacing="10">
-                        <Grid ColumnDefinitions="*,Auto">
-                            <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="1">
-                                <TextBlock Text="扫描所有文件" FontSize="14" Foreground="{StaticResource TextBrush}"/>
-                                <TextBlock Text="忽略扩展名白名单" FontSize="12" Foreground="{StaticResource MutedBrush}"/>
+                    <!-- 连接编辑表单（新增/编辑共用，FR-A8.3） -->
+                    <Border IsVisible="{Binding EditingNetwork}" Background="#FAFAFA"
+                            CornerRadius="8" Padding="12" Margin="8,4" BorderBrush="#E5E5E5" BorderThickness="1">
+                        <StackPanel Spacing="10">
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="类型" FontSize="12" Foreground="#616161"/>
+                                <ComboBox ItemsSource="{Binding NetworkTypeOptions}"
+                                          SelectedIndex="{Binding EditTypeIndex, Mode=TwoWay}"/>
                             </StackPanel>
-                            <CheckBox Grid.Column="1" IsChecked="{Binding ScanAllFiles, Mode=TwoWay}" MinHeight="44"/>
-                        </Grid>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="扩展名白名单（逗号分隔）" FontSize="12" Foreground="{StaticResource MutedBrush}"/>
-                            <TextBox Text="{Binding SupportedFormatsText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                                     FontSize="11" FontFamily="Consolas, monospace" MinHeight="44" TextWrapping="Wrap"
-                                     AcceptsReturn="False"/>
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="名称" FontSize="12" Foreground="#616161"/>
+                                <TextBox Text="{Binding EditName, Mode=TwoWay}" PlaceholderText="家里的 NAS"/>
+                            </StackPanel>
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="地址" FontSize="12" Foreground="#616161"/>
+                                <TextBox Text="{Binding EditAddress, Mode=TwoWay}" PlaceholderText="\\192.168.1.10\photos 或 https://dav.example.com/dav"/>
+                            </StackPanel>
+                            <Grid ColumnDefinitions="*,8,*">
+                                <StackPanel Grid.Column="0" Spacing="6">
+                                    <TextBlock Text="用户名" FontSize="12" Foreground="#616161"/>
+                                    <TextBox Text="{Binding EditUsername, Mode=TwoWay}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Grid.ColumnSpan="1" Spacing="6">
+                                    <TextBlock Text="密码（Keystore 加密存储）" FontSize="12" Foreground="#616161"/>
+                                    <TextBox Text="{Binding EditPassword, Mode=TwoWay}" PasswordChar="•"/>
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock Text="{Binding NetworkHint}" FontSize="12" Foreground="#8A3714" TextWrapping="Wrap"
+                                       IsVisible="{Binding NetworkHint, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                            <Grid ColumnDefinitions="*,8,*,8,*">
+                                <Button Grid.Column="0" Content="测试连接" Click="OnTestEditing"/>
+                                <Button Grid.Column="2" Content="取消" Command="{Binding CancelNetworkCommand}"/>
+                                <Button Grid.Column="4" Content="保存" Classes="primary" Command="{Binding SaveNetworkCommand}"/>
+                            </Grid>
                         </StackPanel>
-                        <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Grid.Column="0" Text="扫描并行度（0 = 自动）" FontSize="12"
-                                       Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" TextWrapping="Wrap"/>
-                            <NumericUpDown Grid.Column="1" Value="{Binding MaxDegreeOfParallelism, Mode=TwoWay}" Minimum="0" Maximum="64"/>
-                        </Grid>
-                        <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Grid.Column="0" Text="执行并行度（0 = 自动）" FontSize="12"
-                                       Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" TextWrapping="Wrap"/>
-                            <NumericUpDown Grid.Column="1" Value="{Binding ExecutionParallelism, Mode=TwoWay}" Minimum="0" Maximum="64"/>
-                        </Grid>
-                    </StackPanel>
-                </Border>
+                    </Border>
 
-                <!-- 保存反馈 -->
-                <TextBlock Text="{Binding SaveHint}" FontSize="11" Foreground="{StaticResource MutedBrush}"
-                           TextWrapping="Wrap" Margin="4,8"
-                           IsVisible="{Binding SaveHint, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-            </StackPanel>
-        </ScrollViewer>
-    </Grid>
+                    <Border Background="#F3F9FD" BorderBrush="#C3DCF1" BorderThickness="1" CornerRadius="8"
+                            Padding="12,8" Margin="8,4">
+                        <TextBlock Text="ℹ️ 网络目标仅支持复制（copy）；SMB 需账号密码认证（首版不支持匿名）。"
+                                   FontSize="12" Foreground="#0F4E7D" TextWrapping="Wrap"/>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <!-- ===== 扫描参数（FR-A8.4） ===== -->
+            <TextBlock Classes="sectionTitle" Text="扫描参数"/>
+            <Border Classes="card">
+                <StackPanel Spacing="14">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Spacing="2" VerticalAlignment="Center">
+                            <TextBlock Text="扫描所有文件" FontSize="14" Foreground="{StaticResource TextBrush}"/>
+                            <TextBlock Text="忽略扩展名白名单" FontSize="12" Foreground="{StaticResource MutedBrush}"/>
+                        </StackPanel>
+                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding ScanAllFiles}"/>
+                    </Grid>
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="扩展名白名单（逗号分隔）" FontSize="12" Foreground="#616161"/>
+                        <TextBox Text="{Binding SupportedFormatsText, Mode=TwoWay}" MinHeight="72"
+                                 AcceptsReturn="True" TextWrapping="Wrap"/>
+                    </StackPanel>
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="扫描并行度" FontSize="12" Foreground="#616161"/>
+                        <ComboBox x:Name="ScanParallelCombo" SelectionChanged="OnScanParallelChanged">
+                            <ComboBoxItem Content="自动（CPU 核心数）"/>
+                            <ComboBoxItem Content="1（串行）"/>
+                            <ComboBoxItem Content="2"/>
+                            <ComboBoxItem Content="4"/>
+                            <ComboBoxItem Content="8"/>
+                        </ComboBox>
+                    </StackPanel>
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="执行并行度" FontSize="12" Foreground="#616161"/>
+                        <ComboBox x:Name="ExecParallelCombo" SelectionChanged="OnExecParallelChanged">
+                            <ComboBoxItem Content="自动（本地 2 / 网络 4）"/>
+                            <ComboBoxItem Content="1"/>
+                            <ComboBoxItem Content="2"/>
+                            <ComboBoxItem Content="4"/>
+                        </ComboBox>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="{Binding SaveHint}" FontSize="12" Foreground="#107C10" Margin="4,2"
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding SaveHint, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+            <Border Height="16"/>
+        </StackPanel>
+    </ScrollViewer>
 </UserControl>

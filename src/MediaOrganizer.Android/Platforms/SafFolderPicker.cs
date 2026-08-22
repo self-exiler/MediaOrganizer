@@ -1,42 +1,33 @@
-using Android.App;
 using Android.Content;
-using Android.OS;
 using MediaOrganizer.Shared.Services;
 
 namespace MediaOrganizer.Android.Platforms;
 
 /// <summary>
-/// SAF 目录选取（FR-A1.1/FR-A1.5）：ACTION_OPEN_DOCUMENT_TREE + takePersistableUriPermission
-/// 持久化授权（应用重启后无需重新选取）。
+/// SAF 目录选取（FR-A1.1/FR-A1.5）：ACTION_OPEN_DOCUMENT_TREE，
+/// takePersistableUriPermission 持久化授权（应用重启后免重选），返回树 URI 字符串。
 /// </summary>
-public sealed class SafFolderPicker : IFolderPicker
+public sealed class SafFolderPicker(MainActivity activity) : IFolderPicker
 {
-    private readonly MainActivity _activity;
-
-    public SafFolderPicker(MainActivity activity)
-    {
-        _activity = activity;
-    }
-
     public async Task<string?> PickFolderAsync()
     {
         var intent = new Intent(Intent.ActionOpenDocumentTree);
-        intent.AddFlags(ActivityFlags.GrantReadUriPermission | ActivityFlags.GrantWriteUriPermission
-            | ActivityFlags.GrantPersistableUriPermission | ActivityFlags.GrantPrefixUriPermission);
+        intent.AddFlags(ActivityFlags.GrantReadUriPermission
+                        | ActivityFlags.GrantWriteUriPermission
+                        | ActivityFlags.GrantPersistableUriPermission);
 
-        var data = await _activity.StartForResultAsync(intent, RequestCodes.FolderPick);
+        var data = await activity.StartForResultAsync(intent, RequestCodes.FolderPick);
         var uri = data?.Data;
         if (uri is null) return null;
 
-        var flags = ActivityFlags.GrantReadUriPermission | ActivityFlags.GrantWriteUriPermission
-            | ActivityFlags.GrantPersistableUriPermission;
         try
         {
-            _activity.ContentResolver.TakePersistableUriPermission(uri, flags);
+            activity.Resolver.TakePersistableUriPermission(uri,
+                ActivityFlags.GrantReadUriPermission | ActivityFlags.GrantWriteUriPermission);
         }
-        catch (Java.Lang.SecurityException)
+        catch
         {
-            // 部分提供者不支持持久化授权，忽略
+            // 部分文档提供方不支持持久化：当次会话仍可用，重启后需重选
         }
         return uri.ToString();
     }

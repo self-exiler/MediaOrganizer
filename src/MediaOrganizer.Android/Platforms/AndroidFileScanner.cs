@@ -1,4 +1,5 @@
 using Android.Content;
+using Android.Provider;
 using AndroidX.DocumentFile.Provider;
 using MediaOrganizer.Core.Models;
 using MediaOrganizer.Core.Scanning;
@@ -6,9 +7,9 @@ using MediaOrganizer.Core.Scanning;
 namespace MediaOrganizer.Android.Platforms;
 
 /// <summary>
-/// SAF 树递归扫描器（FR-A1，ADR-0005 §3）：sourceDir 为 ACTION_OPEN_DOCUMENT_TREE 返回的树 URI 字符串。
-/// 遍历 DocumentFile.listFiles() 替代 Directory.EnumerateFiles，按扩展名白名单过滤；
-/// 每个文件构造 AndroidSafMediaSource（预取名称/大小/mtime，mtime 兜底零额外查询）。
+/// SAF 树递归扫描器（FR-A1）：sourceDir 为 ACTION_OPEN_DOCUMENT_TREE 返回的树 URI 字符串。
+/// 遍历 DocumentFile.ListFiles() 替代 Directory.EnumerateFiles，按扩展名白名单过滤（FR-A1.2/A1.3）；
+/// 每个文件构造 AndroidSafMediaSource，名称/大小/mtime 随 DocumentFile 预取（R-A2）。
 /// </summary>
 public sealed class AndroidFileScanner : IFileScanner
 {
@@ -16,22 +17,26 @@ public sealed class AndroidFileScanner : IFileScanner
     private readonly bool _scanAllFiles;
     private readonly ContentResolver _resolver;
 
-    public AndroidFileScanner(IEnumerable<string> supportedFormats, bool scanAllFiles = false, ContentResolver? resolver = null)
+    public AndroidFileScanner(IEnumerable<string> supportedFormats, bool scanAllFiles, ContentResolver resolver)
     {
-        _formats = supportedFormats.Select(f => f.TrimStart('.').ToLowerInvariant()).ToHashSet();
+        _formats = supportedFormats
+            .Select(f => f.TrimStart('.').ToLowerInvariant())
+            .Where(f => f.Length > 0)
+            .ToHashSet();
         _scanAllFiles = scanAllFiles;
-        _resolver = resolver ?? global::Android.App.Application.Context.ContentResolver;
+        _resolver = resolver;
     }
-
-    public static AndroidFileScanner FromConfig(MediaOrganizer.Core.Configuration.AppConfig config)
-        => new(config.Scan.SupportedFormats, config.Scan.ScanAllFiles);
 
     public IReadOnlyList<MediaFile> Scan(string sourceDir)
     {
-        var treeUri = global::Android.Net.Uri.Parse(sourceDir);
-        if (treeUri is null) return [];
+        if (string.IsNullOrEmpty(sourceDir)) return [];
 
-        var tree = DocumentFile.FromTreeUri(global::Android.App.Application.Context, treeUri);
+        var context = global::Android.App.Application.Context;
+        var treeUri = global::Android.Net.Uri.Parse(sourceDir);
+        var tree = treeUri is null ? null : DocumentFile.FromTreeUri(context, treeUri);
+        if (tree is null || !tree.CanRead())
+            throw new IOException($"源目录不可读（SAF 授权可能已失效）：{sourceDir}");
+
         var list = new List<MediaFile>();
         Walk(tree, list);
         return list;
@@ -56,7 +61,7 @@ public sealed class AndroidFileScanner : IFileScanner
             }
             catch
             {
-                // 文件可能被占用/删除，跳过
+                // 文件被占用/删除/URI 失效：跳过单个文件（NFR-A4）
             }
         }
     }

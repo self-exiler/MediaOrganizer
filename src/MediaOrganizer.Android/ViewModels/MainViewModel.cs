@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MediaOrganizer.Android.Platforms;
@@ -7,9 +8,17 @@ using MediaOrganizer.Shared.ViewModels;
 
 namespace MediaOrganizer.Android.ViewModels;
 
+/// <summary>抽屉导航项（FR-A7.1）：图标 + 标签 + 页索引 + 失败文件角标（Badge=0 时角标隐藏）。</summary>
+public sealed record NavItem(string Icon, string Label, int Page)
+{
+    public int Badge { get; init; }
+    public bool HasBadge => Badge > 0;
+}
+
 /// <summary>
-/// 抽屉导航（FR-A7.1/FR-A7.2/FR-A7.3）：汉堡菜单切换页面（整理工作台 / 失败文件 / 分析报告 / 设置），
-/// 底部状态栏聚合操作反馈，返回键行为（关抽屉/退出）由 View 层处理。
+/// 应用外壳 VM（FR-A7）：顶部 AppBar 标题随页面切换、侧滑抽屉（整理工作台 / 失败文件 / 分析报告 / 设置）、
+/// 底部状态栏聚合操作反馈（忙碌圆点 + 状态文本 + 上次分析摘要）。
+/// 返回键行为（关抽屉/退出）由 MainActivity 的 OnBackPressedCallback 处理；
 /// WakeLock 随分析/执行的忙碌状态自动持有/释放（NFR-A9）。
 /// </summary>
 public partial class MainViewModel : ViewModelBase
@@ -31,6 +40,9 @@ public partial class MainViewModel : ViewModelBase
     private string _statusText = "就绪";
 
     [ObservableProperty]
+    private string _statusDetail = "尚未分析";
+
+    [ObservableProperty]
     private bool _isBusy;
 
     [ObservableProperty]
@@ -38,6 +50,15 @@ public partial class MainViewModel : ViewModelBase
 
     [ObservableProperty]
     private int _selectedPage; // 0 工作台 / 1 失败 / 2 报告 / 3 设置
+
+    /// <summary>抽屉导航项（失败文件项带角标，角标变化时替换条目触发刷新）。</summary>
+    public ObservableCollection<NavItem> NavItems { get; } =
+    [
+        new NavItem("🏠", "整理工作台", 0),
+        new NavItem("⚠️", "失败文件", 1) { Badge = 0 },
+        new NavItem("📄", "分析报告", 2),
+        new NavItem("⚙️", "设置", 3)
+    ];
 
     public ViewModelBase? CurrentPage => SelectedPage switch
     {
@@ -87,8 +108,16 @@ public partial class MainViewModel : ViewModelBase
         DrawerOpen = false;
     }
 
+    partial void OnFailedBadgeChanged(int value)
+        => NavItems[1] = NavItems[1] with { Badge = value };
+
     public void RefreshFailedBadge(AnalysisResult? result)
-        => FailedBadge = result?.Unparsed.Count ?? 0;
+    {
+        FailedBadge = result?.Unparsed.Count ?? 0;
+        StatusDetail = result is null
+            ? "尚未分析"
+            : $"上次分析: {result.Total:N0} 文件 · 成功 {result.Parsed.Count:N0}";
+    }
 
     partial void OnIsBusyChanged(bool value)
     {
@@ -96,10 +125,10 @@ public partial class MainViewModel : ViewModelBase
         else _wakeLock.Release();
     }
 
-    /// <summary>由 App 订阅 workbench.IsBusy 转发：忙碌时持 WakeLock 并更新状态栏。</summary>
+    /// <summary>由 App 订阅 workbench.IsBusy 转发：忙碌时持 WakeLock，状态栏文本由 StatusText 转发更新。</summary>
     public void SetBusy(bool busy)
     {
         IsBusy = busy;
-        if (busy) StatusText = "正在处理…";
+        if (!busy) StatusText = "就绪";
     }
 }

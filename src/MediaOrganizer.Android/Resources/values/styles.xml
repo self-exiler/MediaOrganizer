@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- AvaloniaActivity 继承 AppCompatActivity：主题必须是 Theme.AppCompat 系，否则启动抛
-         IllegalStateException "You need to use a Theme.AppCompat theme (or descendant)"。
-         之前误用平台 Material 主题导致该崩溃。 -->
-    <style name="MyTheme" parent="Theme.AppCompat.Light.NoActionBar" />
-    <!-- MainActivity Theme 属性引用的是 MyTheme.NoActionBar -->
-    <style name="MyTheme.NoActionBar" parent="Theme.AppCompat.Light.NoActionBar" />
+    <!-- AvaloniaActivity 继承 AppCompatActivity：主题必须为 Theme.AppCompat 系，否则启动抛
+         "You need to use a Theme.AppCompat theme (or descendant)"。状态栏/导航栏由 Avalonia 自绘。 -->
+    <style name="MyTheme" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:windowBackground">@android:color/white</item>
+    </style>
+    <style name="MyTheme.NoActionBar" parent="MyTheme" />
 </resources>

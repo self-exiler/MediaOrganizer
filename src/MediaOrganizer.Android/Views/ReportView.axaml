@@ -4,45 +4,51 @@
              x:Class="MediaOrganizer.Android.Views.ReportView"
              x:DataType="vm:ReportViewModel">
     <UserControl.Resources>
-        <SolidColorBrush x:Key="AccentBrush" Color="#0067C0"/>
         <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF"/>
         <SolidColorBrush x:Key="DividerBrush" Color="#E5E5E5"/>
         <SolidColorBrush x:Key="MutedBrush" Color="#8A8A8A"/>
-        <SolidColorBrush x:Key="TextBrush" Color="#1B1B1B"/>
     </UserControl.Resources>
 
-    <Grid RowDefinitions="*,Auto" Background="#F5F5F5">
-        <ScrollViewer>
-            <StackPanel Margin="16,12" Spacing="10">
+    <Grid RowDefinitions="Auto,*,Auto">
+        <ScrollViewer Grid.Row="1">
+            <StackPanel Margin="16" Spacing="8">
                 <Border Background="{StaticResource CardBrush}" CornerRadius="12" Padding="16"
-                        BorderBrush="{StaticResource DividerBrush}" BorderThickness="1">
+                        BorderBrush="{StaticResource DividerBrush}" BorderThickness="1"
+                        BoxShadow="0 1 3 0 #14000000">
                     <StackPanel Spacing="10">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <TextBlock Text="分析报告" FontSize="14" FontWeight="SemiBold"
-                                       Foreground="{StaticResource TextBrush}"/>
-                            <TextBlock Text="{Binding ReportMeta}" FontSize="11"
-                                       Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"
-                                       TextTrimming="CharacterEllipsis" MaxWidth="220"/>
-                        </StackPanel>
-                        <!-- 等宽文本报告（FR-A4 展示 / FR-A4.3 导出） -->
+                        <DockPanel>
+                            <TextBlock Text="📄 分析报告" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding ReportMeta}" FontSize="11" Foreground="{StaticResource MutedBrush}"
+                                       HorizontalAlignment="Right" TextTrimming="CharacterEllipsis" MaxWidth="180"/>
+                        </DockPanel>
                         <TextBlock Text="{Binding ReportText}" FontSize="11" LineHeight="18"
-                                   FontFamily="Consolas, monospace" TextWrapping="Wrap"
-                                   Foreground="{StaticResource TextBrush}"/>
+                                   Foreground="#1B1B1B" TextWrapping="Wrap"/>
                     </StackPanel>
                 </Border>
                 <TextBlock Text="报告自动保存于应用专有目录，可另存为或分享导出。"
-                           FontSize="11" Foreground="{StaticResource MutedBrush}" Margin="4,0"/>
+                           FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="4,0"/>
             </StackPanel>
         </ScrollViewer>
 
-        <Border Grid.Row="1" Background="{StaticResource CardBrush}"
-                BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,1,0,0" Padding="16,10">
-            <Grid ColumnDefinitions="*,*">
-                <Button Grid.Column="0" Content="📥 另存为（SAF）" Command="{Binding SaveReportCommand}"
-                        Background="#F0F0F0" Foreground="{StaticResource TextBrush}" Margin="0,0,4,0"/>
-                <Button Grid.Column="1" Content="📤 分享" Command="{Binding ShareReportCommand}"
-                        Background="{StaticResource AccentBrush}" Foreground="White" Margin="4,0,0,0"/>
+        <!-- 底部操作栏：另存为（SAF CREATE_DOCUMENT）/ 系统分享 -->
+        <Border Grid.Row="2" Background="{StaticResource CardBrush}" Padding="16,12"
+                BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,1,0,0">
+            <Grid ColumnDefinitions="*,8,*">
+                <Button Grid.Column="0" Content="📥 另存为（SAF）" Command="{Binding SaveReportCommand}"/>
+                <Button Grid.Column="2" Content="📤 分享" Classes="primary" Command="{Binding ShareReportCommand}"/>
             </Grid>
         </Border>
     </Grid>
+
+    <UserControl.Styles>
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="#0067C0"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="MinHeight" Value="48"/>
+        </Style>
+        <Style Selector="Button.primary:pointerover">
+            <Setter Property="Background" Value="#1975C5"/>
+        </Style>
+    </UserControl.Styles>
 </UserControl>

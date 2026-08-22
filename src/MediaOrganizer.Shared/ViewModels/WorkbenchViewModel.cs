@@ -63,6 +63,10 @@ public partial class WorkbenchViewModel : ViewModelBase
     [ObservableProperty]
     private string _successRate = "--";
 
+    /// <summary>按提取来源的统计摘要（如 "Exif 1,156 · FileName 68"），分析完成后更新。</summary>
+    [ObservableProperty]
+    private string _sourceSummary = "";
+
     [ObservableProperty]
     private bool _hasResult;
 
@@ -251,6 +255,10 @@ public partial class WorkbenchViewModel : ViewModelBase
             var result = await analyzer.AnalyzeAsync(SourceDir, progress, _cts.Token);
 
             SuccessRate = result.SuccessRate.ToString("P1");
+            SourceSummary = string.Join(" · ", result.Parsed
+                .GroupBy(p => p.Source)
+                .OrderByDescending(g => g.Count())
+                .Select(g => $"{g.Key} {g.Count():N0}"));
             StatusText = $"分析完成：{result.Total} 个文件，成功 {result.Parsed.Count}，失败 {result.Unparsed.Count}";
             _logger.Info(StatusText);
             HasResult = true;
