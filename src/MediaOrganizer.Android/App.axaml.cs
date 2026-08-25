@@ -10,6 +10,7 @@ using MediaOrganizer.Android.ViewModels;
 using MediaOrganizer.Android.Views;
 using MediaOrganizer.Core;
 using MediaOrganizer.Core.Logging;
+using MediaOrganizer.Core.Scanning;
 using MediaOrganizer.Core.Security;
 using MediaOrganizer.Core.Storage;
 using MediaOrganizer.Shared.ViewModels;
@@ -54,9 +55,19 @@ public partial class App : Avalonia.Application
         var state = AppState.Load(configPath, patternsPath);
         var logger = new AppLogger();
 
-        // 平台服务注入（ADR-0006 决策 4/7/8）：Keystore 凭据 + SAF 本地存储 + EXIF/选取/导出/确认
+        // 平台服务注入：Keystore 凭据 + 双模式本地存储（content: → SAF；真实路径 → System.IO）+ EXIF/选取/导出/确认。
+        // 已获全局存储权限时把残留的 content: 树 URI 换算为真实路径（治愈旧配置/持久授权丢失），
+        // 输出与待处理目录同样受益（PendingFileMover 经 CreateLocalStorage 创建）。
         CredentialCrypto.Current = new AndroidCredentialCrypto();
-        StorageFactory.CustomLocalStorageFactory = treeUri => new AndroidSafStorage(treeUri, activity.Resolver);
+        StorageFactory.CustomLocalStorageFactory = path =>
+        {
+            var real = SafPaths.IsSafIdentifier(path) && AndroidStorageAccess.HasAllFilesAccess
+                ? SafPaths.TryTreeUriToPath(path)
+                : null;
+            return SafPaths.IsSafIdentifier(path) && real is null
+                ? new AndroidSafStorage(path, activity.Resolver)
+                : new LocalFileStorage(real ?? path);
+        };
 
         var folderPicker = new SafFolderPicker(activity);
         var fileSaver = new AndroidFileSaver(activity);
@@ -68,7 +79,11 @@ public partial class App : Avalonia.Application
             state, logger, folderPicker,
             () =>
             {
-                var scanner = new AndroidFileScanner(state.Config.Scan.SupportedFormats, state.Config.Scan.ScanAllFiles, activity.Resolver);
+                // 源目录为真实路径时走 System.IO 快扫描；content: URI 回退 SAF 遍历
+                var source = state.Config.Paths.SourceDir;
+                IFileScanner scanner = SafPaths.IsSafIdentifier(source)
+                    ? new AndroidFileScanner(state.Config.Scan.SupportedFormats, state.Config.Scan.ScanAllFiles, activity.Resolver)
+                    : new FileScanner(state.Config.Scan.SupportedFormats, state.Config.Scan.ScanAllFiles);
                 return CoreFactory.CreateAnalyzer(state.Config, state.Patterns, scanner, new AndroidExifReader());
             },
             dataDir);

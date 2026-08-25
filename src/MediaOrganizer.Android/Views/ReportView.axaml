@@ -17,7 +17,7 @@
                         BoxShadow="0 1 3 0 #14000000">
                     <StackPanel Spacing="10">
                         <DockPanel>
-                            <TextBlock Text="📄 分析报告" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <TextBlock Text="分析报告" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
                             <TextBlock Text="{Binding ReportMeta}" FontSize="11" Foreground="{StaticResource MutedBrush}"
                                        HorizontalAlignment="Right" TextTrimming="CharacterEllipsis" MaxWidth="180"/>
                         </DockPanel>
@@ -34,8 +34,8 @@
         <Border Grid.Row="2" Background="{StaticResource CardBrush}" Padding="16,12"
                 BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,1,0,0">
             <Grid ColumnDefinitions="*,8,*">
-                <Button Grid.Column="0" Content="📥 另存为（SAF）" Command="{Binding SaveReportCommand}"/>
-                <Button Grid.Column="2" Content="📤 分享" Classes="primary" Command="{Binding ShareReportCommand}"/>
+                <Button Grid.Column="0" Content="另存为（SAF）" Command="{Binding SaveReportCommand}"/>
+                <Button Grid.Column="2" Content="分享" Classes="primary" Command="{Binding ShareReportCommand}"/>
             </Grid>
         </Border>
     </Grid>

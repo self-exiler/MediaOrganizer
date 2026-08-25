@@ -199,42 +199,16 @@ public partial class SettingsViewModel : ViewModelBase
 
     private static void ResetConfigToDefaults(AppConfig config)
     {
-        config.Version = AppConfig.CurrentVersion;
-
-        config.General.Theme = "Default";
-        config.General.WindowSize = "1280x760";
-        config.General.PreviewSize = 320;
-
-        config.Paths.SourceDir = "";
-        config.Paths.OutputDir = "";
-        config.Paths.PendingDir = "";
-        config.Paths.OutputNetworkProfile = "";
-
-        config.Scan.SupportedFormats =
-        [
-            "jpg", "jpeg", "png", "tiff", "tif", "bmp", "webp", "heic", "heif",
-            "mp4", "mov", "avi", "mkv", "wmv", "flv", "webm", "m4v", "mpg", "mpeg", "3gp", "3g2"
-        ];
-        config.Scan.ScanAllFiles = false;
-        config.Scan.ProgressInterval = 10;
-        config.Scan.MaxDegreeOfParallelism = 0;
-
-        config.Extraction.MaxYearsPast = 30;
-        config.Extraction.FutureDateBufferDays = 0;
-        config.Extraction.Extractors =
-        [
-            new() { Name = "Exif", Weight = 1.2 },
-            new() { Name = "FileName", Weight = 1.1 },
-            new() { Name = "FileSystem", Enabled = false, Weight = 0.8 }
-        ];
-
-        config.Execute.Operation = FileOperation.Copy;
-        config.Execute.ExistAction = ExistAction.Skip;
-        config.Execute.ClassificationLevel = ClassificationLevel.Day;
-        config.Execute.FixMtime = false;
-        config.Execute.MaxDegreeOfParallelism = 0;
-
-        // 注意：网络位置不随初始化清除，避免误删用户配置
+        // AppConfig 各子配置的默认值与此处的重置值完全一致，
+        // 直接用 new() 覆盖即可，避免逐字段手写维护两份默认值。
+        // 注意：网络位置不随初始化清除，避免误删用户配置。
+        var defaults = new AppConfig();
+        config.Version = defaults.Version;
+        config.General = defaults.General;
+        config.Paths = defaults.Paths;
+        config.Scan = defaults.Scan;
+        config.Extraction = defaults.Extraction;
+        config.Execute = defaults.Execute;
     }
 
     // ---- 网络位置管理（FR-10/FR-A8.3）----

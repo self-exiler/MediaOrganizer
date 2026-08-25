@@ -24,7 +24,7 @@ public static class RequestCodes
 public class Application(IntPtr javaReference, JniHandleOwnership transfer) : AvaloniaAndroidApplication<App>(javaReference, transfer)
 {
     protected override AppBuilder CustomizeAppBuilder(AppBuilder builder)
-        => base.CustomizeAppBuilder(builder).WithInterFont();
+        => base.CustomizeAppBuilder(builder);
 }
 
 /// <summary>

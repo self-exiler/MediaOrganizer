@@ -53,7 +53,7 @@
             <DockPanel>
                 <Button DockPanel.Dock="Left" Command="{Binding ToggleDrawerCommand}"
                         Background="Transparent" BorderThickness="0" Foreground="White"
-                        Width="48" Height="48" FontSize="22" Content="&#x2630;"
+                        Width="48" Height="48" FontSize="22" Content="≡"
                         VerticalAlignment="Center"/>
                 <TextBlock Text="{Binding AppTitle}" Foreground="White" FontSize="18" FontWeight="Medium"
                            VerticalAlignment="Center" Margin="4,0,12,0"/>
@@ -95,7 +95,8 @@
                                     <GradientStop Color="#4FA3E3" Offset="1"/>
                                 </LinearGradientBrush>
                             </Border.Background>
-                            <TextBlock Text="🗂" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <TextBlock Text="MO" FontSize="14" FontWeight="Bold" Foreground="White"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <TextBlock Text="MediaOrganizer" FontSize="15" FontWeight="SemiBold"
                                    Foreground="{StaticResource TextBrush}" VerticalAlignment="Center"/>
@@ -111,12 +112,11 @@
                              ItemContainerTheme="{StaticResource NavListItem}">
                         <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="vm:NavItem">
-                                <Grid ColumnDefinitions="24,8,*,Auto" MinHeight="48">
-                                    <TextBlock Grid.Column="0" Text="{Binding Icon}" FontSize="18" VerticalAlignment="Center"/>
-                                    <TextBlock Grid.Column="2" Text="{Binding Label}" FontSize="14"
+                                <Grid ColumnDefinitions="*,Auto" MinHeight="48">
+                                    <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="14"
                                                Foreground="{StaticResource TextBrush}" VerticalAlignment="Center"/>
                                     <!-- 失败文件角标（Badge=0 时隐藏） -->
-                                    <Border Grid.Column="3" IsVisible="{Binding HasBadge}"
+                                    <Border Grid.Column="1" IsVisible="{Binding HasBadge}"
                                             Background="#C42B1C" CornerRadius="10" Padding="8,2" VerticalAlignment="Center">
                                         <TextBlock Text="{Binding Badge}" FontSize="11" Foreground="White"/>
                                     </Border>

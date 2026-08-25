@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="108" height="108">
+  <defs>
+    <linearGradient id="asky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7DD3FC"/>
+      <stop offset="1" stop-color="#0EA5E9"/>
+    </linearGradient>
+    <linearGradient id="amt" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1E40AF"/>
+      <stop offset="1" stop-color="#1E3A8A"/>
+    </linearGradient>
+    <filter id="ashadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#0C2D6B" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+
+  <!-- 底层卡片（左倾，露出左下角） -->
+  <g transform="rotate(-10 46 60)">
+    <rect x="26" y="36" width="40" height="48" rx="5" fill="#FFFFFF"/>
+    <rect x="29" y="39" width="34" height="26" rx="3" fill="#DBEAFE"/>
+    <rect x="29" y="68" width="20" height="3" rx="1.5" fill="#CBD5E1"/>
+  </g>
+
+  <!-- 中层卡片（右倾，露出右上角） -->
+  <g transform="rotate(7 62 56)">
+    <rect x="42" y="32" width="40" height="48" rx="5" fill="#FFFFFF"/>
+    <rect x="45" y="35" width="34" height="26" rx="3" fill="#CFFAFE"/>
+    <rect x="45" y="64" width="20" height="3" rx="1.5" fill="#CBD5E1"/>
+  </g>
+
+  <!-- 顶层主卡片（居中，主体落在 66dp 安全区内） -->
+  <g transform="rotate(-1 54 50)" filter="url(#ashadow)">
+    <rect x="34" y="26" width="40" height="48" rx="5" fill="#FFFFFF"/>
+    <!-- 照片区 -->
+    <rect x="37" y="29" width="34" height="26" rx="3" fill="url(#asky)"/>
+    <!-- 太阳 -->
+    <circle cx="60" cy="37" r="3.5" fill="#FCD34D"/>
+    <!-- 山脉 -->
+    <path d="M 37 55 L 46 45 L 52 50 L 58 43 L 71 55 Z" fill="url(#amt)"/>
+    <!-- 信息栏 -->
+    <rect x="37" y="59" width="18" height="3" rx="1.5" fill="#94A3B8"/>
+    <rect x="37" y="65" width="28" height="2.5" rx="1.25" fill="#E2E8F0"/>
+    <rect x="37" y="70" width="22" height="2.5" rx="1.25" fill="#E2E8F0"/>
+  </g>
+</svg>

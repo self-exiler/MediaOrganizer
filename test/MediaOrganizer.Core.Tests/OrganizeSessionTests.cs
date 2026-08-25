@@ -8,6 +8,12 @@ namespace MediaOrganizer.Core.Tests;
 
 public class OrganizeSessionTests
 {
+    private static OrganizeSession NewSession(ClassificationLevel level = ClassificationLevel.Day)
+        => new(new AppConfig(),
+            () => CoreFactory.CreateAnalyzer(new AppConfig(), PatternsStore.GetBuiltinPatterns()),
+            Path.GetTempPath(),
+            level);
+
     private static AnalysisResult Result() =>
         new(@"C:\src", new DateTimeOffset(2026, 8, 8, 0, 0, 0, TimeSpan.Zero),
         [
@@ -18,7 +24,7 @@ public class OrganizeSessionTests
     [Fact]
     public void 新结果就位后自动生成计划()
     {
-        var s = new OrganizeSession(new AppConfig());
+        var s = NewSession();
         Assert.Null(s.CurrentPlan);
         s.SetResult(Result(), @"D:\out");
         Assert.NotNull(s.CurrentPlan);
@@ -28,7 +34,7 @@ public class OrganizeSessionTests
     [Fact]
     public void 修改级别立即重规划()
     {
-        var s = new OrganizeSession(new AppConfig(), ClassificationLevel.Day);
+        var s = NewSession(ClassificationLevel.Day);
         s.SetResult(Result(), @"D:\out");
         Assert.Equal("2024/01/15/a.jpg", s.CurrentPlan!.Files[0].RelativeTarget);
 
@@ -40,7 +46,7 @@ public class OrganizeSessionTests
     [Fact]
     public void 失效结果后不可执行()
     {
-        var s = new OrganizeSession(new AppConfig());
+        var s = NewSession();
         s.SetResult(Result(), @"D:\out");
         s.InvalidateResult();
         Assert.Null(s.CurrentPlan);

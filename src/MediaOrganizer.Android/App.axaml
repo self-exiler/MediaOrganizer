@@ -3,9 +3,22 @@
              xmlns:local="using:MediaOrganizer.Android"
              x:Class="MediaOrganizer.Android.App"
              RequestedThemeVariant="Light">
+    <Application.Resources>
+        <!-- 自打包中文字体（Noto Sans SC，SIL OFL 许可，可随 APK 分发）：
+             彻底绕开 Avalonia 12 Android 系统字体回退缺陷导致的 CJK 空白问题。
+             注意 UI 文本避免使用 emoji/生僻符号（本字体不含，见 docs 字体说明）。 -->
+        <FontFamily x:Key="AppFont">avares://MediaOrganizer.Android/Fonts/NotoSansSC-Regular.otf#Noto Sans SC</FontFamily>
+        <!-- 覆盖 FluentTheme 模板内部引用的主题字体资源键 -->
+        <FontFamily x:Key="ContentControlThemeFontFamily">{StaticResource AppFont}</FontFamily>
+    </Application.Resources>
     <Application.Styles>
         <FluentTheme />
         <local:AppTheme />
+        <!-- 全局字体：TextElement.FontFamily 为可继承附加属性，作用于所有控件；
+             Application 级样式同时覆盖 PopupRoot 弹出层。 -->
+        <Style Selector="Control">
+            <Setter Property="TextElement.FontFamily" Value="{StaticResource AppFont}"/>
+        </Style>
     </Application.Styles>
     <Application.DataTemplates>
         <local:ViewLocator />

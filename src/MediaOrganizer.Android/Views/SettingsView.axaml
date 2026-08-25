@@ -114,7 +114,7 @@
                     </ItemsControl>
                     <Border Background="#F3F9FD" BorderBrush="#C3DCF1" BorderThickness="1" CornerRadius="8"
                             Padding="12,8" Margin="8,4">
-                        <TextBlock Text="ℹ️ 如需新增自定义模式，请在桌面版魔术工具中编辑后把 patterns.json 复制到手机。"
+                        <TextBlock Text="提示：如需新增自定义模式，请在桌面版魔术工具中编辑后把 patterns.json 复制到手机。"
                                    FontSize="12" Foreground="#0F4E7D" TextWrapping="Wrap"/>
                     </Border>
                 </StackPanel>
@@ -196,7 +196,7 @@
 
                     <Border Background="#F3F9FD" BorderBrush="#C3DCF1" BorderThickness="1" CornerRadius="8"
                             Padding="12,8" Margin="8,4">
-                        <TextBlock Text="ℹ️ 网络目标仅支持复制（copy）；SMB 需账号密码认证（首版不支持匿名）。"
+                        <TextBlock Text="提示：网络目标仅支持复制（copy）；SMB 需账号密码认证（首版不支持匿名）。"
                                    FontSize="12" Foreground="#0F4E7D" TextWrapping="Wrap"/>
                     </Border>
                 </StackPanel>

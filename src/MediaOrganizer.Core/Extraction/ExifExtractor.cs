@@ -34,9 +34,10 @@ public sealed class ExifExtractor(bool enabled, double weight, IExifReader? exif
             using var stream = file.Source.OpenRead();
             return exifReader.ReadImageExif(stream);
         }
-        catch
+        catch (Exception ex)
         {
             // 损坏文件/无权限等：一律视为该提取器无结果
+            System.Diagnostics.Debug.WriteLine($"[ExifExtractor] Image EXIF read failed for {file.FileName}: {ex.Message}");
             return null;
         }
     }
@@ -54,9 +55,10 @@ public sealed class ExifExtractor(bool enabled, double weight, IExifReader? exif
                 return new DateTimeOffset(DateTime.SpecifyKind(d, DateTimeKind.Unspecified),
                     TimeZoneInfo.Local.GetUtcOffset(d));
         }
-        catch
+        catch (Exception ex)
         {
             // 容器无法解析等：视为无结果
+            System.Diagnostics.Debug.WriteLine($"[ExifExtractor] Video tag read failed for {file.FileName}: {ex.Message}");
         }
         return null;
     }

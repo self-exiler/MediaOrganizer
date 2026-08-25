@@ -15,7 +15,7 @@
 
 ### 1.2 范围
 
-MediaOrganizer Android 版通过 SAF（Storage Access Framework）访问用户指定的源目录，从照片/视频文件中提取拍摄日期，按"年/月/日"分级目录结构将文件复制或移动到目标目录（本地 SAF 目录或 WebDAV 网络位置），并提供失败文件管理与分析报告能力。
+MediaOrganizer Android 版访问用户指定的源目录（全局存储权限直读真实路径，第三方文档提供方回退 SAF），从照片/视频文件中提取拍摄日期，按"年/月/日"分级目录结构将文件复制或移动到目标目录（本地 SAF 目录或 WebDAV 网络位置），并提供失败文件管理与分析报告能力。
 
 **不包含**（相对桌面版的裁剪）：
 - 魔术工具（触屏不适合圈选交互）
@@ -49,7 +49,7 @@ MediaOrganizer Android 版通过 SAF（Storage Access Framework）访问用户�
 | 操作系统 | Android 13（API 33）及以上 |
 | 架构 | arm64-v8a（主）；armeabi-v7a / x86_64（模拟器） |
 | 运行时 | .NET 10 for Android（自包含 APK） |
-| 存储 | 应用专有目录无需权限；源/目标目录通过 SAF 授权 |
+| 存储 | 应用专有目录无需权限；本地源/目标经"所有文件访问"（MANAGE_EXTERNAL_STORAGE）直读真实路径，第三方文档提供方回退 SAF |
 
 ### 2.3 用户画像
 
@@ -59,7 +59,7 @@ MediaOrganizer Android 版通过 SAF（Storage Access Framework）访问用户�
 ### 2.4 设计约束
 
 1. Core 类库多目标 `net10.0;net10.0-android`，同一份代码（ADR-0005）
-2. 文件访问走 SAF，不得申请 `MANAGE_EXTERNAL_STORAGE` 全文件权限
+2. 存储访问优先申请 `MANAGE_EXTERNAL_STORAGE` 全文件权限走真实路径（APK 侧载分发，不受 Play 政策约束）；SAF 仅作为第三方文档提供方回退
 3. 凭据加密使用 Android Keystore（非 DPAPI/Base64）
 4. 图片 EXIF 读取使用 `Android.Media.ExifInterface`（非 Magick.NET）
 5. UI 使用 Avalonia 12 Android + MVVM，ViewModel 复用桌面版，View 全新重写
@@ -82,7 +82,7 @@ MediaOrganizer Android 版通过 SAF（Storage Access Framework）访问用户�
 
 | 编号 | 需求 |
 |------|------|
-| FR-A1.1 | 用户通过 SAF（`ACTION_OPEN_DOCUMENT_TREE`）选取源目录，获取树 URI 持久化授权 |
+| FR-A1.1 | 用户经系统目录选择器（`ACTION_OPEN_DOCUMENT_TREE`）选取源目录；externalstorage 提供方确定性转换为真实路径存储，其余回退树 URI |
 | FR-A1.2 | 递归遍历 DocumentFile 树，按配置的扩展名白名单过滤（与桌面版一致的格式列表） |
 | FR-A1.3 | 可选"扫描所有文件"模式，忽略扩展名限制 |
 | FR-A1.4 | 扫描与分析过程通过 IProgress 节流上报进度，UI 不卡顿（主线程不阻塞） |
@@ -112,7 +112,7 @@ MediaOrganizer Android 版通过 SAF（Storage Access Framework）访问用户�
 
 | 编号 | 需求 |
 |------|------|
-| FR-A4.1 | 一键分析：SAF 扫描 → 并行提取（Parallel.ForEachAsync，最大并发数可配，默认 CPU 核心数）→ 产出结果 |
+| FR-A4.1 | 一键分析：目录扫描（真实路径直读优先，SAF 回退）→ 并行提取（Parallel.ForEachAsync，最大并发数可配，默认 CPU 核心数）→ 产出结果 |
 | FR-A4.2 | 产出 `analysis-result.json`（结构与桌面版一致）：parsed（含日期、来源、大小）与 unparsed（含失败原因）；落盘到应用专有目录（ADR-0006 决策 6），不写 SAF 源目录 |
 | FR-A4.3 | 产出 TXT 分析报告：源/输出目录、总数/成功/失败/成功率、按日期来源统计、按年/月分布、失败文件清单 |
 | FR-A4.4 | 分析可在 UI 上查看统计摘要（总数/成功/失败/成功率、按来源/年份分布） |
@@ -129,7 +129,7 @@ MediaOrganizer Android 版通过 SAF（Storage Access Framework）访问用户�
 | FR-A5.5 | 可选 mtime 矫正：将目标文件修改时间设为提取日期（WebDAV 不支持时静默跳过） |
 | FR-A5.6 | 执行前展示计划摘要（涉及文件数、目标根目录、操作类型），用户确认后执行 |
 | FR-A5.7 | 执行进度、可取消；执行完成输出结果摘要（成功/跳过/覆盖/重命名/失败计数） |
-| FR-A5.8 | 本地 SAF 目标：通过 ContentResolver 写入；网络 WebDAV 目标：从 SAF 读源 → 流式上传 |
+| FR-A5.8 | 本地目标：真实路径 System.IO 写入（content: 回退 ContentResolver）；网络 WebDAV 目标：流式读源 → 流式上传 |
 | FR-A5.9 | 临时名传输（`<name>.mo-tmp`）+ 完成后改名 + 大小校验，与桌面版一致 |
 
 ### FR-A6 失败文件管理（P0）
@@ -205,12 +205,12 @@ MediaOrganizer Android 版通过 SAF（Storage Access Framework）访问用户�
 
 结构与桌面版一致（见桌面 SRS §5.1），存储路径为应用专有目录。差异：
 - `networkProfiles` 支持 WebDAV 与 SMB 两类（2026-08-15 修订，ADR-0007；原"仅 WebDAV"作废）
-- `paths.sourceDir` / `outputDir` / `pendingDir` 存储 SAF 树 URI 字符串（`content://...`）
+- `paths.sourceDir` / `outputDir` / `pendingDir` 存储真实路径字符串；旧版或不可映射提供方为 `content://...` 树 URI（读取时按前缀分流）
 - 密码加密前缀为 `KS:`（Keystore），非 `DPAPI:` / `B64:`
 
 ### 5.2 analysis-result.json
 
-结构与桌面版一致（见桌面 SRS §5.2）。`path` 字段存储 SAF content URI（源标识符，ADR-0006）。文件落盘位置为应用专有目录（不写 SAF 源目录）；`MediaFile.Source` 不参与序列化，读取结果后由 Scanner/Store 按 path 重新解析源。
+结构与桌面版一致（见桌面 SRS §5.2）。`path` 字段存储源标识符（真实路径或 SAF content URI，ADR-0006）。文件落盘位置为应用专有目录（不写 SAF 源目录）；`MediaFile.Source` 不参与序列化，读取结果后由 Scanner/Store 按 path 重新解析源。
 
 ### 5.3 patterns.json
 

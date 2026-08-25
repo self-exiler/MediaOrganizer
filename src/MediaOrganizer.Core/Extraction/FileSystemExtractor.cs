@@ -10,7 +10,9 @@ public sealed class FileSystemExtractor(bool enabled, double weight) : IDateExtr
 {
     public string Name => "FileSystem";
     public bool Enabled { get; } = enabled;
-    public double Weight { get; } = weight;
+    public double Weight { get; } = weight >= 0
+        ? weight
+        : throw new ArgumentOutOfRangeException(nameof(weight), "must be non-negative");
 
     public DateTimeOffset? Extract(MediaFile file)
         => file.Source?.ModifiedTime;

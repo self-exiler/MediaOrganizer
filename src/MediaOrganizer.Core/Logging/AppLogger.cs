@@ -11,9 +11,11 @@ public sealed class AppLogger(int capacity = 1000)
 {
     private readonly ConcurrentQueue<LogEntry> _entries = new();
 
+    private readonly int _capacity = capacity;
+
     public event Action<LogEntry>? EntryAdded;
 
-    public int Capacity { get; } = capacity;
+    public int Capacity => _capacity;
 
     public void Info(string message) => Log(LogLevel.Info, message);
     public void Warn(string message) => Log(LogLevel.Warn, message);
@@ -23,7 +25,7 @@ public sealed class AppLogger(int capacity = 1000)
     {
         var entry = new LogEntry(DateTimeOffset.Now, level, message);
         _entries.Enqueue(entry);
-        while (_entries.Count > Capacity && _entries.TryDequeue(out _)) { }
+        while (_entries.Count > _capacity && _entries.TryDequeue(out _)) { }
         EntryAdded?.Invoke(entry);
     }
 

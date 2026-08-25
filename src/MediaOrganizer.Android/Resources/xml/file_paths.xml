@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- 主存储 /storage/emulated/0/** -->
+  <external-path name="external_storage" path="." />
+  <!-- 其余物理卷（SD 卡 /storage/XXXX-XXXX/**）及根下其他路径 -->
+  <root-path name="root_storage" path="." />
+</paths>

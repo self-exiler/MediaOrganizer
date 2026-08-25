@@ -157,28 +157,6 @@ public sealed class FileOperator
         }
     }
 
-    private async Task<string> FindFreeNameAsync(string relativeTarget, CancellationToken ct)
-    {
-        var dir = relativeTarget[..relativeTarget.LastIndexOf('/')];
-        var name = Path.GetFileNameWithoutExtension(relativeTarget);
-        var ext = Path.GetExtension(relativeTarget);
-        for (var i = 1; ; i++)
-        {
-            var candidate = dir.Length == 0 ? $"{name}_{i}{ext}" : $"{dir}/{name}_{i}{ext}";
-            if (!await _target.ExistsAsync(candidate, ct)) return candidate;
-        }
-    }
-
-    /// <summary>本地文件系统查重名：返回追加 _n 且不存在的目标路径（失败文件批量移动等本地场景用）。</summary>
-    public static string FindFreeLocalPath(string targetPath)
-    {
-        var dir = Path.GetDirectoryName(targetPath) ?? "";
-        var name = Path.GetFileNameWithoutExtension(targetPath);
-        var ext = Path.GetExtension(targetPath);
-        for (var i = 1; ; i++)
-        {
-            var candidate = Path.Combine(dir, $"{name}_{i}{ext}");
-            if (!File.Exists(candidate)) return candidate;
-        }
-    }
+    private Task<string> FindFreeNameAsync(string relativeTarget, CancellationToken ct)
+        => NameCollisionResolver.FindFreeAsync(_target, relativeTarget, ct);
 }

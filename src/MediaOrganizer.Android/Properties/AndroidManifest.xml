@@ -2,9 +2,20 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
   <!-- MainActivity 的 <activity> 条目由 C# [Activity] 特性自动生成（含 CRC 包名的 Java stub），
        手写相对名条目会指向不存在的类导致 ClassNotFoundException，此处勿手写。 -->
-  <application android:label="MediaOrganizer" android:icon="@drawable/icon" android:allowBackup="true" />
+  <application android:label="MediaOrganizer" android:icon="@drawable/icon" android:allowBackup="true">
+    <!-- 真实路径文件经 FileProvider 分享给系统应用打开（Android 7+ 禁 file://） -->
+    <provider android:name="androidx.core.content.FileProvider"
+              android:authorities="${applicationId}.fileprovider"
+              android:exported="false"
+              android:grantUriPermissions="true">
+      <meta-data android:name="android.support.FILE_PROVIDER_PATHS"
+                 android:resource="@xml/file_paths"/>
+    </provider>
+  </application>
 
-  <!-- SAF 目录/文件访问走 DocumentProvider，无需存储权限；网络输出目标与 WakeLock 需要以下权限 -->
+  <!-- 全局存储权限（所有文件访问）：授权后扫描/整理走真实路径 System.IO；
+       API 30+ 需引导用户到系统设置页授予（AndroidStorageAccess.EnsureAsync）。 -->
+  <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
   <uses-permission android:name="android.permission.INTERNET" />
   <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
   <uses-permission android:name="android.permission.WAKE_LOCK" />

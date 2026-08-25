@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <!-- 底板渐变：蓝青 -->
+    <linearGradient id="baseGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3B82F6"/>
+      <stop offset="0.5" stop-color="#0EA5E9"/>
+      <stop offset="1" stop-color="#06B6D4"/>
+    </linearGradient>
+    <!-- 底板顶部高光 -->
+    <linearGradient id="baseHi" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.18"/>
+      <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <!-- 照片天空渐变 -->
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7DD3FC"/>
+      <stop offset="0.6" stop-color="#38BDF8"/>
+      <stop offset="1" stop-color="#0EA5E9"/>
+    </linearGradient>
+    <!-- 山脉渐变 -->
+    <linearGradient id="mountain" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1E40AF"/>
+      <stop offset="1" stop-color="#1E3A8A"/>
+    </linearGradient>
+    <!-- 卡片柔和投影 -->
+    <filter id="cardShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="#0C2D6B" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+
+  <!-- 圆角方形底板 -->
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="url(#baseGrad)"/>
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="url(#baseHi)"/>
+
+  <!-- 底层卡片（最后面，左倾） -->
+  <g transform="rotate(-11 110 140)" filter="url(#cardShadow)">
+    <rect x="55" y="74" width="110" height="132" rx="14" fill="#FFFFFF"/>
+    <rect x="63" y="82" width="94" height="70" rx="6" fill="#DBEAFE"/>
+    <rect x="63" y="160" width="56" height="6" rx="3" fill="#CBD5E1"/>
+    <rect x="63" y="172" width="76" height="5" rx="2.5" fill="#E2E8F0"/>
+  </g>
+
+  <!-- 中层卡片（右倾） -->
+  <g transform="rotate(7 146 134)" filter="url(#cardShadow)">
+    <rect x="91" y="68" width="110" height="132" rx="14" fill="#FFFFFF"/>
+    <rect x="99" y="76" width="94" height="70" rx="6" fill="#CFFAFE"/>
+    <rect x="99" y="154" width="56" height="6" rx="3" fill="#CBD5E1"/>
+    <rect x="99" y="166" width="76" height="5" rx="2.5" fill="#E2E8F0"/>
+  </g>
+
+  <!-- 顶层主卡片（居中，略左倾） -->
+  <g transform="rotate(-1 128 116)" filter="url(#cardShadow)">
+    <rect x="73" y="50" width="110" height="132" rx="14" fill="#FFFFFF"/>
+    <!-- 照片内容区 -->
+    <rect x="81" y="58" width="94" height="78" rx="6" fill="url(#sky)"/>
+    <!-- 太阳 -->
+    <circle cx="148" cy="76" r="9" fill="#FCD34D"/>
+    <!-- 山脉剪影 -->
+    <path d="M 81 136 L 102 108 L 120 124 L 142 100 L 158 118 L 175 136 Z" fill="url(#mountain)"/>
+    <!-- 底部信息栏（标题 + 文字行） -->
+    <rect x="81" y="146" width="48" height="7" rx="3.5" fill="#94A3B8"/>
+    <rect x="81" y="160" width="78" height="5" rx="2.5" fill="#E2E8F0"/>
+    <rect x="81" y="170" width="62" height="5" rx="2.5" fill="#E2E8F0"/>
+  </g>
+</svg>

@@ -38,7 +38,7 @@ public sealed class PendingFileMover
             try
             {
                 var name = file.FileName;
-                var relative = await FindFreeNameAsync(target, name, ct);
+                var relative = await NameCollisionResolver.FindFreeNameOnlyAsync(target, name, ct);
                 await target.CopyFromAsync(file.Source, relative, null, ct);
 
                 var expected = file.Source.Length;
@@ -62,17 +62,5 @@ public sealed class PendingFileMover
             progress?.Report((double)(i + 1) / files.Count);
         }
         return new PendingMoveResult(moved, failed, movedNames, errors);
-    }
-
-    private static async Task<string> FindFreeNameAsync(IFileStorage target, string name, CancellationToken ct)
-    {
-        if (!await target.ExistsAsync(name, ct)) return name;
-        var stem = Path.GetFileNameWithoutExtension(name);
-        var ext = Path.GetExtension(name);
-        for (var i = 1; ; i++)
-        {
-            var candidate = $"{stem}_{i}{ext}";
-            if (!await target.ExistsAsync(candidate, ct)) return candidate;
-        }
     }
 }

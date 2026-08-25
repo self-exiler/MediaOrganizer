@@ -6,7 +6,9 @@ namespace MediaOrganizer.Core.Storage;
 /// <summary>本地文件系统存储。</summary>
 public class LocalFileStorage(string rootPath) : IFileStorage
 {
-    protected readonly string Root = Path.GetFullPath(rootPath);
+    protected readonly string Root = string.IsNullOrWhiteSpace(rootPath)
+        ? throw new ArgumentException("rootPath cannot be null or empty.", nameof(rootPath))
+        : Path.GetFullPath(rootPath);
 
     protected string Resolve(string relativePath)
     {

@@ -3,7 +3,9 @@
     <Project Path="src/MediaOrganizer.Core/MediaOrganizer.Core.csproj" />
     <Project Path="src/MediaOrganizer.Shared/MediaOrganizer.Shared.csproj" />
     <Project Path="src/MediaOrganizer.Desktop/MediaOrganizer.Desktop.csproj" />
-    <Project Path="src/MediaOrganizer.Android/MediaOrganizer.Android.csproj" />
+    <Project Path="src/MediaOrganizer.Android/MediaOrganizer.Android.csproj">
+      <Deploy Solution="Debug|*" />
+    </Project>
   </Folder>
   <Folder Name="/test/">
     <Project Path="test/MediaOrganizer.Core.Tests/MediaOrganizer.Core.Tests.csproj" />

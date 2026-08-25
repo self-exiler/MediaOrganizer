@@ -18,6 +18,7 @@ public partial class MagicToolsViewModel : ViewModelBase
 {
     private readonly List<PatternDefinition> _patterns;
     private readonly AppState _state;
+    private readonly string _dataDir;
 
     public ObservableCollection<string> Samples { get; } = [];
     public ObservableCollection<RegexTestItem> TestResults { get; } = [];
@@ -63,9 +64,10 @@ public partial class MagicToolsViewModel : ViewModelBase
 
     private AnalysisResult? _lastResult;
 
-    public MagicToolsViewModel(AppState state)
+    public MagicToolsViewModel(AppState state, string dataDir)
     {
         _state = state;
+        _dataDir = dataDir;
         _patterns = state.Patterns;
     }
 
@@ -117,21 +119,14 @@ public partial class MagicToolsViewModel : ViewModelBase
         SaveHint = $"已从分析结果载入 {names.Length} 个文件名样本";
     }
 
-    /// <summary>从源目录的 analysis-result.json 载入失败文件（原型「从失败文件载入」）。</summary>
+    /// <summary>从应用数据目录的 analysis-result.json 载入失败文件（原型「从失败文件载入」）。</summary>
     [RelayCommand]
     private void LoadFromFailedFiles()
     {
-        var dir = _state.Config.Paths.SourceDir;
-        if (string.IsNullOrWhiteSpace(dir) || !Directory.Exists(dir))
-        {
-            SaveHint = "请先在设置/工作台指定源目录";
-            return;
-        }
-
-        var path = Path.Combine(dir, "analysis-result.json");
+        var path = Path.Combine(_dataDir, "analysis-result.json");
         if (!File.Exists(path))
         {
-            SaveHint = "源目录下未找到 analysis-result.json，请先完成一次分析";
+            SaveHint = "应用数据目录下未找到 analysis-result.json，请先完成一次分析";
             return;
         }
 
@@ -194,9 +189,8 @@ public partial class MagicToolsViewModel : ViewModelBase
 
     private static async Task<string[]> LoadFileNamesFromJsonAsync(string path)
     {
-        var json = await File.ReadAllTextAsync(path);
-        var mediaExts = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
+    var mediaExts = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
             ".jpg", ".jpeg", ".png", ".tiff", ".bmp", ".gif", ".webp",
             ".mp4", ".mov", ".avi", ".mkv", ".wmv", ".flv", ".webm",
             ".heic", ".heif"
@@ -204,57 +198,39 @@ public partial class MagicToolsViewModel : ViewModelBase
 
         bool IsMediaFile(string? name) => name is not null && mediaExts.Contains(Path.GetExtension(name));
 
-        var result = new HashSet<string>();
-        var doc = System.Text.Json.JsonDocument.Parse(json);
+        var json = await File.ReadAllTextAsync(path);
 
-        // 1. analysis-result.json / unparsed_files.json 结构：Unparsed[].Path
-        if (doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object)
+        // 1. analysis-result.json 结构：优先用 AnalysisResultStore 解析
+        var result = AnalysisResultStore.Load(path);
+        if (result is not null)
         {
-            if (doc.RootElement.TryGetProperty("Unparsed", out var unparsed))
-            {
-                foreach (var item in unparsed.EnumerateArray())
-                {
-                    if (item.ValueKind == System.Text.Json.JsonValueKind.String)
-                    {
-                        if (IsMediaFile(item.GetString())) result.Add(Path.GetFileName(item.GetString()!)!);
-                    }
-                    else if (item.TryGetProperty("Path", out var p) || item.TryGetProperty("path", out p))
-                    {
-                        if (IsMediaFile(p.GetString())) result.Add(Path.GetFileName(p.GetString()!)!);
-                    }
-                }
-            }
-
-            // 2. files 结构：按日期分组的文件
-            if (doc.RootElement.TryGetProperty("files", out var files))
-            {
-                foreach (var dateGroup in files.EnumerateObject())
-                {
-                    foreach (var fileProp in dateGroup.Value.EnumerateObject())
-                    {
-                        if (IsMediaFile(fileProp.Name)) result.Add(fileProp.Name);
-                        if (fileProp.Value.TryGetProperty("path", out var p) && IsMediaFile(p.GetString()))
-                            result.Add(Path.GetFileName(p.GetString()!)!);
-                    }
-                }
-            }
-
-            // 3. 简单字符串列表
-            if (doc.RootElement.TryGetProperty("items", out var items))
-            {
-                foreach (var item in items.EnumerateArray())
-                    if (IsMediaFile(item.GetString())) result.Add(Path.GetFileName(item.GetString()!)!);
-            }
+            var names = result.Parsed.Select(p => p.File.FileName)
+                .Concat(result.Unparsed.Select(u => u.File.FileName))
+                .Where(n => IsMediaFile(n))
+                .Distinct()
+                .OrderBy(n => n)
+                .ToArray();
+            if (names.Length > 0) return names;
         }
 
-        // 4. 顶层字符串数组
-        if (doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+        // 2. 兜底：顶层字符串数组
+        try
         {
-            foreach (var item in doc.RootElement.EnumerateArray())
-                if (IsMediaFile(item.GetString())) result.Add(Path.GetFileName(item.GetString()!)!);
+            var doc = System.Text.Json.JsonDocument.Parse(json);
+            if (doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                return doc.RootElement.EnumerateArray()
+                    .Select(e => e.GetString())
+                    .Where(IsMediaFile)
+                    .Select(s => Path.GetFileName(s!)!)
+                    .Distinct()
+                    .OrderBy(n => n)
+                    .ToArray();
+            }
         }
+        catch { }
 
-        return result.OrderBy(n => n).ToArray();
+        return [];
     }
 
     // ---- 字符着色与圈选（FR-7.2/7.3）----
@@ -374,7 +350,7 @@ public partial class MagicToolsViewModel : ViewModelBase
         // 冲突检查：该字符已被标记为其他角色
         if (cell.Role != MarkRole.None && cell.Role != role)
         {
-            SaveHint = $"位置 {index} 已标记为「{RoleLabel(cell.Role)}」，请先清除标记";
+            SaveHint = $"位置 {index} 已标记为「{cell.Role.Label()}」，请先清除标记";
             return;
         }
 
@@ -390,22 +366,8 @@ public partial class MagicToolsViewModel : ViewModelBase
                 CharCells[i].Role = role;
         }
 
-        SaveHint = $"已标记「{RoleLabel(role)}」（位置 {min}-{max}）；继续点击扩展，或选下一个角色";
+        SaveHint = $"已标记「{role.Label()}」（位置 {min}-{max}）；继续点击扩展，或选下一个角色";
     }
-
-    private static string RoleLabel(MarkRole r) => r switch
-    {
-        MarkRole.Year => "年",
-        MarkRole.Month => "月",
-        MarkRole.Day => "日",
-        MarkRole.Hour => "时",
-        MarkRole.Minute => "分",
-        MarkRole.Second => "秒",
-        MarkRole.Timestamp => "时间戳",
-        MarkRole.Ignore => "忽略",
-        MarkRole.Required => "必现",
-        _ => "未标记"
-    };
 
     [RelayCommand]
     private void ClearMarks()
@@ -558,39 +520,11 @@ public partial class MarkableCharVM : ObservableObject
         _ => char.IsDigit(Char) ? "#E91E8C" : char.IsLetter(Char) ? "#107C10" : "#0067C0"
     };
 
-    public string Tooltip => Role == MarkRole.None ? Char.ToString() : $"{Char} → {RoleLabel(Role)}";
+    public string Tooltip => Role == MarkRole.None ? Char.ToString() : $"{Char} → {Role.Label()}";
 
     partial void OnRoleChanged(MarkRole value) => OnPropertyChanged(nameof(Brush));
-
-    public void AdvanceRole() => Role = Role switch
-    {
-        MarkRole.None => MarkRole.Year,
-        MarkRole.Year => MarkRole.Month,
-        MarkRole.Month => MarkRole.Day,
-        MarkRole.Day => MarkRole.Hour,
-        MarkRole.Hour => MarkRole.Minute,
-        MarkRole.Minute => MarkRole.Second,
-        MarkRole.Second => MarkRole.Timestamp,
-        MarkRole.Timestamp => MarkRole.Ignore,
-        MarkRole.Ignore => MarkRole.Required,
-        _ => MarkRole.None
-    };
 
     public void ResetRole() => Role = MarkRole.None;
 
     public CharCell AsCell() => new(Char, Role);
-
-    private static string RoleLabel(MarkRole r) => r switch
-    {
-        MarkRole.Year => "年",
-        MarkRole.Month => "月",
-        MarkRole.Day => "日",
-        MarkRole.Hour => "时",
-        MarkRole.Minute => "分",
-        MarkRole.Second => "秒",
-        MarkRole.Timestamp => "时间戳",
-        MarkRole.Ignore => "忽略",
-        MarkRole.Required => "必现",
-        _ => "未标记"
-    };
 }

@@ -22,9 +22,14 @@
     <PackageReference Include="Avalonia" Version="12.1.1" />
     <PackageReference Include="Avalonia.Android" Version="12.1.1" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.1" />
-    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.1" />
     <PackageReference Include="Xamarin.AndroidX.DocumentFile" Version="1.0.1.4" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.1" />
+  </ItemGroup>
+
+  <!-- 内嵌中文字体（Noto Sans SC，SIL OFL）：放 Fonts/ 而非 Assets/，避免 .NET Android 把
+       Assets/** 自动标记为 AndroidAsset 与 AvaloniaResource 冲突 -->
+  <ItemGroup>
+    <AvaloniaResource Include="Fonts\**" />
   </ItemGroup>
 
   <ItemGroup>

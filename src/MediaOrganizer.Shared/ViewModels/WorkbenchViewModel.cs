@@ -117,16 +117,19 @@ public partial class WorkbenchViewModel : ViewModelBase
         _pendingDir = _config.Paths.PendingDir;
         _fixMtime = _config.Execute.FixMtime;
         _operationIndex = _config.Execute.Operation == FileOperation.Move ? 1 : 0;
-        _existActionIndex = ExistIndex(_config.Execute.ExistAction);
-        _levelIndex = LevelIndexValue(_config.Execute.ClassificationLevel);
+        _existActionIndex = _config.Execute.ExistAction.ToIndex();
+        _levelIndex = _config.Execute.ClassificationLevel.ToIndex();
 
         _session = new OrganizeSession(
             _config,
+            _analyzerFactory,
+            _dataDir,
             _config.Execute.ClassificationLevel,
             _config.Execute.Operation,
             _config.Execute.ExistAction,
             _config.Execute.FixMtime);
         _session.PlanChanged += OnPlanChanged;
+        _session.AnalysisCompleted += OnAnalysisCompleted;
 
         ReloadOutputTargets();
     }
@@ -169,25 +172,25 @@ public partial class WorkbenchViewModel : ViewModelBase
         return OutputDir;
     }
 
-    private static int ExistIndex(ExistAction a) => a switch
-    {
-        ExistAction.Overwrite => 1,
-        ExistAction.Rename => 2,
-        _ => 0
-    };
-
-    private static int LevelIndexValue(ClassificationLevel l) => l switch
-    {
-        ClassificationLevel.Month => 1,
-        ClassificationLevel.Year => 2,
-        _ => 0
-    };
-
     private void OnPlanChanged(ArchivePlan plan)
     {
         var op = _session.Operation == FileOperation.Move ? "移动" : "复制";
         PlanText = $"将对 {plan.Files.Count} 个文件执行「{op}」到 {plan.OutputRoot}";
         CanExecute = true;
+    }
+
+    /// <summary>Session 分析完成后回调：更新 UI 展示 + 转发给外部订阅者。</summary>
+    private void OnAnalysisCompleted(AnalysisResult result)
+    {
+        SuccessRate = result.SuccessRate.ToString("P1");
+        SourceSummary = string.Join(" · ", result.Parsed
+            .GroupBy(p => p.Source)
+            .OrderByDescending(g => g.Count())
+            .Select(g => $"{g.Key} {g.Count():N0}"));
+        StatusText = $"分析完成：{result.Total} 个文件，成功 {result.Parsed.Count}，失败 {result.Unparsed.Count}";
+        _logger.Info(StatusText);
+        HasResult = true;
+        AnalysisCompleted?.Invoke(result);
     }
 
     [RelayCommand]
@@ -241,7 +244,6 @@ public partial class WorkbenchViewModel : ViewModelBase
         _cts = new CancellationTokenSource();
         try
         {
-            var analyzer = _analyzerFactory();
             var progress = new Progress<AnalysisProgress>(p =>
             {
                 TotalFiles = p.Total;
@@ -252,31 +254,7 @@ public partial class WorkbenchViewModel : ViewModelBase
             });
 
             _logger.Info($"开始分析 {SourceDir}");
-            var result = await analyzer.AnalyzeAsync(SourceDir, progress, _cts.Token);
-
-            SuccessRate = result.SuccessRate.ToString("P1");
-            SourceSummary = string.Join(" · ", result.Parsed
-                .GroupBy(p => p.Source)
-                .OrderByDescending(g => g.Count())
-                .Select(g => $"{g.Key} {g.Count():N0}"));
-            StatusText = $"分析完成：{result.Total} 个文件，成功 {result.Parsed.Count}，失败 {result.Unparsed.Count}";
-            _logger.Info(StatusText);
-            HasResult = true;
-
-            // 落盘到应用专有目录（ADR-0006 决策 6）：analysis-result.json + TXT 报告，不写源目录
-            try
-            {
-                AnalysisResultStore.Save(Path.Combine(_dataDir, "analysis-result.json"), result);
-                var report = AnalysisReportGenerator.Generate(result, OutputDir);
-                File.WriteAllText(Path.Combine(_dataDir, "analysis-report.txt"), report);
-            }
-            catch (Exception ex)
-            {
-                _logger.Warn($"结果落盘失败：{ex.Message}");
-            }
-
-            _session.SetResult(result, DisplayTarget());
-            AnalysisCompleted?.Invoke(result);
+            await _session.AnalyzeAsync(SourceDir, DisplayTarget(), progress, _cts.Token);
         }
         catch (OperationCanceledException)
         {
@@ -309,8 +287,8 @@ public partial class WorkbenchViewModel : ViewModelBase
 
         // 执行前把当前选项快照进 session（选项变更已即时触发重规划）
         _session.Operation = OperationIndex == 1 ? FileOperation.Move : FileOperation.Copy;
-        _session.ExistAction = ExistActionFromIndex(ExistActionIndex);
-        _session.Level = LevelFromIndex(LevelIndex);
+        _session.ExistAction = ExistActionIndex.ToExistAction();
+        _session.Level = LevelIndex.ToClassificationLevel();
         _session.FixMtime = FixMtime;
 
         _config.Execute.Operation = _session.Operation;
@@ -353,20 +331,6 @@ public partial class WorkbenchViewModel : ViewModelBase
             _cts = null;
         }
     }
-
-    private static ExistAction ExistActionFromIndex(int i) => i switch
-    {
-        1 => ExistAction.Overwrite,
-        2 => ExistAction.Rename,
-        _ => ExistAction.Skip
-    };
-
-    private static ClassificationLevel LevelFromIndex(int i) => i switch
-    {
-        1 => ClassificationLevel.Month,
-        2 => ClassificationLevel.Year,
-        _ => ClassificationLevel.Day
-    };
 
     /// <summary>规则或配置变更后重建提取链（由主 VM 事件接线）。</summary>
     public void RebuildChain()

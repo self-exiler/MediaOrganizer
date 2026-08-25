@@ -7,14 +7,17 @@ using MediaOrganizer.Core.Storage;
 
 namespace MediaOrganizer.Core;
 
-/// <summary>一次整理会话：持有分析结果与计划，级别/操作变更即重规划，执行时快照配置（SRS FR-4/FR-5 编排）。</summary>
+/// <summary>一次整理会话：分析 → 规划 → 执行的完整流程 Facade（SRS FR-4/FR-5 编排）。</summary>
 /// <remarks>
-/// 把"分析 → 计划 → 执行"的编排从 GUI 层收进 Core：任何影响目标路径的选项变更都会立即重建计划，
-/// 避免 GUI 层"改分级后执行旧计划"的过期计划 bug。
+/// 把"分析 → 计划 → 执行"的完整编排从 GUI 层收进 Core：Analyzer 的创建和调用、结果落盘、
+/// 计划重建、执行快照配置——全部在此协调。ViewModel 只需调 AnalyzeAsync / ExecuteAsync 两个入口。
+/// 任何影响目标路径的选项变更都会立即重建计划，避免 GUI 层"改分级后执行旧计划"的过期计划 bug。
 /// </remarks>
 public sealed class OrganizeSession
 {
     private readonly AppConfig _config;
+    private readonly Func<Analyzer> _analyzerFactory;
+    private readonly string _dataDir;
     private AnalysisResult? _result;
     private string _outputRoot = "";
     private ClassificationLevel _level;
@@ -25,14 +28,21 @@ public sealed class OrganizeSession
     /// <summary>计划重建后触发（级别/操作/同名策略变更或新结果就位）。</summary>
     public event Action<ArchivePlan>? PlanChanged;
 
+    /// <summary>分析完成时触发（结果已落盘，计划已就绪），供 ViewModel 通知下游刷新。</summary>
+    public event Action<AnalysisResult>? AnalysisCompleted;
+
     public OrganizeSession(
         AppConfig config,
+        Func<Analyzer> analyzerFactory,
+        string dataDir,
         ClassificationLevel level = ClassificationLevel.Day,
         FileOperation operation = FileOperation.Copy,
         ExistAction existAction = ExistAction.Skip,
         bool fixMtime = false)
     {
         _config = config;
+        _analyzerFactory = analyzerFactory;
+        _dataDir = dataDir;
         _level = level;
         _operation = operation;
         _existAction = existAction;
@@ -68,6 +78,33 @@ public sealed class OrganizeSession
     {
         get => _fixMtime;
         set { if (_fixMtime != value) { _fixMtime = value; NotifyPlanChanged(); } }
+    }
+
+    /// <summary>分析源目录：创建 Analyzer → 并行提取 → 落盘 → 重建计划。</summary>
+    public async Task<AnalysisResult> AnalyzeAsync(
+        string sourceDir,
+        string outputRoot,
+        IProgress<AnalysisProgress>? progress = null,
+        CancellationToken ct = default)
+    {
+        var analyzer = _analyzerFactory();
+        var result = await analyzer.AnalyzeAsync(sourceDir, progress, ct);
+
+        // 落盘到应用专有目录（ADR-0006 决策 6）：analysis-result.json + TXT 报告，不写源目录
+        try
+        {
+            AnalysisResultStore.Save(Path.Combine(_dataDir, "analysis-result.json"), result);
+            var report = AnalysisReportGenerator.Generate(result, outputRoot);
+            File.WriteAllText(Path.Combine(_dataDir, "analysis-report.txt"), report);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[OrganizeSession] 结果落盘失败: {ex.Message}");
+        }
+
+        SetResult(result, outputRoot);
+        AnalysisCompleted?.Invoke(result);
+        return result;
     }
 
     public void SetResult(AnalysisResult result, string outputRoot)

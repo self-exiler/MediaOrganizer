@@ -14,6 +14,7 @@ artifacts/
 *.user
 .zcode/
 .workbuddy/*
+.dumate/*
 
 # 运行时数据（保留默认配置模板则忽略生成物）
 config.json

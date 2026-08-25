@@ -27,7 +27,7 @@ public sealed class AppState
     public event Action? Changed;
 
     public static AppState Load(string configPath, string patternsPath)
-        => new(ConfigManager.Load(configPath), PatternsStore.Load(patternsPath), configPath, patternsPath);
+        => new(JsonFileStore.Load<AppConfig>(configPath) ?? new AppConfig(), PatternsStore.Load(patternsPath), configPath, patternsPath);
 
     /// <summary>
     /// 保存配置。默认触发 Changed（配置变更 → 工作台重建提取链并失效旧计划）；
@@ -35,7 +35,7 @@ public sealed class AppState
     /// </summary>
     public void SaveConfig(bool notifyChanged = true)
     {
-        ConfigManager.Save(_configPath, Config);
+        JsonFileStore.Save(_configPath, Config);
         if (notifyChanged) Changed?.Invoke();
     }
 

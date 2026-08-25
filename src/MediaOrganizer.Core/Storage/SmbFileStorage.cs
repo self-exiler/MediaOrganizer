@@ -13,7 +13,7 @@ namespace MediaOrganizer.Core.Storage;
 /// SMBLibrary 客户端非线程安全，所有操作经 _gate 串行化（FileOperator 并行度 > 1 时退化为顺序写）。
 /// 8MB 分块流式、.mo-tmp 临时名 + 大小校验、重试退避由 FileOperator 层统一保证。
 /// </summary>
-public sealed class SmbFileStorage : IFileStorage
+public sealed class SmbFileStorage : IFileStorage, IDisposable
 {
     private const int ChunkSize = 8 * 1024 * 1024;
 
@@ -71,8 +71,9 @@ public sealed class SmbFileStorage : IFileStorage
             _client = client;
             _store = store;
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"[SmbFileStorage] Connect/Login failed for {_server}: {ex.Message}");
             client.Disconnect();
             throw;
         }
@@ -90,8 +91,8 @@ public sealed class SmbFileStorage : IFileStorage
         var client = _client;
         _store = null;
         _client = null;
-        try { store?.Disconnect(); } catch { /* 连接已断 */ }
-        try { client?.Disconnect(); } catch { /* 连接已断 */ }
+        try { store?.Disconnect(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[SmbFileStorage] Store disconnect failed: {ex.Message}"); }
+        try { client?.Disconnect(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[SmbFileStorage] Client disconnect failed: {ex.Message}"); }
     }
 
     /// <summary>串行执行一次 SMB 操作；传输层失效（连接被断/会话失效）时重建连接重试一次。</summary>
@@ -283,4 +284,11 @@ public sealed class SmbFileStorage : IFileStorage
             }
             return null;
         }, ct);
+
+    /// <summary>断开 SMB 连接，释放客户端与文件存储句柄。</summary>
+    public void Dispose()
+    {
+        ResetConnection();
+        _gate.Dispose();
+    }
 }

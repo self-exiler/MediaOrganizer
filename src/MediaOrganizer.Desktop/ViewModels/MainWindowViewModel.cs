@@ -58,7 +58,7 @@ public partial class MainWindowViewModel : ViewModelBase
             appData);
         FailedFiles = new FailedFilesViewModel(State, _logger,
             new DesktopConfirmDialog(), new DesktopSystemFileOpener(), new DesktopImageLoader());
-        MagicTools = new MagicToolsViewModel(State);
+        MagicTools = new MagicToolsViewModel(State, appData);
         Settings = new SettingsViewModel(State, ThemeHelper.Apply);
         Report = new ReportViewModel(new DesktopFileSaver());
         Logs = new LogsViewModel(_logger);

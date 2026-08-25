@@ -84,7 +84,7 @@
                         BorderBrush="{StaticResource DividerBrush}" BorderThickness="1"
                         BoxShadow="0 1 3 0 #14000000">
                     <StackPanel Spacing="14">
-                        <TextBlock Text="📁 目录" FontSize="14" FontWeight="SemiBold"/>
+                        <TextBlock Text="目录" FontSize="14" FontWeight="SemiBold"/>
 
                         <StackPanel Spacing="6">
                             <TextBlock Text="源目录（SAF）" FontSize="12" Foreground="#616161"/>
@@ -109,7 +109,7 @@
                         <!-- 网络目标提示（FR-A9.4）：仅复制，move 已禁用 -->
                         <Border Background="#F3F9FD" BorderBrush="#C3DCF1" BorderThickness="1" CornerRadius="8"
                                 Padding="12,10" IsVisible="{Binding !IsMoveAllowed}">
-                            <TextBlock Text="ℹ️ 网络目标（SMB / WebDAV）仅支持「复制」，已自动切换并禁用移动。"
+                            <TextBlock Text="提示：网络目标（SMB / WebDAV）仅支持「复制」，已自动切换并禁用移动。"
                                        FontSize="12" Foreground="#0F4E7D" TextWrapping="Wrap"/>
                         </Border>
 
@@ -134,7 +134,7 @@
                         BorderBrush="{StaticResource DividerBrush}" BorderThickness="1"
                         BoxShadow="0 1 3 0 #14000000">
                     <StackPanel Spacing="14">
-                        <TextBlock Text="⚙️ 执行参数" FontSize="14" FontWeight="SemiBold"/>
+                        <TextBlock Text="执行参数" FontSize="14" FontWeight="SemiBold"/>
 
                         <StackPanel Spacing="6">
                             <TextBlock Text="分级目录" FontSize="12" Foreground="#616161"/>
@@ -169,7 +169,7 @@
                 <!-- 空态提示 -->
                 <Border Background="#F3F9FD" BorderBrush="#C3DCF1" BorderThickness="1" CornerRadius="8"
                         Padding="12,10" IsVisible="{Binding !HasResult}">
-                    <TextBlock Text="👆 目录就绪。点击底部「开始分析」扫描源目录并提取拍摄日期；分析完成确认计划后再执行归档。"
+                    <TextBlock Text="目录就绪。点击底部「开始分析」扫描源目录并提取拍摄日期；分析完成确认计划后再执行归档。"
                                FontSize="13" Foreground="#0F4E7D" TextWrapping="Wrap"/>
                 </Border>
 
@@ -178,12 +178,12 @@
                         BorderBrush="{StaticResource DividerBrush}" BorderThickness="1"
                         BoxShadow="0 1 3 0 #14000000" IsVisible="{Binding IsBusy}">
                     <StackPanel Spacing="10">
-                        <TextBlock Text="⏳ 正在处理…" FontSize="14" FontWeight="SemiBold"/>
+                        <TextBlock Text="正在处理…" FontSize="14" FontWeight="SemiBold"/>
                         <ProgressBar MinHeight="6" IsIndeterminate="{Binding !HasResult}"
                                      Value="{Binding Progress}" Maximum="100"/>
                         <TextBlock FontSize="12" Foreground="#8A8A8A" TextWrapping="Wrap"
                                    Text="{Binding StatusText}"/>
-                        <Button Content="✕ 取消" Classes="danger" HorizontalAlignment="Right" MinHeight="40"
+                        <Button Content="× 取消" Classes="danger" HorizontalAlignment="Right" MinHeight="40"
                                 Command="{Binding CancelAnalysisCommand}"/>
                     </StackPanel>
                 </Border>
@@ -194,7 +194,7 @@
                         BoxShadow="0 1 3 0 #14000000" IsVisible="{Binding HasResult}">
                     <StackPanel Spacing="10">
                         <DockPanel>
-                            <TextBlock Text="📊 分析结果" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <TextBlock Text="分析结果" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
                             <Button DockPanel.Dock="Right" Content="查看失败 →" FontSize="12" MinHeight="36"
                                     HorizontalAlignment="Right" Click="OnViewFailed"/>
                         </DockPanel>

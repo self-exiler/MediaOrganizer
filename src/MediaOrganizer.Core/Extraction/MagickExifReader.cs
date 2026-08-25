@@ -39,9 +39,10 @@ public sealed class MagickExifReader : IExifReader
                     return new DateTimeOffset(dt2, TimeZoneInfo.Local.GetUtcOffset(dt2));
             }
         }
-        catch
+        catch (Exception ex)
         {
             // 损坏文件/无权限等：一律视为该提取器无结果
+            System.Diagnostics.Debug.WriteLine($"[MagickExifReader] EXIF read failed: {ex.Message}");
         }
         return null;
     }

@@ -8,8 +8,8 @@ using MediaOrganizer.Shared.ViewModels;
 
 namespace MediaOrganizer.Android.ViewModels;
 
-/// <summary>抽屉导航项（FR-A7.1）：图标 + 标签 + 页索引 + 失败文件角标（Badge=0 时角标隐藏）。</summary>
-public sealed record NavItem(string Icon, string Label, int Page)
+/// <summary>抽屉导航项（FR-A7.1）：标签 + 页索引 + 失败文件角标（Badge=0 时角标隐藏）。</summary>
+public sealed record NavItem(string Label, int Page)
 {
     public int Badge { get; init; }
     public bool HasBadge => Badge > 0;
@@ -54,10 +54,10 @@ public partial class MainViewModel : ViewModelBase
     /// <summary>抽屉导航项（失败文件项带角标，角标变化时替换条目触发刷新）。</summary>
     public ObservableCollection<NavItem> NavItems { get; } =
     [
-        new NavItem("🏠", "整理工作台", 0),
-        new NavItem("⚠️", "失败文件", 1) { Badge = 0 },
-        new NavItem("📄", "分析报告", 2),
-        new NavItem("⚙️", "设置", 3)
+        new NavItem("整理工作台", 0),
+        new NavItem("失败文件", 1) { Badge = 0 },
+        new NavItem("分析报告", 2),
+        new NavItem("设置", 3)
     ];
 
     public ViewModelBase? CurrentPage => SelectedPage switch

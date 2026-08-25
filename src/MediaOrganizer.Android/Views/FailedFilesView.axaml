@@ -19,7 +19,7 @@
                 <Border Background="#FFF9F5" BorderBrush="#F4D1BC" BorderThickness="1" CornerRadius="8"
                         Padding="12,10">
                     <TextBlock FontSize="13" Foreground="#8A3714" TextWrapping="Wrap"
-                               Text="⚠️ 以下文件未能提取日期，已按文件名结构指纹聚类。可勾选后批量移动到待处理目录，或在桌面版用魔术工具添加规则后重新分析。"/>
+                               Text="⚠ 以下文件未能提取日期，已按文件名结构指纹聚类。可勾选后批量移动到待处理目录，或在桌面版用魔术工具添加规则后重新分析。"/>
                 </Border>
 
                 <!-- 移动进行中进度 -->
@@ -102,7 +102,7 @@
             <Grid ColumnDefinitions="*,8,*">
                 <Button Grid.Column="0" Content="全选" Command="{Binding ToggleSelectAllCommand}"
                         IsEnabled="{Binding !IsMoving}"/>
-                <Button Grid.Column="2" Content="📁 批量移动到待处理" Classes="primary"
+                <Button Grid.Column="2" Content="批量移动到待处理" Classes="primary"
                         Command="{Binding MoveToPendingCommand}" IsEnabled="{Binding !IsMoving}"/>
             </Grid>
         </Border>

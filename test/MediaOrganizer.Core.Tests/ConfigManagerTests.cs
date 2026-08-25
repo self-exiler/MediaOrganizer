@@ -2,7 +2,7 @@ using MediaOrganizer.Core.Configuration;
 
 namespace MediaOrganizer.Core.Tests;
 
-public class ConfigManagerTests
+public class ConfigStoreTests
 {
     [Fact]
     public void 配置往返保持默认值()
@@ -15,8 +15,8 @@ public class ConfigManagerTests
         var path = Path.Combine(Path.GetTempPath(), "mo-config-" + Guid.NewGuid().ToString("N") + ".json");
         try
         {
-            ConfigManager.Save(path, cfg);
-            var loaded = ConfigManager.Load(path);
+            JsonFileStore.Save(path, cfg);
+            var loaded = JsonFileStore.Load<AppConfig>(path) ?? new AppConfig();
             Assert.Equal(1, loaded.Version);
             Assert.Equal(@"D:\photos", loaded.Paths.SourceDir);
             Assert.Equal(25, loaded.Extraction.MaxYearsPast);
@@ -40,7 +40,8 @@ public class ConfigManagerTests
         File.WriteAllText(path, "{ not valid json !!");
         try
         {
-            var loaded = ConfigManager.Load(path);
+            // JsonFileStore.Load 在解析失败时返回 null，调用方兜底为 new AppConfig()
+            var loaded = JsonFileStore.Load<AppConfig>(path) ?? new AppConfig();
             Assert.Equal(30, loaded.Extraction.MaxYearsPast);
         }
         finally

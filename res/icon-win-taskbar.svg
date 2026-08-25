@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <linearGradient id="tsky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7DD3FC"/>
+      <stop offset="1" stop-color="#0EA5E9"/>
+    </linearGradient>
+  </defs>
+  <!-- 背景卡片（简化，仅露一角） -->
+  <g transform="rotate(-8 14 18)">
+    <rect x="7" y="9" width="16" height="18" rx="2" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="0.75"/>
+  </g>
+  <!-- 主卡片 -->
+  <rect x="9" y="5" width="16" height="20" rx="2.5" fill="#FFFFFF" stroke="#94A3B8" stroke-width="0.75"/>
+  <!-- 照片内容 -->
+  <rect x="11" y="7" width="12" height="10" rx="1" fill="url(#tsky)"/>
+  <!-- 太阳 -->
+  <circle cx="20" cy="11" r="1.6" fill="#FCD34D"/>
+  <!-- 山脉 -->
+  <path d="M 11 17 L 15 13 L 18 15 L 21 12 L 23 17 Z" fill="#1E40AF"/>
+</svg>

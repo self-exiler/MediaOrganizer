@@ -1,0 +1,628 @@
+--------- beginning of (HKS)098D06A9E3172D417DF72C424CFD477BE51196352D227991616EEB6C9B653598CF78CB2C02D5DC745ECFCBBA10FEE20E1DDB421CA7ECECBABF9112233A152144EF89112615A698E7225B12F78802E8D2DF1B26F8463F1C898D1F4756F28C626206666FFA680AF0482F880F0F78BDA7C14D57774A97E41C87FDEE34DE4F860C5D8D647A0219B6E92875EDF030B0642208D950B305DDE3CDCF75672FF46226DE0EA3459E8F26455E5B2E730DCB30E94BB1F1FB90F7CD36E7CAF66DE7400C37A1D9C463948E6A534F3E9BFD376E70B9F42D813DF1A8F6D272E0C8DBE3F00943ACCAFE2D5C59639AF1FA79362505B9F312998BFA507DD97583CADC16BBC7591CDD88(HKE)
+--------- beginning of main
+08-19 23:33:26.541  4129  4428 E IndepBtControlManager: checkSignalStrength rsrq is not legal
+08-19 23:33:26.541  4129  4428 E IndepBtControlManager: checkSignalStrength sinr is not legal
+08-19 23:33:26.713  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=59
+08-19 23:33:27.216  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=60
+08-19 23:33:27.272 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:33:27.272 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:33:27.277 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:33:27.278 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:33:27.288 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:33:27.289 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:33:27.289 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:33:27.290 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:33:27.294 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:33:27.295 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:33:27.711  3055  3769 E TcpInfoMonitor: obtain valid average rtt failed.
+08-19 23:33:27.712  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=61
+08-19 23:33:27.836  4390 10822 E HnDeviceGroupAuthModule: HwServiceConnectMethods:HwDeviceAuthService binderDied
+08-19 23:33:27.836  4835 10592 E P2pD2dLinkManager: disconnectDevice pid: disconnect all in this pid=1599
+08-19 23:33:27.843  4129  4427 E SmartcareProc: getInstance, sInstance is null !
+08-19 23:33:27.843  4129  5511 E HsmCoreServiceImpl: onTransact in code is: 102
+08-19 23:33:27.845  4129  4427 E SmartDualCardConfig: isAppInBlackList false,items==null
+08-19 23:33:27.849  4129  4427 E MpAptDecisionSystem: remove bind rules with uid = 10100have no policy
+08-19 23:33:27.849  4129  4427 E MpAptDecisionSystem: handleAppDied. multipathPolicy
+08-19 23:33:27.850  4129  4427 E SmartDualCardConfig: isAppInBlackList false,items==null
+08-19 23:33:27.850  4399  6876 E CHR_ChrProtocolTxtManager: [hasReachTxtLimitLineForMap]:the txt has reached limit, tableName = data_flow_record
+08-19 23:33:28.215  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=62
+08-19 23:33:28.719  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=63
+08-19 23:33:28.752  3055  4067 E SensorService: 0xb40000717c023a10 removeFd fd=1083
+08-19 23:33:28.756  4297  5441 E SensorManager: Error: Sensor Event is null for Sensor: {Sensor name="TCS3720ALSPRX Proximity Sensor Wakeup", vendor="ams AG", version=66048, type=8, maxRange=5.0, resolution=1.0, power=0.625, minDelay=0}
+08-19 23:33:29.213  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=64
+08-19 23:33:29.380  3055  3055 E WifiEnhance_DataPlatformServiceWapper: DataPlatformConnection: DataPlatformService returned null binding: ComponentInfo{com.hihonor.android.chr/com.hihonor.dataplatform.service.DataPlatformService}
+08-19 23:33:29.717  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=65
+08-19 23:33:29.882  4835  5428 E DeviceMonitorPowerKit: not Satify ApplyResource
+08-19 23:33:29.962  4129  4428 E IndepBtControlManager: checkSignalStrength rsrq is not legal
+08-19 23:33:29.962  4129  4428 E IndepBtControlManager: checkSignalStrength sinr is not legal
+08-19 23:33:30.212  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=66
+08-19 23:33:30.716  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=67
+08-19 23:33:31.219  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=68
+08-19 23:33:31.715  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=69
+08-19 23:33:32.218  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=70
+08-19 23:33:32.309 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:33:32.310 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:33:32.314 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:33:32.314 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:33:32.322 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:33:32.322 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:33:32.322 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:33:32.322 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:33:32.327 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:33:32.327 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:33:32.721  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=71
+08-19 23:33:33.216  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=72
+08-19 23:33:33.719  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=73
+08-19 23:33:34.231  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=74
+08-19 23:33:34.386  3055  3055 E WifiEnhance_DataPlatformServiceWapper: DataPlatformConnection: DataPlatformService returned null binding: ComponentInfo{com.hihonor.android.chr/com.hihonor.dataplatform.service.DataPlatformService}
+08-19 23:33:34.550  4129  4428 E IndepBtControlManager: checkSignalStrength rsrq is not legal
+08-19 23:33:34.550  4129  4428 E IndepBtControlManager: checkSignalStrength sinr is not legal
+08-19 23:33:34.726  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=75
+08-19 23:33:35.222  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=76
+08-19 23:33:35.725  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=77
+--------- beginning of system
+08-19 23:33:35.737  8101  8128 E HnPackageUtils: Copy baseline profile failed.
+08-19 23:33:35.755  8101  8128 E HnPackageUtils: Copy baseline profile failed.
+08-19 23:33:35.766  3055  3769 E TcpInfoMonitor: totalTxPackets is zero, no need to query TcpInfo!
+08-19 23:33:35.813   547   734 E HnPackageUtils: Copy baseline profile failed.
+08-19 23:33:35.816   547   594 E StringUtils: 获取默认 User-Agent 失败: WebView cannot be initialized on a thread that has no Looper.
+08-19 23:33:35.816   547   594 E StringUtils: java.lang.RuntimeException: WebView cannot be initialized on a thread that has no Looper.
+08-19 23:33:35.816   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:495)
+08-19 23:33:35.816   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:415)
+08-19 23:33:35.816   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:397)
+08-19 23:33:35.816   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:384)
+08-19 23:33:35.816   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:374)
+08-19 23:33:35.816   547   594 E StringUtils: 	at com.hihonor.mms.operationservicekit.utils.StringUtils.getDefaultUserAgent(Unknown Source:7)
+08-19 23:33:35.816   547   594 E StringUtils: 	at com.hihonor.mms.operationservicekit.provider.DesktopDataProvider.lambda$setDestTopHaReport$1(Unknown Source:69)
+08-19 23:33:35.816   547   594 E StringUtils: 	at com.hihonor.mms.operationservicekit.provider.DesktopDataProvider.a(Unknown Source:0)
+08-19 23:33:35.816   547   594 E StringUtils: 	at i.c.run(Unknown Source:16)
+08-19 23:33:35.816   547   594 E StringUtils: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1156)
+08-19 23:33:35.816   547   594 E StringUtils: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:651)
+08-19 23:33:35.816   547   594 E StringUtils: 	at java.lang.Thread.run(Thread.java:1126)
+08-19 23:33:35.818   547   594 E StringUtils: 获取默认 User-Agent 失败: WebView cannot be initialized on a thread that has no Looper.
+08-19 23:33:35.818   547   594 E StringUtils: java.lang.RuntimeException: WebView cannot be initialized on a thread that has no Looper.
+08-19 23:33:35.818   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:495)
+08-19 23:33:35.818   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:415)
+08-19 23:33:35.818   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:397)
+08-19 23:33:35.818   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:384)
+08-19 23:33:35.818   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:374)
+08-19 23:33:35.818   547   594 E StringUtils: 	at com.hihonor.mms.operationservicekit.utils.StringUtils.getDefaultUserAgent(Unknown Source:7)
+08-19 23:33:35.818   547   594 E StringUtils: 	at com.hihonor.mms.operationservicekit.provider.DesktopDataProvider.lambda$setDestTopHaReport$1(Unknown Source:112)
+08-19 23:33:35.818   547   594 E StringUtils: 	at com.hihonor.mms.operationservicekit.provider.DesktopDataProvider.a(Unknown Source:0)
+08-19 23:33:35.818   547   594 E StringUtils: 	at i.c.run(Unknown Source:16)
+08-19 23:33:35.818   547   594 E StringUtils: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1156)
+08-19 23:33:35.818   547   594 E StringUtils: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:651)
+08-19 23:33:35.818   547   594 E StringUtils: 	at java.lang.Thread.run(Thread.java:1126)
+08-19 23:33:35.855   547   594 E StringUtils: 获取默认 User-Agent 失败: WebView cannot be initialized on a thread that has no Looper.
+08-19 23:33:35.855   547   594 E StringUtils: java.lang.RuntimeException: WebView cannot be initialized on a thread that has no Looper.
+08-19 23:33:35.855   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:495)
+08-19 23:33:35.855   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:415)
+08-19 23:33:35.855   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:397)
+08-19 23:33:35.855   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:384)
+08-19 23:33:35.855   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:374)
+08-19 23:33:35.855   547   594 E StringUtils: 	at com.hihonor.mms.operationservicekit.utils.StringUtils.getDefaultUserAgent(Unknown Source:7)
+08-19 23:33:35.855   547   594 E StringUtils: 	at com.hihonor.mms.operationservicekit.provider.DesktopDataProvider.lambda$setDestTopHaReport$1(Unknown Source:69)
+08-19 23:33:35.855   547   594 E StringUtils: 	at com.hihonor.mms.operationservicekit.provider.DesktopDataProvider.a(Unknown Source:0)
+08-19 23:33:35.855   547   594 E StringUtils: 	at i.c.run(Unknown Source:16)
+08-19 23:33:35.855   547   594 E StringUtils: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1156)
+08-19 23:33:35.855   547   594 E StringUtils: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:651)
+08-19 23:33:35.855   547   594 E StringUtils: 	at java.lang.Thread.run(Thread.java:1126)
+08-19 23:33:35.857   547   594 E StringUtils: 获取默认 User-Agent 失败: WebView cannot be initialized on a thread that has no Looper.
+08-19 23:33:35.857   547   594 E StringUtils: java.lang.RuntimeException: WebView cannot be initialized on a thread that has no Looper.
+08-19 23:33:35.857   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:495)
+08-19 23:33:35.857   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:415)
+08-19 23:33:35.857   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:397)
+08-19 23:33:35.857   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:384)
+08-19 23:33:35.857   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:374)
+08-19 23:33:35.857   547   594 E StringUtils: 	at com.hihonor.mms.operationservicekit.utils.StringUtils.getDefaultUserAgent(Unknown Source:7)
+08-19 23:33:35.857   547   594 E StringUtils: 	at com.hihonor.mms.operationservicekit.provider.DesktopDataProvider.lambda$setDestTopHaReport$1(Unknown Source:112)
+08-19 23:33:35.857   547   594 E StringUtils: 	at com.hihonor.mms.operationservicekit.provider.DesktopDataProvider.a(Unknown Source:0)
+08-19 23:33:35.857   547   594 E StringUtils: 	at i.c.run(Unknown Source:16)
+08-19 23:33:35.857   547   594 E StringUtils: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1156)
+08-19 23:33:35.857   547   594 E StringUtils: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:651)
+08-19 23:33:35.857   547   594 E StringUtils: 	at java.lang.Thread.run(Thread.java:1126)
+08-19 23:33:35.866   547   594 E StringUtils: 获取默认 User-Agent 失败: WebView cannot be initialized on a thread that has no Looper.
+08-19 23:33:35.866   547   594 E StringUtils: java.lang.RuntimeException: WebView cannot be initialized on a thread that has no Looper.
+08-19 23:33:35.866   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:495)
+08-19 23:33:35.866   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:415)
+08-19 23:33:35.866   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:397)
+08-19 23:33:35.866   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:384)
+08-19 23:33:35.866   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:374)
+08-19 23:33:35.866   547   594 E StringUtils: 	at com.hihonor.mms.operationservicekit.utils.StringUtils.getDefaultUserAgent(Unknown Source:7)
+08-19 23:33:35.866   547   594 E StringUtils: 	at com.hihonor.mms.operationservicekit.provider.DesktopDataProvider.lambda$setDestTopHaReport$1(Unknown Source:69)
+08-19 23:33:35.866   547   594 E StringUtils: 	at com.hihonor.mms.operationservicekit.provider.DesktopDataProvider.a(Unknown Source:0)
+08-19 23:33:35.866   547   594 E StringUtils: 	at i.c.run(Unknown Source:16)
+08-19 23:33:35.866   547   594 E StringUtils: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1156)
+08-19 23:33:35.866   547   594 E StringUtils: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:651)
+08-19 23:33:35.866   547   594 E StringUtils: 	at java.lang.Thread.run(Thread.java:1126)
+08-19 23:33:35.867   547   594 E StringUtils: 获取默认 User-Agent 失败: WebView cannot be initialized on a thread that has no Looper.
+08-19 23:33:35.867   547   594 E StringUtils: java.lang.RuntimeException: WebView cannot be initialized on a thread that has no Looper.
+08-19 23:33:35.867   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:495)
+08-19 23:33:35.867   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:415)
+08-19 23:33:35.867   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:397)
+08-19 23:33:35.867   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:384)
+08-19 23:33:35.867   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:374)
+08-19 23:33:35.867   547   594 E StringUtils: 	at com.hihonor.mms.operationservicekit.utils.StringUtils.getDefaultUserAgent(Unknown Source:7)
+08-19 23:33:35.867   547   594 E StringUtils: 	at com.hihonor.mms.operationservicekit.provider.DesktopDataProvider.lambda$setDestTopHaReport$1(Unknown Source:112)
+08-19 23:33:35.867   547   594 E StringUtils: 	at com.hihonor.mms.operationservicekit.provider.DesktopDataProvider.a(Unknown Source:0)
+08-19 23:33:35.867   547   594 E StringUtils: 	at i.c.run(Unknown Source:16)
+08-19 23:33:35.867   547   594 E StringUtils: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1156)
+08-19 23:33:35.867   547   594 E StringUtils: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:651)
+08-19 23:33:35.867   547   594 E StringUtils: 	at java.lang.Thread.run(Thread.java:1126)
+08-19 23:33:35.875   547   594 E StringUtils: 获取默认 User-Agent 失败: WebView cannot be initialized on a thread that has no Looper.
+08-19 23:33:35.875   547   594 E StringUtils: java.lang.RuntimeException: WebView cannot be initialized on a thread that has no Looper.
+08-19 23:33:35.875   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:495)
+08-19 23:33:35.875   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:415)
+08-19 23:33:35.875   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:397)
+08-19 23:33:35.875   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:384)
+08-19 23:33:35.875   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:374)
+08-19 23:33:35.875   547   594 E StringUtils: 	at com.hihonor.mms.operationservicekit.utils.StringUtils.getDefaultUserAgent(Unknown Source:7)
+08-19 23:33:35.875   547   594 E StringUtils: 	at com.hihonor.mms.operationservicekit.provider.DesktopDataProvider.lambda$setDestTopHaReport$1(Unknown Source:69)
+08-19 23:33:35.875   547   594 E StringUtils: 	at com.hihonor.mms.operationservicekit.provider.DesktopDataProvider.a(Unknown Source:0)
+08-19 23:33:35.875   547   594 E StringUtils: 	at i.c.run(Unknown Source:16)
+08-19 23:33:35.875   547   594 E StringUtils: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1156)
+08-19 23:33:35.875   547   594 E StringUtils: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:651)
+08-19 23:33:35.875   547   594 E StringUtils: 	at java.lang.Thread.run(Thread.java:1126)
+08-19 23:33:35.876   547   594 E StringUtils: 获取默认 User-Agent 失败: WebView cannot be initialized on a thread that has no Looper.
+08-19 23:33:35.876   547   594 E StringUtils: java.lang.RuntimeException: WebView cannot be initialized on a thread that has no Looper.
+08-19 23:33:35.876   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:495)
+08-19 23:33:35.876   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:415)
+08-19 23:33:35.876   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:397)
+08-19 23:33:35.876   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:384)
+08-19 23:33:35.876   547   594 E StringUtils: 	at android.webkit.WebView.<init>(WebView.java:374)
+08-19 23:33:35.876   547   594 E StringUtils: 	at com.hihonor.mms.operationservicekit.utils.StringUtils.getDefaultUserAgent(Unknown Source:7)
+08-19 23:33:35.876   547   594 E StringUtils: 	at com.hihonor.mms.operationservicekit.provider.DesktopDataProvider.lambda$setDestTopHaReport$1(Unknown Source:112)
+08-19 23:33:35.876   547   594 E StringUtils: 	at com.hihonor.mms.operationservicekit.provider.DesktopDataProvider.a(Unknown Source:0)
+08-19 23:33:35.876   547   594 E StringUtils: 	at i.c.run(Unknown Source:16)
+08-19 23:33:35.876   547   594 E StringUtils: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1156)
+08-19 23:33:35.876   547   594 E StringUtils: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:651)
+08-19 23:33:35.876   547   594 E StringUtils: 	at java.lang.Thread.run(Thread.java:1126)
+08-19 23:33:36.228  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=78
+08-19 23:33:36.723  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=79
+08-19 23:33:37.054  6492  6492 E adbd    : failed to connect to socket 'tcp:8889': Connection refused
+08-19 23:33:37.227  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=80
+08-19 23:33:37.336 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:33:37.336 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:33:37.340 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:33:37.341 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:33:37.360 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:33:37.360 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:33:37.361 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:33:37.363 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:33:37.368 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:33:37.368 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:33:37.730  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=81
+08-19 23:33:38.072  6492  6492 E adbd    : failed to connect to socket 'tcp:8889': Connection refused
+08-19 23:33:38.225  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=82
+08-19 23:33:38.728  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=83
+08-19 23:33:39.083  6492  6492 E adbd    : failed to connect to socket 'tcp:8889': Connection refused
+08-19 23:33:39.231  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=84
+08-19 23:33:39.396  3055  3055 E WifiEnhance_DataPlatformServiceWapper: DataPlatformConnection: DataPlatformService returned null binding: ComponentInfo{com.hihonor.android.chr/com.hihonor.dataplatform.service.DataPlatformService}
+08-19 23:33:39.735  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=85
+08-19 23:33:40.095  6492  6492 E adbd    : failed to connect to socket 'tcp:8889': Connection refused
+08-19 23:33:40.230  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=86
+08-19 23:33:40.741  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=87
+08-19 23:33:41.114  6492  6492 E adbd    : failed to connect to socket 'tcp:8889': Connection refused
+08-19 23:33:41.228  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=88
+08-19 23:33:41.731  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=89
+08-19 23:33:41.981  4129  4428 E IndepBtControlManager: checkSignalStrength rsrq is not legal
+08-19 23:33:41.983  4129  4428 E IndepBtControlManager: checkSignalStrength sinr is not legal
+08-19 23:33:42.124  6492  6492 E adbd    : failed to connect to socket 'tcp:8889': Connection refused
+08-19 23:33:42.234  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=90
+08-19 23:33:42.326  3055  4067 E ResMng NATIVE_MSG_FILTER: Fail to get hwrme service
+08-19 23:33:42.330  1842  1901 E ANDR-PERF-RESOURCEQS: ANDR-PERF-RESOURCEQS: AddAndApply() 125: Resource with major=11, minor=0 not supported
+08-19 23:33:42.345 16354 16354 E RtgSchedManager: endActivityTransaction: margin state not match
+08-19 23:33:42.352  3055  5965 E libprocessgroup: No such cgroup attribute: /sys/fs/cgroup/apps/uid_10293/pid_29853/cgroup.freeze
+08-19 23:33:42.363 16354 16354 E FixedFlowFrameManager: initAndCheck: configType is 0, skip FixedFlowFrame
+08-19 23:33:42.365  1885  1980 E Parcel  : Reading a NULL string not supported here.
+08-19 23:33:42.365  2411  2624 E power   : Failed to get SystemSuspend service
+08-19 23:33:42.366  2411  2624 E power   : Failed to get SystemSuspend service
+08-19 23:33:42.366 16354 16354 E WindowManagerEx: getDisplaySideRegion: windowInsets is null please check!
+08-19 23:33:42.371  2411  2690 E AGPService: Display Service AIDL nullptr
+08-19 23:33:42.371  2411  2690 E AGPService: DisplayFreqClient: [SetDdicMinFpsByAidl]: GetDisplayService failed
+08-19 23:33:42.371  1763  1763 E HW_DISPLAY_TEST: get_active_panel: panel index: 0
+08-19 23:33:42.373  7494  7494 E sug_info: checkMatch:com.hihonor.android.launcher_6_177_搜索应用
+08-19 23:33:42.373  7494  7494 E sug_info: true_true_true_true_false_true_true
+08-19 23:33:42.373  2411  2690 E AGPService: Display Service AIDL nullptr
+08-19 23:33:42.373  2411  2690 E AGPService: DisplayFreqClient: [SetDdicMinFpsByAidl]: GetDisplayService failed
+08-19 23:33:42.374  1763  1763 E HW_DISPLAY_TEST: get_active_panel: panel index: 0
+08-19 23:33:42.376  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=91
+08-19 23:33:42.377  3055  6043 E SWAP_KernelInterface: writeDevMemcg::writeDevMemcg_ERROR:/dev/memcg/apps/org.mediaorganizer.androidmemory.name content:org.mediaorganizer.android, ex:java.io.FileNotFoundException: /dev/memcg/apps/org.mediaorganizer.androidmemory.name: open failed: EACCES (Permission denied)
+08-19 23:33:42.377  3055  6043 E SWAP_KernelInterface: setMemcgName error, pkgname = org.mediaorganizer.android
+08-19 23:33:42.379  7494  8005 E iptcore : Bool Set NOT-IMPLEMENTED!
+08-19 23:33:42.383 16354 16354 E RtgSchedManager: endActivityTransaction: margin state not match
+08-19 23:33:42.383  7494  7494 E sug_info: [, , 0]:checkMatch:com.hihonor.android.launcher_6_177_搜索应用
+08-19 23:33:42.384  7494  7494 E sug_info: checkMatch:com.hihonor.android.launcher_6_177_搜索应用
+08-19 23:33:42.384  7494  7494 E CandHandler: fontSizeInfo:71_71_0.84
+08-19 23:33:42.384  7494  7494 E CandHandler: fontSizeInfo:71_71_0.84
+08-19 23:33:42.385  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=92
+08-19 23:33:42.386 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:33:42.386 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:33:42.389 31911 32011 E RemoteTransitionHandler: pending remote null
+08-19 23:33:42.390 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:33:42.390 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:33:42.395 31911 32011 E HnFreeformController: mHnDesktopTasksController is null
+08-19 23:33:42.399 16354 16354 E RtgSchedManager: endActivityTransaction: margin state not match
+08-19 23:33:42.400  1815  1815 E TS_HAL  : honor_tp_run_command: call
+08-19 23:33:42.400 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:33:42.401 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:33:42.401 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:33:42.401 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:33:42.405  1842  1901 E ANDR-PERF-UTIL: ANDR-PERF-UTIL: change_node_val() 319: Failed to update node /sys/class/kgsl/kgsl-3d0/min_pwrlevel with value 0
+08-19 23:33:42.405  1842  1901 E ANDR-PERF-RESOURCEQS: ANDR-PERF-RESOURCEQS: AddAndApply() 167: Failed to apply optimization [10, 1]
+08-19 23:33:42.406 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:33:42.406 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:33:42.411  7494  6038 E TLSDeployUtil:  subPackage isValided . subPkgPath is :/data/user/0/com.baidu.input_hihonor/files/talos/dpmbundles/honor.rnplugin.goodscircle/goodsshop/100.0.1.57/ subPkgInfo is exist:false successMark:false
+08-19 23:33:42.413  7494  6038 E TLSDeployUtil:  subPackage isValided . subPkgPath is :/data/user/0/com.baidu.input_hihonor/files/talos/dpmbundles/honor.rnplugin.goodscircle/goodsshop/100.0.1.57/ subPkgInfo is exist:false successMark:false
+08-19 23:33:42.415  6018  6018 E [VipSchedProxy:]: Vip Success open /proc/vip/ioctl
+08-19 23:33:42.429  2483  2515 E AwareLog: SetThreadToVipGroup:: iawared vipgroup set pid[0] FAILED-NOT-TOP-APP!
+08-19 23:33:42.434 16566 16662 E HSM_BG  : MaliciousDBHelper:list is empty
+08-19 23:33:42.434 16566 16662 E HSM_BG  : SecurityThreatsService:notifyRiskAppWhenStartUp optional is present.
+08-19 23:33:42.434  4129  4427 E SmartcareProc: getInstance, sInstance is null !
+08-19 23:33:42.435  1815  1815 E TS_HAL  : honor_tp_run_command: call
+08-19 23:33:42.436  4129  4427 E SmartDualCardConfig: isAppInBlackList false,items==null
+08-19 23:33:42.451  7317 20796 E AWARENESS_AppGeneralCollectAbility: contained in black list : com.hihonor.android.launcher
+08-19 23:33:42.454  4129  4427 E NearMpAptDecisionSystem: isSupportNearMp. mNearMpConfigInfo is null
+08-19 23:33:42.457  4129  4427 E SmartDualCardConfig: isAppInBlackList false,items==null
+08-19 23:33:42.461  3055  4579 E IHwWindowManager: Process Permission error! uid:10404
+08-19 23:33:42.461  3055  4579 E IHwWindowManager: check permission error, current package is org.mediaorganizer.android , it is not systemApp, callers is com.hihonor.android.view.IHwWindowManager$Stub.onTransact:1707 android.os.Binder.execTransactInternal:1459 android.os.Binder.execTransact:1401 <bottom of call stack> <bottom of call stack> <bottom of call stack> <bottom of call stack> <bottom of call stack> <bottom of call stack> <bottom of call stack> 
+08-19 23:33:42.474  4129  4427 E SmartDualCardTrafficManager: isCustomerApplyTheTrafficPackage:: customer not set the package!
+08-19 23:33:42.484  4129  4427 E SmartDualCardConfig: isAppInBlackList false,items==null
+08-19 23:33:42.485  4129  4427 E SmartDualCardConfig: isAppInBlackList false,items==null
+08-19 23:33:42.490  4129  4427 E SmartDualCardTrafficManager: isCustomerApplyTheTrafficPackage:: customer not set the package!
+08-19 23:33:42.493  3055  3769 E WifiPhyLinkInfoCollect: service is not started
+08-19 23:33:42.493  3055  3769 E WifiPhyLinkInfoCollect: service is not started
+08-19 23:33:42.506  4129  4427 E Booster_DataAccelerateManager: Current scene is not supported for data acceleration
+08-19 23:33:42.551 31911 31911 E LivelyCapsuleStatusBH: startSvgAnim: topCapsule is null
+08-19 23:33:42.559 31911 31911 E ZZQ     : mGlobalLayoutListener mShowingType = 0
+08-19 23:33:42.567  6018  6070 E AwareLog: AtomicFileUtils: readFileLines file not exist: AtomicFile[/data/user/0/org.mediaorganizer.android/files/hw_cached_resid.list]
+08-19 23:33:42.580  4129 13219 E HsmCoreServiceImpl: onTransact in code is: 102
+08-19 23:33:42.585  3055  3656 E HwActivityManagerServiceEx: Null app thread, notifyAppToTop failed: 6018
+08-19 23:33:42.585  3055  9435 E ZrHung.AppEyeFocusWindow: cancel check
+08-19 23:33:42.592  4129  4427 E SmartcareProc: getInstance, sInstance is null !
+08-19 23:33:42.593  4129  4427 E SmartDualCardConfig: isAppInBlackList false,items==null
+08-19 23:33:42.594  4129  4427 E MpAptDecisionSystem: remove bind rules with uid = 10404have no policy
+08-19 23:33:42.594  4129  4427 E MpAptDecisionSystem: handleAppDied. multipathPolicy
+08-19 23:33:42.596  4399  6876 E CHR_ChrProtocolTxtManager: [hasReachTxtLimitLineForMap]:the txt has reached limit, tableName = data_flow_record
+08-19 23:33:42.597  3055  6043 E SWAP_AppModel: getAppScore error! pkgName:org.mediaorganizer.android scoreType:1
+08-19 23:33:42.598  4129  4427 E SmartDualCardConfig: isAppInBlackList false,items==null
+08-19 23:33:42.603  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=93
+08-19 23:33:42.606  3055  3421 E TAG     : return null due to empty jpeg data
+08-19 23:33:42.607 16354 16354 E FixedFlowFrameManager: initAndCheck: configType is 0, skip FixedFlowFrame
+08-19 23:33:42.609 16354 16354 E DeskVisibleListenMgr: onVisible
+08-19 23:33:42.609 16354 16468 E HnAppRec_15.5.0.339 YOYOCardManager: getRecommendApps no card
+08-19 23:33:42.610  1815  1815 E TS_HAL  : honor_tp_run_command: call
+08-19 23:33:42.618 16354 16354 E FixedFlowFrameManager: initAndCheck: configType is 0, skip FixedFlowFrame
+08-19 23:33:42.625  3055  3420 E HnTaskSnapshotEx: Failed to dup FD for mJpegShm
+08-19 23:33:42.625  3055  3420 E HnTaskSnapshotEx: Failed to dup FD for mJpegShm
+08-19 23:33:42.626  3055  3420 E HnTaskSnapshotEx: Failed to dup FD for mJpegShm
+08-19 23:33:42.626  3055  3420 E HnTaskSnapshotEx: Failed to dup FD for mJpegShm
+08-19 23:33:42.626  3055  3420 E HnTaskSnapshotEx: Failed to dup FD for mJpegShm
+08-19 23:33:42.626  3055  3420 E HnTaskSnapshotEx: Failed to dup FD for mJpegShm
+08-19 23:33:42.626  3055  3420 E HnTaskSnapshotEx: Failed to dup FD for mJpegShm
+08-19 23:33:42.626  3055  3420 E HnTaskSnapshotEx: Failed to dup FD for mJpegShm
+08-19 23:33:42.628 16354 16354 E MotionEngine-PhysicsMotionModelJNI: uiElementPtr is 0, a virtual motionObject.
+08-19 23:33:42.628  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=94
+08-19 23:33:42.629  1885  1981 E Parcel  : Reading a NULL string not supported here.
+08-19 23:33:42.629  2411  2624 E power   : Failed to get SystemSuspend service
+08-19 23:33:42.629  2411  2624 E power   : Failed to get SystemSuspend service
+08-19 23:33:42.630  4129  4427 E SmartDualCardConfig: isAppInBlackList false,items==null
+08-19 23:33:42.630  7494  7494 E sug_info: checkMatch:com.hihonor.android.launcher_0_0_null
+08-19 23:33:42.630  7494  7494 E sug_info: true_true_true_true_false_true_true
+08-19 23:33:42.634  2411  2690 E AGPService: Display Service AIDL nullptr
+08-19 23:33:42.634  2411  2690 E AGPService: DisplayFreqClient: [SetDdicMinFpsByAidl]: GetDisplayService failed
+08-19 23:33:42.635  1763  1763 E HW_DISPLAY_TEST: get_active_panel: panel index: 0
+08-19 23:33:42.635 16354 16354 E FixedFlowFrameManager: initAndCheck: configType is 0, skip FixedFlowFrame
+08-19 23:33:42.636  7317 14429 E AWARENESS_AppGeneralCollectAbility: contained in black list : com.hihonor.android.launcher
+08-19 23:33:42.636  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=95
+08-19 23:33:42.638  7494  8005 E iptcore : Bool Set NOT-IMPLEMENTED!
+08-19 23:33:42.638  2411  2690 E AGPService: Display Service AIDL nullptr
+08-19 23:33:42.638  2411  2690 E AGPService: DisplayFreqClient: [SetDdicMinFpsByAidl]: GetDisplayService failed
+08-19 23:33:42.638  1763  1763 E HW_DISPLAY_TEST: get_active_panel: panel index: 0
+08-19 23:33:42.644  3055  8342 E SWAP_AppModel: setIsFront app nullptr: org.mediaorganizer.android
+08-19 23:33:42.645  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=96
+08-19 23:33:42.649  7494  7494 E sug_info: checkMatch:com.hihonor.android.launcher_0_0_null
+08-19 23:33:42.649  7494  7494 E sug_info: true_true_true_true_false_true_true
+08-19 23:33:42.649  7494  7494 E CandHandler: fontSizeInfo:71_71_0.84
+08-19 23:33:42.649  7494  7494 E CandHandler: fontSizeInfo:71_71_0.84
+08-19 23:33:42.650  7494  7494 E CandHandler: fontSizeInfo:71_71_0.84
+08-19 23:33:42.650  7494  7494 E sug_info: checkMatch:com.hihonor.android.launcher_0_0_null
+08-19 23:33:42.650  7494  7494 E sug_info: true_true_true_true_false_true_true
+08-19 23:33:42.652  2411  2624 E power   : Failed to get SystemSuspend service
+08-19 23:33:42.652  7494  7494 E sug_info: [, , 0]:checkMatch:com.hihonor.android.launcher_0_0_null
+08-19 23:33:42.652  7494  7494 E sug_info: checkMatch:com.hihonor.android.launcher_0_0_null
+08-19 23:33:42.652  7494  7494 E sug_info: checkMatch:com.hihonor.android.launcher_0_0_null
+08-19 23:33:42.652  7494  7494 E sug_info: true_true_true_true_false_true_true
+08-19 23:33:42.653  2411  2690 E AGPService: Display Service AIDL nullptr
+08-19 23:33:42.653  2411  2690 E AGPService: DisplayFreqClient: [SetDdicMinFpsByAidl]: GetDisplayService failed
+08-19 23:33:42.653  7494  7494 E CandHandler: fontSizeInfo:71_71_0.84
+08-19 23:33:42.653  1763  1763 E HW_DISPLAY_TEST: get_active_panel: panel index: 0
+08-19 23:33:42.653  7494  7494 E CandHandler: fontSizeInfo:71_71_0.84
+08-19 23:33:42.654  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=97
+08-19 23:33:42.663  7494  7494 E sug_info: checkMatch:com.hihonor.android.launcher_0_0_null
+08-19 23:33:42.663  7494  7494 E sug_info: true_true_true_true_false_true_true
+08-19 23:33:42.665  7494  8005 E iptcore : Bool Set NOT-IMPLEMENTED!
+08-19 23:33:42.669  7494  7494 E sug_info: checkMatch:com.hihonor.android.launcher_0_0_null
+08-19 23:33:42.669  7494  7494 E sug_info: true_true_true_true_false_true_true
+08-19 23:33:42.669  7494  7494 E CandHandler: fontSizeInfo:71_71_0.84
+08-19 23:33:42.669  7494  7494 E CandHandler: fontSizeInfo:71_71_0.84
+08-19 23:33:42.669  7494  7494 E CandHandler: fontSizeInfo:71_71_0.84
+08-19 23:33:42.669  7494  7494 E sug_info: checkMatch:com.hihonor.android.launcher_0_0_null
+08-19 23:33:42.669  7494  7494 E sug_info: true_true_true_true_false_true_true
+08-19 23:33:42.671  7494  7494 E sug_info: [, , 0]:checkMatch:com.hihonor.android.launcher_0_0_null
+08-19 23:33:42.671  7494  7494 E sug_info: checkMatch:com.hihonor.android.launcher_0_0_null
+08-19 23:33:42.671  7494  7494 E sug_info: checkMatch:com.hihonor.android.launcher_0_0_null
+08-19 23:33:42.671  7494  7494 E sug_info: true_true_true_true_false_true_true
+08-19 23:33:42.671  7494  7494 E CandHandler: fontSizeInfo:71_71_0.84
+08-19 23:33:42.671  7494  7494 E CandHandler: fontSizeInfo:71_71_0.84
+08-19 23:33:42.676  1815  1815 E TS_HAL  : honor_tp_run_command: call
+08-19 23:33:42.677  1815  1815 E TS_HAL  : honor_tp_run_command: call
+08-19 23:33:42.680  7494  7494 E Voice-Turbonet: start to enable turbonet
+08-19 23:33:42.680  7494  7494 E Voice-Turbonet: start to enable turbonet, Turbonet is running, stop
+08-19 23:33:42.718  7699  7801 E Brain_uniRequestHelper: not push and is currentTime requested
+08-19 23:33:42.721 16354 16796 E YOYOCardDisplay: relateInfoJson is null
+08-19 23:33:42.721 16354 16796 E YOYOCardDisplay: relateInfoJson is null
+08-19 23:33:42.767  1842  1901 E ANDR-PERF-UTIL: ANDR-PERF-UTIL: change_node_val() 319: Failed to update node /sys/class/kgsl/kgsl-3d0/min_pwrlevel with value 7
+08-19 23:33:42.767  1842  1901 E ANDR-PERF-RESOURCEQS: ANDR-PERF-RESOURCEQS: RemoveAndApply() 292: Failed to reset optimization here [10, 1]
+08-19 23:33:42.957  3055  4571 E RMS.HwSysResManagerService: Process Permission error! pid:4423 uid:1001 Process.myPid:3055
+08-19 23:33:42.971  7317 13990 E AWARENESS_LocationHelperAbility: pushData envenType :5
+08-19 23:33:43.101  4129  4428 E IndepBtChrManager: onUserSceneChanged: invalid sceneId: 0
+08-19 23:33:43.102  3055  3769 E WifiPhyLinkInfoCollect: service is not started
+08-19 23:33:43.102  3055  3769 E WifiPhyLinkInfoCollect: service is not started
+08-19 23:33:43.137  7317 13990 E AWARENESS_LocationHelperAbility: cellTime is not valid
+08-19 23:33:43.137  7317 13990 E AWARENESS_LocationHelperAbility: pushData envenType :5
+08-19 23:33:43.536 16354 16354 E DeskVisibleListenMgr: onVisible
+08-19 23:33:43.537  1763  1763 E HW_DISPLAY_TEST: get_active_panel: panel index: 0
+08-19 23:33:43.537  2411  2624 E power   : Failed to get SystemSuspend service
+08-19 23:33:43.539  2411  2690 E AGPService: Display Service AIDL nullptr
+08-19 23:33:43.539  2411  2690 E AGPService: DisplayFreqClient: [SetDdicMinFpsByAidl]: GetDisplayService failed
+08-19 23:33:43.539  1763  1763 E HW_DISPLAY_TEST: get_active_panel: panel index: 0
+08-19 23:33:43.551  3055  3418 E SystemGestures: The HwFoldScreenManagerInternal is null.
+08-19 23:33:43.639  2411  3943 E AGPService: FrameRateManager targetFps 10, settingFps 60 after setFps
+08-19 23:33:43.833  7317  6091 E HianalyticsSDK-1.0.8.300-HaDnsManager: [HaSdk-com.hihonor.awareness:7317:13463-N E] getOrCreateDnsHandler getHnDnsKey null,appId=com.hihonor.awareness
+08-19 23:33:43.929  3055  3418 E SystemGestures: The HwFoldScreenManagerInternal is null.
+08-19 23:33:43.976  2411  3943 E AGPService: FrameRateManager targetFps 60, settingFps 10 after setFps
+08-19 23:33:44.331  1842  1901 E ANDR-PERF-OPTSHANDLER: ANDR-PERF-OPTSHANDLER: unsupported() 953: Error: This resource is not supported
+08-19 23:33:44.331  1842  1901 E ANDR-PERF-RESOURCEQS: ANDR-PERF-RESOURCEQS: RemoveAndApply() 292: Failed to reset optimization here [11, 0]
+08-19 23:33:44.347  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=98
+08-19 23:33:44.355  3055  3418 E SystemGestures: The HwFoldScreenManagerInternal is null.
+08-19 23:33:44.358  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=99
+08-19 23:33:44.377  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=100
+08-19 23:33:44.394  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=101
+08-19 23:33:44.399  3055  3055 E WifiEnhance_DataPlatformServiceWapper: DataPlatformConnection: DataPlatformService returned null binding: ComponentInfo{com.hihonor.android.chr/com.hihonor.dataplatform.service.DataPlatformService}
+08-19 23:33:44.445  2411  3943 E AGPService: FrameRateManager targetFps 10, settingFps 60 after setFps
+08-19 23:33:45.354  1842  1901 E ANDR-PERF-UTIL: ANDR-PERF-UTIL: change_node_val() 319: Failed to update node /proc/sys/walt/walt_rtg_cfs_boost_prio with value 99
+08-19 23:33:45.354  1842  1901 E ANDR-PERF-RESOURCEQS: ANDR-PERF-RESOURCEQS: RemoveAndApply() 292: Failed to reset optimization here [3, 50]
+08-19 23:33:45.399  3055  5965 E libprocessgroup: No such cgroup attribute: /sys/fs/cgroup/apps/uid_10293/pid_29853/cgroup.freeze
+08-19 23:33:45.402  1842  1901 E ANDR-PERF-UTIL: ANDR-PERF-UTIL: change_node_val() 319: Failed to update node /proc/sys/walt/walt_rtg_cfs_boost_prio with value 119
+08-19 23:33:45.402  1842  1901 E ANDR-PERF-RESOURCEQS: ANDR-PERF-RESOURCEQS: AddAndApply() 167: Failed to apply optimization [3, 50]
+08-19 23:33:45.502  2411  3943 E AGPService: FrameRateManager targetFps 60, settingFps 10 after setFps
+08-19 23:33:46.467  4399 23409 E GnssDftHandler: notifyNcDftBundleEvent eventId : 3
+08-19 23:33:46.470  4371  6620 E QCNEJ/WlanStaInfoRelay: Incorrect SSID / BSSID values received
+08-19 23:33:46.673  4399  4660 E WifiDftDataBaseManager: updateSunsetRecord enter
+08-19 23:33:46.776  3055  3418 E SystemGestures: The HwFoldScreenManagerInternal is null.
+08-19 23:33:47.416 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:33:47.416 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:33:47.420 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:33:47.421 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:33:47.431 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:33:47.431 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:33:47.432 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:33:47.432 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:33:47.437 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:33:47.437 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:33:47.987  4129  4428 E IndepBtControlManager: checkSignalStrength rsrq is not legal
+08-19 23:33:47.987  4129  4428 E IndepBtControlManager: checkSignalStrength sinr is not legal
+08-19 23:33:49.408  3055  3055 E WifiEnhance_DataPlatformServiceWapper: DataPlatformConnection: DataPlatformService returned null binding: ComponentInfo{com.hihonor.android.chr/com.hihonor.dataplatform.service.DataPlatformService}
+08-19 23:33:49.477  1999  2011 E bsoh    : soh service obj APP set vterm_dec failed
+08-19 23:33:49.477  1780  1780 E vendor.honor.hardware.power@1.0-service: write fg 100 to /sys/class/hw_power/interface/vterm_dec fail
+08-19 23:33:49.478 16566 16795 E SmartChgBase/Arb_HidlParam: SetValue Fail: Set Fail [ret:1, module:BASP, scene:vterm_dec, value:fg 100]
+08-19 23:33:49.883  4835  5428 E DeviceMonitorPowerKit: not Satify ApplyResource
+08-19 23:33:49.987  4129  4428 E IndepBtControlManager: checkSignalStrength rsrq is not legal
+08-19 23:33:49.987  4129  4428 E IndepBtControlManager: checkSignalStrength sinr is not legal
+08-19 23:33:52.102  4835  4835 E DMS     : BrMonitorST null: update selfInfo
+08-19 23:33:52.433  4129  4427 E SpeedLimitTestNotifier: mIsTopActivity false
+08-19 23:33:52.445 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:33:52.445 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:33:52.448  4129  4427 E SpeedLimitTestNotifier: mIsTopActivity false
+08-19 23:33:52.449 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:33:52.450 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:33:52.461 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:33:52.461 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:33:52.461 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:33:52.461 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:33:52.465 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:33:52.465 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:33:52.624  4129  4427 E SpeedLimitTestNotifier: mIsTopActivity false
+08-19 23:33:53.997  4129  4428 E IndepBtControlManager: checkSignalStrength rsrq is not legal
+08-19 23:33:53.998  4129  4428 E IndepBtControlManager: checkSignalStrength sinr is not legal
+08-19 23:33:54.413  3055  3055 E WifiEnhance_DataPlatformServiceWapper: DataPlatformConnection: DataPlatformService returned null binding: ComponentInfo{com.hihonor.android.chr/com.hihonor.dataplatform.service.DataPlatformService}
+08-19 23:33:55.863  3055  3769 E TcpInfoMonitor: obtain valid average rtt failed.
+08-19 23:33:56.520  4399 23409 E Nc_NfcDftManager: unknow errCode type
+08-19 23:33:56.521  4399  4644 E Nc_NfcDftManager: reportToDftCnt: unknown id:33
+08-19 23:33:56.528  4399 23409 E Nc_NfcDftManager: unknow errCode type
+08-19 23:33:56.528  4399 23409 E Nc_NfcDftManager: unknow errCode type
+08-19 23:33:56.528  4399 23409 E Nc_NfcDftManager: unknow errCode type
+08-19 23:33:56.528  4399 23409 E Nc_NfcDftManager: unknow errCode type
+08-19 23:33:56.528  4399 23409 E Nc_NfcDftManager: unknow errCode type
+08-19 23:33:56.529  4399 23409 E Nc_NfcDftManager: unknow errCode type
+08-19 23:33:56.529  4399 23409 E Nc_NfcDftManager: unknow errCode type
+08-19 23:33:56.532  4399  4644 E Nc_NfcDftManager: reportToDftCnt: unknown id:33
+08-19 23:33:56.534  4399  4644 E Nc_NfcDftManager: reportToDftCnt: unknown id:33
+08-19 23:33:56.536  4399  4644 E Nc_NfcDftManager: reportToDftCnt: unknown id:33
+08-19 23:33:56.576  4129  4428 E IndepBtControlManager: checkSignalStrength rsrq is not legal
+08-19 23:33:56.577  4129  4428 E IndepBtControlManager: checkSignalStrength sinr is not legal
+08-19 23:33:57.477 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:33:57.477 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:33:57.482 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:33:57.482 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:33:57.491 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:33:57.491 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:33:57.492 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:33:57.492 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:33:57.499 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:33:57.499 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:33:59.419  3055  3055 E WifiEnhance_DataPlatformServiceWapper: DataPlatformConnection: DataPlatformService returned null binding: ComponentInfo{com.hihonor.android.chr/com.hihonor.dataplatform.service.DataPlatformService}
+08-19 23:33:59.910  3055  3769 E TcpInfoMonitor: obtain valid average rtt failed.
+08-19 23:34:00.023 31911 31911 E ndroid.systemui: No package ID ff found for resource ID 0xffffffff.
+08-19 23:34:00.024 31911 31911 E ndroid.systemui: No package ID ff found for resource ID 0xffffffff.
+08-19 23:34:00.024 31911 31911 E ndroid.systemui: No package ID ff found for resource ID 0xffffffff.
+08-19 23:34:00.025 31911 31911 E ndroid.systemui: No package ID ff found for resource ID 0xffffffff.
+08-19 23:34:00.034 31911 31911 E ZZQ     : mGlobalLayoutListener mShowingType = 0
+08-19 23:34:00.177  1885  1885 E SurfaceFlinger: Out of order buffers detected for RequestedLayerState{com.hihonor.android.launcher/com.hihonor.android.launcher.drawer.DrawerLauncher#531372 parentId=154743} producedId=3477 frameNumber=278 -> producedId=3477 frameNumber=102
+08-19 23:34:00.185  3055  3418 E SystemGestures: The HwFoldScreenManagerInternal is null.
+08-19 23:34:00.302  2411  3943 E AGPService: FrameRateManager targetFps 10, settingFps 60 after setFps
+08-19 23:34:01.181  1842  1901 E ANDR-PERF-UTIL: ANDR-PERF-UTIL: change_node_val() 319: Failed to update node /proc/sys/walt/walt_rtg_cfs_boost_prio with value 99
+08-19 23:34:01.182  1842  1901 E ANDR-PERF-RESOURCEQS: ANDR-PERF-RESOURCEQS: RemoveAndApply() 292: Failed to reset optimization here [3, 50]
+08-19 23:34:01.210  1842  1901 E ANDR-PERF-UTIL: ANDR-PERF-UTIL: change_node_val() 319: Failed to update node /proc/sys/walt/walt_rtg_cfs_boost_prio with value 119
+08-19 23:34:01.210  1842  1901 E ANDR-PERF-RESOURCEQS: ANDR-PERF-RESOURCEQS: AddAndApply() 167: Failed to apply optimization [3, 50]
+08-19 23:34:01.299  2411  3943 E AGPService: FrameRateManager targetFps 60, settingFps 10 after setFps
+08-19 23:34:01.601  3055  3418 E SystemGestures: The HwFoldScreenManagerInternal is null.
+08-19 23:34:02.512 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:02.512 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:02.517 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:02.518 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:02.528 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:02.528 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:02.528 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:02.528 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:02.533 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:02.533 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:03.959  3055  3769 E TcpInfoMonitor: obtain valid average rtt failed.
+08-19 23:34:04.425  3055  3055 E WifiEnhance_DataPlatformServiceWapper: DataPlatformConnection: DataPlatformService returned null binding: ComponentInfo{com.hihonor.android.chr/com.hihonor.dataplatform.service.DataPlatformService}
+08-19 23:34:04.585  4129  4428 E IndepBtControlManager: checkSignalStrength rsrq is not legal
+08-19 23:34:04.585  4129  4428 E IndepBtControlManager: checkSignalStrength sinr is not legal
+08-19 23:34:07.541 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:07.542 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:07.546 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:07.546 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:07.555 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:07.555 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:07.556 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:07.556 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:07.560 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:07.561 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:07.966  3055  3769 E TcpInfoMonitor: obtain valid average rtt failed.
+08-19 23:34:09.435  3055  3055 E WifiEnhance_DataPlatformServiceWapper: DataPlatformConnection: DataPlatformService returned null binding: ComponentInfo{com.hihonor.android.chr/com.hihonor.dataplatform.service.DataPlatformService}
+08-19 23:34:09.881  4835  5428 E DeviceMonitorPowerKit: not Satify ApplyResource
+08-19 23:34:12.016  3055  3769 E TcpInfoMonitor: obtain valid average rtt failed.
+08-19 23:34:12.572 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:12.572 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:12.576 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:12.577 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:12.584 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:12.585 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:12.585 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:12.585 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:12.590 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:12.590 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:14.444  3055  3055 E WifiEnhance_DataPlatformServiceWapper: DataPlatformConnection: DataPlatformService returned null binding: ComponentInfo{com.hihonor.android.chr/com.hihonor.dataplatform.service.DataPlatformService}
+08-19 23:34:16.062  3055  3769 E TcpInfoMonitor: obtain valid average rtt failed.
+08-19 23:34:17.599 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:17.599 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:17.604 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:17.604 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:17.614 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:17.615 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:17.615 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:17.616 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:17.620 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:17.620 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:18.023  4129  4428 E IndepBtControlManager: checkSignalStrength rsrq is not legal
+08-19 23:34:18.023  4129  4428 E IndepBtControlManager: checkSignalStrength sinr is not legal
+08-19 23:34:19.457  3055  3055 E WifiEnhance_DataPlatformServiceWapper: DataPlatformConnection: DataPlatformService returned null binding: ComponentInfo{com.hihonor.android.chr/com.hihonor.dataplatform.service.DataPlatformService}
+08-19 23:34:20.071  3055  3769 E TcpInfoMonitor: obtain valid average rtt failed.
+08-19 23:34:22.116  4835  4835 E DMS     : BrMonitorST null: update selfInfo
+08-19 23:34:22.600  4129  4428 E IndepBtControlManager: checkSignalStrength rsrq is not legal
+08-19 23:34:22.600  4129  4428 E IndepBtControlManager: checkSignalStrength sinr is not legal
+08-19 23:34:22.630 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:22.630 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:22.635 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:22.635 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:22.641 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:22.642 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:22.642 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:22.642 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:22.646 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:22.646 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:22.754  3055  3450 E BluetoothPowerStatsCollector: Cannot acquire BluetoothActivityEnergyInfo
+08-19 23:34:22.754  3055  3450 E BluetoothPowerStatsCollector: java.util.concurrent.ExecutionException: java.lang.RuntimeException: error: 11
+08-19 23:34:22.754  3055  3450 E BluetoothPowerStatsCollector: 	at java.util.concurrent.CompletableFuture.reportGet(CompletableFuture.java:372)
+08-19 23:34:22.754  3055  3450 E BluetoothPowerStatsCollector: 	at java.util.concurrent.CompletableFuture.get(CompletableFuture.java:2072)
+08-19 23:34:22.754  3055  3450 E BluetoothPowerStatsCollector: 	at com.android.server.power.stats.BluetoothPowerStatsCollector.collectBluetoothActivityInfo(BluetoothPowerStatsCollector.java:192)
+08-19 23:34:22.754  3055  3450 E BluetoothPowerStatsCollector: 	at com.android.server.power.stats.BluetoothPowerStatsCollector.collectStats(BluetoothPowerStatsCollector.java:155)
+08-19 23:34:22.754  3055  3450 E BluetoothPowerStatsCollector: 	at com.android.server.power.stats.PowerStatsCollector.collectAndDeliverStats(PowerStatsCollector.java:176)
+08-19 23:34:22.754  3055  3450 E BluetoothPowerStatsCollector: 	at com.android.server.power.stats.PowerStatsCollector$$ExternalSyntheticLambda0.run(R8$$SyntheticClass:0)
+08-19 23:34:22.754  3055  3450 E BluetoothPowerStatsCollector: 	at android.os.Handler.handleCallback(Handler.java:1039)
+08-19 23:34:22.754  3055  3450 E BluetoothPowerStatsCollector: 	at android.os.Handler.dispatchMessage(Handler.java:117)
+08-19 23:34:22.754  3055  3450 E BluetoothPowerStatsCollector: 	at android.os.Looper.loopOnce(Looper.java:263)
+08-19 23:34:22.754  3055  3450 E BluetoothPowerStatsCollector: 	at android.os.Looper.loop(Looper.java:360)
+08-19 23:34:22.754  3055  3450 E BluetoothPowerStatsCollector: 	at android.os.HandlerThread.run(HandlerThread.java:85)
+08-19 23:34:22.754  3055  3450 E BluetoothPowerStatsCollector: Caused by: java.lang.RuntimeException: error: 11
+08-19 23:34:22.754  3055  3450 E BluetoothPowerStatsCollector: 	at com.android.server.power.stats.BluetoothPowerStatsCollector$1.onBluetoothActivityEnergyInfoError(BluetoothPowerStatsCollector.java:181)
+08-19 23:34:22.754  3055  3450 E BluetoothPowerStatsCollector: 	at android.bluetooth.BluetoothAdapter$OnBluetoothActivityEnergyInfoProxy.lambda$onBluetoothActivityEnergyInfoAvailable$0(BluetoothAdapter.java:1045)
+08-19 23:34:22.754  3055  3450 E BluetoothPowerStatsCollector: 	at android.bluetooth.BluetoothAdapter$OnBluetoothActivityEnergyInfoProxy$$ExternalSyntheticLambda1.run(D8$$SyntheticClass:0)
+08-19 23:34:22.754  3055  3450 E BluetoothPowerStatsCollector: 	at android.bluetooth.BluetoothUtils.lambda$executeFromBinder$0(BluetoothUtils.java:347)
+08-19 23:34:22.754  3055  3450 E BluetoothPowerStatsCollector: 	at android.bluetooth.BluetoothUtils$$ExternalSyntheticLambda1.run(D8$$SyntheticClass:0)
+08-19 23:34:22.754  3055  3450 E BluetoothPowerStatsCollector: 	at com.android.server.SystemServerInitThreadPool$$ExternalSyntheticLambda0.execute(R8$$SyntheticClass:0)
+08-19 23:34:22.754  3055  3450 E BluetoothPowerStatsCollector: 	at android.bluetooth.BluetoothUtils.executeFromBinder(BluetoothUtils.java:347)
+08-19 23:34:22.754  3055  3450 E BluetoothPowerStatsCollector: 	at android.bluetooth.BluetoothAdapter$OnBluetoothActivityEnergyInfoProxy.onBluetoothActivityEnergyInfoAvailable(BluetoothAdapter.java:1043)
+08-19 23:34:22.754  3055  3450 E BluetoothPowerStatsCollector: 	at android.bluetooth.IBluetoothActivityEnergyInfoListener$Stub.onTransact(IBluetoothActivityEnergyInfoListener.java:98)
+08-19 23:34:22.754  3055  3450 E BluetoothPowerStatsCollector: 	at android.os.Binder.execTransactInternal(Binder.java:1464)
+08-19 23:34:22.754  3055  3450 E BluetoothPowerStatsCollector: 	at android.os.Binder.execTransact(Binder.java:1401)
+08-19 23:34:24.031  4129  4428 E IndepBtControlManager: checkSignalStrength rsrq is not legal
+08-19 23:34:24.031  4129  4428 E IndepBtControlManager: checkSignalStrength sinr is not legal
+08-19 23:34:24.092  3055  3769 E TcpInfoMonitor: obtain valid average rtt failed.
+08-19 23:34:24.462  3055  3055 E WifiEnhance_DataPlatformServiceWapper: DataPlatformConnection: DataPlatformService returned null binding: ComponentInfo{com.hihonor.android.chr/com.hihonor.dataplatform.service.DataPlatformService}
+08-19 23:34:27.656 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:27.657 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:27.661 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:27.661 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:27.670 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:27.670 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:27.671 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:27.671 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:27.675 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:27.676 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:28.112  3055  3769 E TcpInfoMonitor: obtain valid average rtt failed.
+08-19 23:34:28.230  4399  6876 E CHR_ChrProtocolTxtManager: [hasReachTxtLimitLineForMap]:the txt has reached limit, tableName = wifi_flow_record
+08-19 23:34:28.614  4129  4428 E IndepBtControlManager: checkSignalStrength rsrq is not legal
+08-19 23:34:28.615  4129  4428 E IndepBtControlManager: checkSignalStrength sinr is not legal
+08-19 23:34:29.465  3055  3055 E WifiEnhance_DataPlatformServiceWapper: DataPlatformConnection: DataPlatformService returned null binding: ComponentInfo{com.hihonor.android.chr/com.hihonor.dataplatform.service.DataPlatformService}
+08-19 23:34:29.881  4835  5428 E DeviceMonitorPowerKit: not Satify ApplyResource
+08-19 23:34:32.686 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:32.687 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:32.692 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:32.692 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:32.698 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:32.698 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:32.699 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:32.699 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:32.703 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:32.703 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:34.468  3055  3055 E WifiEnhance_DataPlatformServiceWapper: DataPlatformConnection: DataPlatformService returned null binding: ComponentInfo{com.hihonor.android.chr/com.hihonor.dataplatform.service.DataPlatformService}
+08-19 23:34:36.046  4129  4428 E IndepBtControlManager: checkSignalStrength rsrq is not legal
+08-19 23:34:36.046  4129  4428 E IndepBtControlManager: checkSignalStrength sinr is not legal
+08-19 23:34:37.712 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:37.713 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:37.717 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:37.718 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:37.725 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:37.726 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:37.726 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:37.726 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:37.730 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:37.731 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:39.482  3055  3055 E WifiEnhance_DataPlatformServiceWapper: DataPlatformConnection: DataPlatformService returned null binding: ComponentInfo{com.hihonor.android.chr/com.hihonor.dataplatform.service.DataPlatformService}
+08-19 23:34:40.625  4129  4428 E IndepBtControlManager: checkSignalStrength rsrq is not legal
+08-19 23:34:40.625  4129  4428 E IndepBtControlManager: checkSignalStrength sinr is not legal
+08-19 23:34:42.743 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:42.743 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:42.748 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:42.748 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:42.757 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:42.757 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:42.758 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:42.758 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid
+08-19 23:34:42.763 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger/direct_charge_succ is invalid
+08-19 23:34:42.763 18015 18018 E bms_file: file /sys/class/hw_power/charger/direct_charger_hsc/direct_charge_succ is invalid

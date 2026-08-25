@@ -40,9 +40,10 @@ public sealed class FileScanner : IFileScanner
             {
                 list.Add(new MediaFile(fi.FullName, fi.Length, ext) { Source = new LocalMediaSource(fi.FullName) });
             }
-            catch
+            catch (Exception ex)
             {
                 // 文件可能在扫描过程中被占用/删除，跳过
+                System.Diagnostics.Debug.WriteLine($"[FileScanner] Skipped file {fi.FullName}: {ex.Message}");
             }
         }
         return list;
