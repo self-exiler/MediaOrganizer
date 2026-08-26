@@ -3,7 +3,6 @@ bin/
 obj/
 *.user
 *.suo
-*.props
 
 # 构建输出
 artifacts/
