@@ -28,15 +28,15 @@
                         <TextBlock Grid.Row="1" Grid.Column="0" Text="输出目标" VerticalAlignment="Center" Classes="muted"/>
                         <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding OutputTargetOptions}"
                                   SelectedIndex="{Binding OutputTargetIndex}"/>
-                        <Button Grid.Row="1" Grid.Column="2" Content="浏览…" Command="{Binding BrowseOutputCommand}"
-                                IsEnabled="{Binding IsMoveAllowed}"/>
+                        <TextBlock Grid.Row="1" Grid.Column="2" Text="网络位置仅支持复制" Classes="muted" FontSize="11"
+                                   VerticalAlignment="Center" HorizontalAlignment="Right"
+                                   IsVisible="{Binding !IsMoveAllowed}"/>
 
                         <TextBlock Grid.Row="2" Grid.Column="0" Text="输出目录" VerticalAlignment="Center" Classes="muted"/>
                         <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding OutputDir, UpdateSourceTrigger=LostFocus}" PlaceholderText="按日期归档的目标文件夹（本地路径）"
                                  IsEnabled="{Binding IsMoveAllowed}"/>
-                        <TextBlock Grid.Row="2" Grid.Column="2" Text="网络位置仅支持复制" Classes="muted" FontSize="11"
-                                   VerticalAlignment="Center" HorizontalAlignment="Right"
-                                   IsVisible="{Binding !IsMoveAllowed}"/>
+                        <Button Grid.Row="2" Grid.Column="2" Content="浏览…" Command="{Binding BrowseOutputCommand}"
+                                IsEnabled="{Binding IsMoveAllowed}"/>
 
                         <TextBlock Grid.Row="3" Grid.Column="0" Text="待处理" VerticalAlignment="Center" Classes="muted"/>
                         <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding PendingDir, UpdateSourceTrigger=LostFocus}" PlaceholderText="失败文件批量移入的文件夹"/>

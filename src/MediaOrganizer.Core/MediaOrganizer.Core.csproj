@@ -1,8 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- ADR-0006 决策 8：多目标编译，#if ANDROID 切换平台实现，桌面版不受影响 -->
-    <TargetFrameworks>net10.0;net10.0-android</TargetFrameworks>
+    <!-- ADR-0006 决策 8：多目标编译，#if ANDROID 切换平台实现，桌面版不受影响。
+         未安装 android 工作负载的机器（纯桌面开发）自动排除 net10.0-android，
+         否则 Desktop 引用 Core 的 restore 会因缺少工作负载报 NETSDK1147。
+         判定依据：android 工作负载会把 Microsoft.Android.Sdk 装进 dotnet\packs -->
+    <TargetFrameworks>net10.0</TargetFrameworks>
+    <TargetFrameworks Condition="Exists('$(NetCoreRoot)packs\Microsoft.Android.Sdk')">net10.0;net10.0-android</TargetFrameworks>
     <RootNamespace>MediaOrganizer.Core</RootNamespace>
     <AssemblyName>MediaOrganizer.Core</AssemblyName>
     <Description>MediaOrganizer 核心逻辑库（跨平台，零 UI 依赖）</Description>
