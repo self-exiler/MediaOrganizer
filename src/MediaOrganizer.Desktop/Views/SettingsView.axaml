@@ -68,32 +68,36 @@
                                         <TextBlock Classes="muted" Text="{Binding PatternSummary}" VerticalAlignment="Center"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                                        <Button Content="🪄 打开魔术工具" Command="{Binding OpenMagicToolsCommand}"/>
+                                        <Button Content="打开魔术工具" Command="{Binding OpenMagicToolsCommand}"/>
                                         <Button Content="恢复默认" Command="{Binding RestoreDefaultPatternsCommand}"/>
                                     </StackPanel>
                                 </Grid>
                                 <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
                                            Text="分析时按权重降序依次尝试。勾选/取消即时生效；删除后自动保存。"/>
-                                <Grid ColumnDefinitions="Auto,140,1*,70,60,56" ColumnSpacing="8" Margin="0,4,0,0">
+                                <Grid ColumnDefinitions="Auto,120,1*,70,60,60,60,56" ColumnSpacing="8" Margin="0,4,0,0">
                                     <TextBlock Grid.Column="0" Text="启用" Classes="muted" FontSize="11"/>
                                     <TextBlock Grid.Column="1" Text="名称" Classes="muted" FontSize="11"/>
                                     <TextBlock Grid.Column="2" Text="正则" Classes="muted" FontSize="11"/>
                                     <TextBlock Grid.Column="3" Text="权重" Classes="muted" FontSize="11"/>
-                                    <TextBlock Grid.Column="4" Text="来源" Classes="muted" FontSize="11"/>
-                                    <TextBlock Grid.Column="5" Text="操作" Classes="muted" FontSize="11"/>
+                                    <TextBlock Grid.Column="4" Text="忽略组" Classes="muted" FontSize="11" ToolTip.Tip="明确忽略的捕获组号"/>
+                                    <TextBlock Grid.Column="5" Text="时间戳" Classes="muted" FontSize="11" ToolTip.Tip="timestamp 长度（10/13/16），非时间戳为 -"/>
+                                    <TextBlock Grid.Column="6" Text="来源" Classes="muted" FontSize="11"/>
+                                    <TextBlock Grid.Column="7" Text="操作" Classes="muted" FontSize="11"/>
                                 </Grid>
                                 <ItemsControl ItemsSource="{Binding Patterns}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="svm:PatternSettingVM">
-                                            <Grid ColumnDefinitions="Auto,140,1*,70,60,56" ColumnSpacing="8" Margin="0,4">
+                                            <Grid ColumnDefinitions="Auto,120,1*,70,60,60,60,56" ColumnSpacing="8" Margin="0,4">
                                                 <CheckBox Grid.Column="0" IsChecked="{Binding Enabled, Mode=TwoWay}" VerticalAlignment="Center"/>
                                                 <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
                                                 <TextBlock Grid.Column="2" Text="{Binding Regex}" VerticalAlignment="Center"
                                                            FontFamily="Cascadia Code, Consolas, monospace" FontSize="11.5"
                                                            TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Regex}"/>
                                                 <TextBlock Grid.Column="3" Text="{Binding Weight, StringFormat={}{0:0.0}}" VerticalAlignment="Center" Classes="muted"/>
-                                                <TextBlock Grid.Column="4" Text="{Binding Source}" VerticalAlignment="Center" Classes="muted"/>
-                                                <Button Grid.Column="5" Content="删除" Classes="danger" FontSize="11" Padding="6,2"
+                                                <TextBlock Grid.Column="4" Text="{Binding IgnoredGroupsText}" VerticalAlignment="Center" Classes="muted" FontSize="11" ToolTip.Tip="{Binding IgnoredGroupsText}"/>
+                                                <TextBlock Grid.Column="5" Text="{Binding TimestampLengthText}" VerticalAlignment="Center" Classes="muted" FontSize="11"/>
+                                                <TextBlock Grid.Column="6" Text="{Binding Source}" VerticalAlignment="Center" Classes="muted"/>
+                                                <Button Grid.Column="7" Content="删除" Classes="danger" FontSize="11" Padding="6,2"
                                                         Command="{Binding $parent[ItemsControl].DataContext.DeletePatternCommand}"
                                                         CommandParameter="{Binding}"/>
                                             </Grid>

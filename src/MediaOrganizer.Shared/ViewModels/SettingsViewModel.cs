@@ -53,6 +53,14 @@ public partial class PatternSettingVM : ObservableObject
     public double Weight => _source.Weight;
     public string Source => _source.Builtin ? "内置" : "自定义";
 
+    /// <summary>忽略的捕获组号（FR-3.1），为空时显示「无」。</summary>
+    public string IgnoredGroupsText => _source.IgnoredGroups.Count == 0
+        ? "无"
+        : string.Join(",", _source.IgnoredGroups);
+
+    /// <summary>时间戳位数（10/13/16），非时间戳模式显示「-」。</summary>
+    public string TimestampLengthText => _source.TimestampLength?.ToString() ?? "-";
+
     [ObservableProperty]
     private bool _enabled;
 

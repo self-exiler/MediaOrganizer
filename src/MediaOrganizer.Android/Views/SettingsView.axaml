@@ -105,6 +105,8 @@
                                         <TextBlock FontSize="11" Foreground="{StaticResource MutedBrush}"
                                                    TextTrimming="CharacterEllipsis" MaxWidth="230">
                                             <Run Text="{Binding Regex}"/><Run Text=" · "/><Run Text="{Binding Source}"/>
+                                            <Run Text=" · 忽略组 "/><Run Text="{Binding IgnoredGroupsText}"/>
+                                            <Run Text=" · 时间戳 "/><Run Text="{Binding TimestampLengthText}"/>
                                         </TextBlock>
                                     </StackPanel>
                                     <ToggleSwitch Grid.Column="1" IsChecked="{Binding Enabled}" VerticalAlignment="Center"/>
