@@ -34,7 +34,7 @@ public class Application(IntPtr javaReference, JniHandleOwnership transfer) : Av
 [Activity(
     Label = "MediaOrganizer",
     Theme = "@style/MyTheme.NoActionBar",
-    Icon = "@drawable/icon",
+    Icon = "@mipmap/ic_launcher",
     MainLauncher = true,
     LaunchMode = LaunchMode.SingleTop,
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.UiMode

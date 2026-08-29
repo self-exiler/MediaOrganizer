@@ -125,10 +125,10 @@ public partial class MainViewModel : ViewModelBase
         else _wakeLock.Release();
     }
 
-    /// <summary>由 App 订阅 workbench.IsBusy 转发：忙碌时持 WakeLock，状态栏文本由 StatusText 转发更新。</summary>
-    public void SetBusy(bool busy)
-    {
-        IsBusy = busy;
-        if (!busy) StatusText = "就绪";
-    }
+    /// <summary>
+    /// 由 App 订阅 workbench.IsBusy 转发：忙碌时持 WakeLock（OnIsBusyChanged）。
+    /// 注意：此处不可重置 StatusText——忙碌结束晚于结果/错误文本写入，会把「执行完成 / 执行失败：…」冲掉，
+    /// 表现为操作"点了没反应"。状态栏文本统一由 workbench.StatusText 转发。
+    /// </summary>
+    public void SetBusy(bool busy) => IsBusy = busy;
 }

@@ -106,6 +106,24 @@
                                       SelectedIndex="{Binding OutputTargetIndex, Mode=TwoWay}"/>
                         </StackPanel>
 
+                        <!-- 输出目录（本地目标，FR-A8.6）：SAF 选取，content: URI 由 Core 回退处理 -->
+                        <StackPanel Spacing="6" IsVisible="{Binding IsLocalTarget}">
+                            <TextBlock Text="输出目录（SAF）" FontSize="12" Foreground="#616161"/>
+                            <Border Background="#F8F8F8" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1"
+                                    CornerRadius="8" MinHeight="48" Padding="12,8">
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Right" Content="选取" FontSize="12" MinHeight="36"
+                                            Command="{Binding BrowseOutputCommand}"/>
+                                    <TextBlock Text="{Binding OutputDir}" FontSize="11" VerticalAlignment="Center"
+                                               Foreground="{StaticResource TextBrush}" TextTrimming="CharacterEllipsis"
+                                               MaxLines="2" TextWrapping="Wrap" Margin="0,0,8,0"/>
+                                </DockPanel>
+                            </Border>
+                            <TextBlock Text="尚未选择输出目录，执行归档前必须先选取"
+                                       FontSize="12" Foreground="{StaticResource ErrorBrush}" TextWrapping="Wrap"
+                                       IsVisible="{Binding OutputDir, Converter={x:Static StringConverters.IsNullOrEmpty}}"/>
+                        </StackPanel>
+
                         <!-- 网络目标提示（FR-A9.4）：仅复制，move 已禁用 -->
                         <Border Background="#F3F9FD" BorderBrush="#C3DCF1" BorderThickness="1" CornerRadius="8"
                                 Padding="12,10" IsVisible="{Binding !IsMoveAllowed}">
@@ -242,6 +260,10 @@
                                 Padding="12,10">
                             <TextBlock Text="{Binding PlanText}" FontSize="13" Foreground="#0B5A0B" TextWrapping="Wrap"/>
                         </Border>
+
+                        <!-- 执行结果 / 拦截提示常驻（忙碌结束仍可见，避免"点了没反应"） -->
+                        <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="#616161" TextWrapping="Wrap"
+                                   IsVisible="{Binding !IsBusy}"/>
                     </StackPanel>
                 </Border>
             </StackPanel>

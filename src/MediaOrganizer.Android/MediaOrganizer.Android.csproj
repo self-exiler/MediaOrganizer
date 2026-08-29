@@ -13,6 +13,12 @@
     <AndroidManifest>Properties\AndroidManifest.xml</AndroidManifest>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
+    <!-- 完整打包：禁用共享运行时，APK 自包含、脱离 VS 可独立运行
+         （否则卸载重装后 APK 残缺，点击卡启动界面 ANR 闪退）。
+         注意：不要同时设 EmbedAssembliesIntoApk=true —— 实测会让打包阶段
+         （_CompressAssemblies 之后）长时间卡死；仅 AndroidUseSharedRuntime=false
+         已足以生成 26MB 的独立 APK，并经 adb 验证可独立启动。 -->
+    <AndroidUseSharedRuntime>false</AndroidUseSharedRuntime>
     <!-- aapt2 daemon 模式在部分机器上挂死（dotnet/android 已知问题）：改用一次性调用，跨机可移植 -->
     <AndroidUseDaemonAapt2>false</AndroidUseDaemonAapt2>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>

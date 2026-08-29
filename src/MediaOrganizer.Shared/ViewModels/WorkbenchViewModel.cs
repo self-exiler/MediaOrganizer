@@ -91,6 +91,10 @@ public partial class WorkbenchViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isMoveAllowed = true;
 
+    /// <summary>输出目标为本地目录（非网络位置）：移动端据此显示输出目录选取行（FR-A8.6/FR-A9.1）。</summary>
+    [ObservableProperty]
+    private bool _isLocalTarget = true;
+
     [ObservableProperty]
     private int _outputTargetIndex;
 
@@ -141,12 +145,14 @@ public partial class WorkbenchViewModel : ViewModelBase
         OutputTargetOptions = ["本地目录", .. _config.NetworkProfiles.Select(p => $"网络位置：{p.Name}")];
         OnPropertyChanged(nameof(OutputTargetOptions));
         var newIndex = string.IsNullOrEmpty(selected) ? 0 : Math.Max(0, 1 + _config.NetworkProfiles.FindIndex(p => p.Name == selected));
+        IsLocalTarget = newIndex <= 0;
         if (newIndex != OutputTargetIndex)
             OutputTargetIndex = newIndex; // 触发 OnOutputTargetIndexChanged → 写回配置并刷新网络状态
     }
 
     partial void OnOutputTargetIndexChanged(int value)
     {
+        IsLocalTarget = value <= 0;
         var profileName = value > 0 && value - 1 < _config.NetworkProfiles.Count
             ? _config.NetworkProfiles[value - 1].Name
             : "";
@@ -223,6 +229,9 @@ public partial class WorkbenchViewModel : ViewModelBase
     {
         _config.Paths.OutputDir = value;
         _state.SaveConfig(notifyChanged: false);
+        // 计划摘要里的目标根目录是分析时的快照，改目录后需同步刷新，否则 PlanText 仍显示旧目标（或空）
+        if (_session.LastResult is { } result)
+            _session.SetResult(result, DisplayTarget());
     }
 
     partial void OnPendingDirChanged(string value)
@@ -283,7 +292,28 @@ public partial class WorkbenchViewModel : ViewModelBase
     [RelayCommand]
     private async Task ExecuteFilesAsync()
     {
-        if (!_session.HasResult || IsBusy) return;
+        // 拦截分支必须给出可见反馈，否则移动端表现为“点了没反应”（FR-A5.6）
+        if (IsBusy)
+        {
+            StatusText = "正在处理中，请稍候…";
+            return;
+        }
+
+        if (!_session.HasResult)
+        {
+            StatusText = "尚无分析结果，请先执行分析";
+            _logger.Warn("执行已拦截：尚无分析结果（可能是配置变更后计划已失效）");
+            return;
+        }
+
+        // 执行前预检（FR-A5.6）：本地目标必须先选定输出目录。
+        // 否则 Core 侧 LocalFileStorage("") 会抛空路径异常，移动端又没有错误弹窗，表现为"点了没反应"。
+        if (IsLocalTarget && string.IsNullOrWhiteSpace(OutputDir))
+        {
+            StatusText = "请先选择输出目录，再执行归档";
+            _logger.Warn($"执行已拦截：{StatusText}（输出目标=本地目录，OutputDir 为空）");
+            return;
+        }
 
         // 执行前把当前选项快照进 session（选项变更已即时触发重规划）
         _session.Operation = OperationIndex == 1 ? FileOperation.Move : FileOperation.Copy;

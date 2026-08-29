@@ -72,6 +72,26 @@ Android 8.0+ 的 Adaptive Icon 需要前景层 + 背景层：
 - 前景层主体已落在中心 66dp 安全区内，圆形 / 圆角矩形 / 方形裁剪均不会裁掉主体。
 - 同时建议提供 `mipmap-xxxhdpi`（432×432）等位图版本作为低版本兜底，可用 SVG 渲染导出。
 
+### 4. 批量生成 Android 资源
+
+项目已提供脚本，直接基于本目录两个 SVG 生成所有密度 PNG：
+
+```bash
+# 先安装 sharp（一次性）
+npm install sharp
+
+# 从项目根目录运行
+node res/generate-android-icons.js
+```
+
+生成目标：
+
+| 目录 | 文件 | 尺寸（按密度） |
+|------|------|----------------|
+| `drawable-mdpi` … `drawable-xxxhdpi` | `ic_launcher_background.png` | 108×108 / 162×162 / 216×216 / 324×324 / 432×432 |
+| `drawable-mdpi` … `drawable-xxxhdpi` | `ic_launcher_foreground.png` | 同上 |
+| `mipmap-mdpi` … `mipmap-xxxhdpi` | `ic_launcher.png` | 48×48 / 72×72 / 96×96 / 144×144 / 192×192 |
+
 ---
 
 ## 自定义

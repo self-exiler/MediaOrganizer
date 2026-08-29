@@ -8,15 +8,26 @@
              彻底绕开 Avalonia 12 Android 系统字体回退缺陷导致的 CJK 空白问题。
              注意 UI 文本避免使用 emoji/生僻符号（本字体不含，见 docs 字体说明）。 -->
         <FontFamily x:Key="AppFont">avares://MediaOrganizer.Android/Fonts/NotoSansSC-Regular.otf#Noto Sans SC</FontFamily>
-        <!-- 覆盖 FluentTheme 模板内部引用的主题字体资源键 -->
-        <FontFamily x:Key="ContentControlThemeFontFamily">{StaticResource AppFont}</FontFamily>
+        <!-- 覆盖 FluentTheme 模板内部引用的主题字体资源键（Button/ComboBox/ContentControl 等）。
+             注意：FontFamily 元素的内容按“字体族名字符串”解析，不会展开 {} 标记扩展；
+             写成 {StaticResource AppFont} 会构造出同名字符串的非法字体，
+             导致依赖 ContentControlThemeFontFamily 的控件中文全部不可见（只有 ASCII/符号可见）。 -->
+        <FontFamily x:Key="ContentControlThemeFontFamily">avares://MediaOrganizer.Android/Fonts/NotoSansSC-Regular.otf#Noto Sans SC</FontFamily>
     </Application.Resources>
     <Application.Styles>
         <FluentTheme />
         <local:AppTheme />
-        <!-- 全局字体：TextElement.FontFamily 为可继承附加属性，作用于所有控件；
-             Application 级样式同时覆盖 PopupRoot 弹出层。 -->
+        <!-- 全局字体兜底：TextElement.FontFamily 为可继承附加属性，作用于所有控件
+             （含 PopupRoot 弹出层；TextBlock/AccessText 显式命中，避免 ContentPresenter
+             生成文本框时漏继承）。注意 Selector 中必须写成 TextElement.FontFamily 附加属性形式，
+             裸写 FontFamily 在 Control 上会触发 AVLN2000。 -->
         <Style Selector="Control">
+            <Setter Property="TextElement.FontFamily" Value="{StaticResource AppFont}"/>
+        </Style>
+        <Style Selector="TextBlock">
+            <Setter Property="TextElement.FontFamily" Value="{StaticResource AppFont}"/>
+        </Style>
+        <Style Selector="AccessText">
             <Setter Property="TextElement.FontFamily" Value="{StaticResource AppFont}"/>
         </Style>
     </Application.Styles>
