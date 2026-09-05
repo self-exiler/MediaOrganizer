@@ -8,11 +8,25 @@ using MediaOrganizer.Shared.ViewModels;
 
 namespace MediaOrganizer.Android.ViewModels;
 
-/// <summary>抽屉导航项（FR-A7.1）：标签 + 页索引 + 失败文件角标（Badge=0 时角标隐藏）。</summary>
-public sealed record NavItem(string Label, int Page)
+/// <summary>抽屉导航项（FR-A7.1）：标签 + 页索引 + 失败文件角标（Badge=0 时角标隐藏）。
+/// 可变 ObservableObject：角标变化时原地更新属性，避免替换实例破坏 ListBox 选中状态（P1-8）。</summary>
+public sealed partial class NavItem : ObservableObject
 {
-    public int Badge { get; init; }
+    public NavItem(string label, int page)
+    {
+        Label = label;
+        Page = page;
+    }
+
+    public string Label { get; }
+    public int Page { get; }
+
+    [ObservableProperty]
+    private int _badge;
+
     public bool HasBadge => Badge > 0;
+
+    partial void OnBadgeChanged(int value) => OnPropertyChanged(nameof(HasBadge));
 }
 
 /// <summary>
@@ -69,7 +83,6 @@ public partial class MainViewModel : ViewModelBase
     };
 
     public MainViewModel(
-        AppState state,
         WorkbenchViewModel workbench,
         FailedFilesViewModel failedFiles,
         SettingsViewModel settings,
@@ -109,7 +122,7 @@ public partial class MainViewModel : ViewModelBase
     }
 
     partial void OnFailedBadgeChanged(int value)
-        => NavItems[1] = NavItems[1] with { Badge = value };
+        => NavItems[1].Badge = value;
 
     public void RefreshFailedBadge(AnalysisResult? result)
     {

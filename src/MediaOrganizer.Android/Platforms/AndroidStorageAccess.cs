@@ -13,11 +13,9 @@ public static class AndroidStorageAccess
 {
     public const int RequestCode = 0x1003;
 
-    /// <summary>当前是否已拥有所有文件访问权限。</summary>
+    /// <summary>当前是否已拥有所有文件访问权限。（SupportedOSPlatformVersion=33：仅 Android 且 API≥30，分支恒成立，直接查运行时状态即可。）</summary>
     public static bool HasAllFilesAccess
-        => !OperatingSystem.IsAndroid()
-           || Build.VERSION.SdkInt < BuildVersionCodes.R
-           || global::Android.OS.Environment.IsExternalStorageManager;
+        => global::Android.OS.Environment.IsExternalStorageManager;
 
     /// <summary>
     /// 确保已授权：未授权时跳转系统设置页，等待用户返回后复查（该页返回 RESULT_OK 不可靠，以运行时状态为准）。
@@ -32,14 +30,7 @@ public static class AndroidStorageAccess
             global::Android.Net.Uri.Parse("package:" + activity.PackageName));
         intent.AddFlags(ActivityFlags.NewTask);
 
-        try
-        {
-            await activity.StartForResultAsync(intent, RequestCode);
-        }
-        catch (TimeoutException)
-        {
-            // 用户在设置页停留超过 StartForResultAsync 的 60s 超时：不视为失败
-        }
+        await activity.StartForResultAsync(intent, RequestCode);
 
         return HasAllFilesAccess;
     }
@@ -64,7 +55,7 @@ public static class SafPaths
     }
 
     /// <summary>"primary:DCIM" → "/storage/emulated/0/DCIM"；"XXXX-XXXX:a/b" → "/storage/XXXX-XXXX/a/b"。</summary>
-    internal static string? TryDocumentIdToPath(string? documentId)
+    private static string? TryDocumentIdToPath(string? documentId)
     {
         if (string.IsNullOrEmpty(documentId)) return null;
         var sep = documentId.IndexOf(':');

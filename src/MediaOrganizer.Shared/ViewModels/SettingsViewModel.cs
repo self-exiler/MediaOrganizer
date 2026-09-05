@@ -2,6 +2,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MediaOrganizer.Core;
 using MediaOrganizer.Core.Configuration;
+using MediaOrganizer.Core.Security;
+using MediaOrganizer.Core.Storage;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 
@@ -115,6 +117,10 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     private string _networkHint = "";
 
+    /// <summary>连接测试忙碌态（评审 2.13）：防重入 + 供 UI 展示“正在测试”。</summary>
+    [ObservableProperty]
+    private bool _isTestingNetwork;
+
     [ObservableProperty]
     private int _maxYearsPast;
 
@@ -131,10 +137,10 @@ public partial class SettingsViewModel : ViewModelBase
     private int _themeIndex;
 
     [ObservableProperty]
-    private string _windowSize;
+    private string _windowSize = "";
 
     [ObservableProperty]
-    private string _supportedFormatsText;
+    private string _supportedFormatsText = "";
 
     [ObservableProperty]
     private bool _scanAllFiles;
@@ -160,29 +166,57 @@ public partial class SettingsViewModel : ViewModelBase
 
         LoadFromConfig();
 
+        RefreshExtractors();
+        RefreshPatterns();
+        RefreshNetworkProfiles();
+    }
+
+    private void LoadFromConfig(bool notify = false)
+    {
+        if (notify)
+        {
+            // 走属性赋值：触发 PropertyChanged，使已绑定的设置页 UI 立刻刷新（P0-4「初始化默认配置」后）
+            MaxYearsPast = _config.Extraction.MaxYearsPast;
+            FutureDateBufferDays = _config.Extraction.FutureDateBufferDays;
+            ProgressInterval = _config.Scan.ProgressInterval;
+            PreviewSize = _config.General.PreviewSize;
+            ThemeIndex = ThemeIndexFromName(_config.General.Theme);
+            WindowSize = _config.General.WindowSize;
+            SupportedFormatsText = string.Join(", ", _config.Scan.SupportedFormats);
+            ScanAllFiles = _config.Scan.ScanAllFiles;
+            MaxDegreeOfParallelism = _config.Scan.MaxDegreeOfParallelism;
+            ExecutionParallelism = _config.Execute.MaxDegreeOfParallelism;
+        }
+        else
+        {
+            // 初始化直接写 backing field 是刻意的：走生成属性会触发 OnXxxChanged 的即时落盘/提示副作用；
+            // 故在此范围内静默 MVVMTK0034（此时尚未绑定，无需通知）。
+#pragma warning disable MVVMTK0034
+            _maxYearsPast = _config.Extraction.MaxYearsPast;
+            _futureDateBufferDays = _config.Extraction.FutureDateBufferDays;
+            _progressInterval = _config.Scan.ProgressInterval;
+            _previewSize = _config.General.PreviewSize;
+            _themeIndex = ThemeIndexFromName(_config.General.Theme);
+            _windowSize = _config.General.WindowSize;
+            _supportedFormatsText = string.Join(", ", _config.Scan.SupportedFormats);
+            _scanAllFiles = _config.Scan.ScanAllFiles;
+            _maxDegreeOfParallelism = _config.Scan.MaxDegreeOfParallelism;
+            _executionParallelism = _config.Execute.MaxDegreeOfParallelism;
+#pragma warning restore MVVMTK0034
+        }
+    }
+
+    /// <summary>按当前配置重建提取器列表。重建前先解绑旧 VM 的 PropertyChanged，避免重复/残留订阅（P0-5）。</summary>
+    private void RefreshExtractors()
+    {
+        foreach (var vm in Extractors) vm.PropertyChanged -= OnExtractorChanged;
+        Extractors.Clear();
         foreach (var s in _config.Extraction.Extractors)
         {
             var vm = new ExtractorSettingVM { Name = s.Name, Enabled = s.Enabled, Weight = s.Weight };
             vm.PropertyChanged += OnExtractorChanged;   // 勾选/权重即时写回配置
             Extractors.Add(vm);
         }
-
-        RefreshPatterns();
-        RefreshNetworkProfiles();
-    }
-
-    private void LoadFromConfig()
-    {
-        _maxYearsPast = _config.Extraction.MaxYearsPast;
-        _futureDateBufferDays = _config.Extraction.FutureDateBufferDays;
-        _progressInterval = _config.Scan.ProgressInterval;
-        _previewSize = _config.General.PreviewSize;
-        _themeIndex = ThemeIndexFromName(_config.General.Theme);
-        _windowSize = _config.General.WindowSize;
-        _supportedFormatsText = string.Join(", ", _config.Scan.SupportedFormats);
-        _scanAllFiles = _config.Scan.ScanAllFiles;
-        _maxDegreeOfParallelism = _config.Scan.MaxDegreeOfParallelism;
-        _executionParallelism = _config.Execute.MaxDegreeOfParallelism;
     }
 
     private void RefreshNetworkProfiles()
@@ -199,7 +233,8 @@ public partial class SettingsViewModel : ViewModelBase
     {
         ResetConfigToDefaults(_config);
         RestoreDefaultPatternsCommand.Execute(null);
-        LoadFromConfig();
+        LoadFromConfig(notify: true); // 刷新设置页已绑定控件的显示值（P0-4）
+        RefreshExtractors();          // 提取器列表指向新的默认配置，避免界面与配置长期打架（P0-5）
         _state.SaveAll();
         SaveHint = "已恢复默认配置与内置文件名模式";
         _state.NotifyChanged();
@@ -264,8 +299,7 @@ public partial class SettingsViewModel : ViewModelBase
     {
         var profile = BuildEditProfile();
         if (profile is null) return;
-        NetworkHint = "正在测试连接…";
-        var (ok, message) = await StorageFactory.TestConnectionAsync(profile);
+        var (ok, message) = await RunConnectionTestAsync(profile);
         NetworkHint = ok ? $"✓ {message}" : $"✗ {message}";
         if (ok && _editingProfile is not null)
         {
@@ -278,14 +312,41 @@ public partial class SettingsViewModel : ViewModelBase
     [RelayCommand]
     private async Task TestProfileAsync(NetworkProfileVM vm)
     {
-        NetworkHint = $"正在测试「{vm.Name}」…";
-        var (ok, message) = await StorageFactory.TestConnectionAsync(vm.Source);
+        var (ok, message) = await RunConnectionTestAsync(vm.Source, $"「{vm.Name}」");
         NetworkHint = ok ? $"✓ 「{vm.Name}」{message}" : $"✗ 「{vm.Name}」{message}";
         if (ok)
         {
             vm.Source.LastVerifiedAt = DateTimeOffset.Now;
             _state.SaveConfig(notifyChanged: false);
             RefreshNetworkProfiles();
+        }
+    }
+
+    /// <summary>
+    /// 统一的连接测试入口（评审 2.13）：忙碌态防重入 + 30s 超时；
+    /// 经 Task.Run 移出 UI 线程——SMB 的 TCP+NTLM 登录是同步阻塞，直接 await 会冻结界面直到 OS 超时。
+    /// </summary>
+    private async Task<(bool Ok, string Message)> RunConnectionTestAsync(NetworkProfile profile, string label = "")
+    {
+        if (IsTestingNetwork) return (false, "正在测试其他连接，请稍候");
+        IsTestingNetwork = true;
+        NetworkHint = string.IsNullOrEmpty(label) ? "正在测试连接…" : $"正在测试{label}…";
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            return await Task.Run(() => StorageFactory.TestConnectionAsync(profile, cts.Token), cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return (false, "连接测试超时（30s）");
+        }
+        catch (Exception ex)
+        {
+            return (false, $"连接失败：{ex.Message}");
+        }
+        finally
+        {
+            IsTestingNetwork = false;
         }
     }
 
@@ -303,10 +364,7 @@ public partial class SettingsViewModel : ViewModelBase
         }
         else
         {
-            // 保留验证状态与未修改的密码
-            profile.LastVerifiedAt = _editingProfile.LastVerifiedAt;
-            if (EditPassword.StartsWith("••••••") && !string.IsNullOrEmpty(_editingProfile.Password))
-                profile.Password = _editingProfile.Password;
+            // 验证状态已由 BuildEditProfile 携带；密码的保留/更新也在其中处理，此处只做替换
             var idx = _config.NetworkProfiles.IndexOf(_editingProfile);
             if (idx >= 0) _config.NetworkProfiles[idx] = profile;
         }
@@ -332,15 +390,48 @@ public partial class SettingsViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(EditPassword) && _editingProfile is null) { NetworkHint = "请填写密码"; return null; }
 
         var isNew = _editingProfile is null;
-        var storedPassword = isNew
-            ? Core.Security.CredentialCrypto.Encrypt(EditPassword)
-            : (_editingProfile!.Password ?? "");
+
+        // WebDAV 地址清洗：手机端输入法/剪贴板常混入零宽字符、全角字符，
+        // 会污染主机名导致 DNS 解析失败（“hostname nor servename provided, or not known”）。
+        // 清洗后的规范形态回填输入框，用户所见即所存。
+        var address = EditAddress.Trim();
+        if (EditTypeIndex == 1)
+        {
+            try
+            {
+                var sanitized = WebDavAddress.Sanitize(address);
+                if (sanitized != EditAddress) EditAddress = sanitized;
+                address = sanitized;
+            }
+            catch (ArgumentException ex)
+            {
+                NetworkHint = ex.Message;
+                return null;
+            }
+        }
+        // 编辑态下占位符/留空 = 保留旧密码；其余情况（新建或输入新密码）一律加密存储。
+        // 旧实现编辑态恒用旧密码，导致修改密码永远不生效。
+        var keepOldPassword = !isNew && (string.IsNullOrWhiteSpace(EditPassword)
+            || EditPassword.StartsWith("••••••", StringComparison.Ordinal));
+        string storedPassword;
+        try
+        {
+            storedPassword = keepOldPassword
+                ? _editingProfile!.Password ?? ""
+                : CredentialCrypto.Encrypt(EditPassword);
+        }
+        catch (Exception ex)
+        {
+            // 加密失败不得静默存空密码（评审 2.7）：给出可见提示并拒绝保存该条目
+            NetworkHint = $"密码无法加密存储：{ex.Message}";
+            return null;
+        }
 
         return new NetworkProfile
         {
             Name = EditName.Trim(),
             Type = EditTypeIndex == 0 ? NetworkType.Smb : NetworkType.WebDav,
-            Address = EditAddress.Trim(),
+            Address = address,
             Username = EditUsername.Trim(),
             Password = storedPassword,
             LastVerifiedAt = _editingProfile?.LastVerifiedAt

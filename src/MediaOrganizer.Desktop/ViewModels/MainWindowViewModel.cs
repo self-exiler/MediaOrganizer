@@ -48,6 +48,13 @@ public partial class MainWindowViewModel : ViewModelBase
 
         State = AppState.Load(configPath, patternsPath);
         _logger = new AppLogger();
+        // 配置加载异常不得静默（AppState 契约）：落日志提醒，损坏副本保留隔离路径供人工恢复
+        if (State.LoadError is not null)
+            _logger.Warn($"配置文件加载异常，已回退默认值：{State.LoadError}");
+        if (State.QuarantinedConfigPath is not null)
+            _logger.Warn($"损坏的配置文件已隔离至：{State.QuarantinedConfigPath}");
+        if (State.QuarantinedPatternsPath is not null)
+            _logger.Warn($"损坏的模式文件已隔离至：{State.QuarantinedPatternsPath}");
         ThemeHelper.Apply(State.Config.General.Theme);
 
         // 桌面平台服务注入共享 VM（ADR-0006 决策 4）：目录选取/另存为/确认/系统打开/缩略图
@@ -67,10 +74,11 @@ public partial class MainWindowViewModel : ViewModelBase
         Workbench.AnalysisCompleted += result =>
         {
             FailedFiles.Refresh(result);
-            Report.Set(result, State.Config.Paths.OutputDir);
+            Report.Set(result, State.Config.Paths.OutputDir, Workbench.LastReportText); // P1-1：复用 Session 报告，避免重复分组统计
             MagicTools.LoadFromAnalysisResult(result); // FR-7.1：魔术工具可用最近分析结果作样本
         };
         State.Changed += Workbench.RebuildChain;
+        State.Changed += Workbench.ReloadPathsFromConfig; // 恢复出厂等重置后回读路径，避免旧目录写回配置
         State.Changed += () => FailedFiles.PendingDir = State.Config.Paths.PendingDir;
         State.Changed += Workbench.ReloadOutputTargets; // 网络位置增删 → 工作台目标下拉刷新
         FailedFiles.NavigateToMagic += names =>
@@ -112,7 +120,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void OnCurrentVmPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is "StatusText" or "MoveHint" or "SaveHint")
+        if (e.PropertyName is nameof(WorkbenchViewModel.StatusText)
+            or nameof(FailedFilesViewModel.MoveHint)
+            or nameof(MagicToolsViewModel.SaveHint))
             StatusMessage = GetStatusText(_currentVm);
     }
 

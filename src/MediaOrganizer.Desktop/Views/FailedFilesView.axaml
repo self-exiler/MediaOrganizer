@@ -24,7 +24,7 @@
             <Button Classes="accent" Content="🪄 用样本打开魔术工具" Command="{Binding OpenMagicToolsCommand}"/>
             <Button Content="全部移到待处理文件夹" Command="{Binding MoveToPendingCommand}" IsEnabled="{Binding !IsMoving}"/>
             <Button Content="系统应用打开" Command="{Binding OpenWithSystemCommand}"/>
-            <ProgressBar Value="{Binding MoveProgress}" Maximum="1" Width="160" VerticalAlignment="Center"
+            <ProgressBar Value="{Binding MoveProgress}" Maximum="100" Width="160" VerticalAlignment="Center"
                          IsVisible="{Binding IsMoving}"/>
         </StackPanel>
 

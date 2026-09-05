@@ -60,7 +60,8 @@
                                     </Grid>
                                     <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
                                         <Slider Minimum="0" Maximum="2" SmallChange="0.1" LargeChange="0.5"
-                                                Value="{Binding Weight}" MinHeight="36"/>
+                                        TickFrequency="0.1" IsSnapToTickEnabled="True"
+                                        Value="{Binding Weight}" MinHeight="36"/>
                                         <TextBlock Grid.Column="1" Text="{Binding Weight, StringFormat='{}{0:F1}'}"
                                                    FontSize="12" Foreground="{StaticResource AccentBrush}"
                                                    FontWeight="SemiBold" Width="36" TextAlignment="Right"
@@ -176,16 +177,15 @@
                                 <TextBlock Text="地址" FontSize="12" Foreground="#616161"/>
                                 <TextBox Text="{Binding EditAddress, Mode=TwoWay}" PlaceholderText="\\192.168.1.10\photos 或 https://dav.example.com/dav"/>
                             </StackPanel>
-                            <Grid ColumnDefinitions="*,8,*">
-                                <StackPanel Grid.Column="0" Spacing="6">
-                                    <TextBlock Text="用户名" FontSize="12" Foreground="#616161"/>
-                                    <TextBox Text="{Binding EditUsername, Mode=TwoWay}"/>
-                                </StackPanel>
-                                <StackPanel Grid.Column="1" Grid.ColumnSpan="1" Spacing="6">
-                                    <TextBlock Text="密码（Keystore 加密存储）" FontSize="12" Foreground="#616161"/>
-                                    <TextBox Text="{Binding EditPassword, Mode=TwoWay}" PasswordChar="•"/>
-                                </StackPanel>
-                            </Grid>
+                            <!-- 手机宽度下并排会挤压重叠，改为整行纵向堆叠 -->
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="用户名" FontSize="12" Foreground="#616161"/>
+                                <TextBox Text="{Binding EditUsername, Mode=TwoWay}"/>
+                            </StackPanel>
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="密码（Keystore 加密存储）" FontSize="12" Foreground="#616161" TextWrapping="Wrap"/>
+                                <TextBox Text="{Binding EditPassword, Mode=TwoWay}" PasswordChar="•"/>
+                            </StackPanel>
                             <TextBlock Text="{Binding NetworkHint}" FontSize="12" Foreground="#8A3714" TextWrapping="Wrap"
                                        IsVisible="{Binding NetworkHint, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                             <Grid ColumnDefinitions="*,8,*,8,*">

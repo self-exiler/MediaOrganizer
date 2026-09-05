@@ -15,13 +15,14 @@ public sealed class AndroidConfirmDialog : IConfirmDialog
         var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         activity.RunOnUiThread(() =>
         {
-            new AlertDialog.Builder(activity)
-                .SetTitle(title)
-                .SetMessage(message)
-                .SetPositiveButton("确定", (_, _) => tcs.TrySetResult(true))
-                .SetNegativeButton("取消", (_, _) => tcs.TrySetResult(false))
-                .SetOnCancelListener(new CancelListener(() => tcs.TrySetResult(false)))
-                .Show();
+            // 链式 setter 在 Java 绑定里返回可空 Builder，拆开逐句调避免空解引用
+            var builder = new AlertDialog.Builder(activity);
+            builder.SetTitle(title);
+            builder.SetMessage(message);
+            builder.SetPositiveButton("确定", (_, _) => tcs.TrySetResult(true));
+            builder.SetNegativeButton("取消", (_, _) => tcs.TrySetResult(false));
+            builder.SetOnCancelListener(new CancelListener(() => tcs.TrySetResult(false)));
+            builder.Show();
         });
         return tcs.Task;
     }

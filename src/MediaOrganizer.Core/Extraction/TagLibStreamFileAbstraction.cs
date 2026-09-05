@@ -19,12 +19,17 @@ public sealed class TagLibStreamFileAbstraction(string name, Func<Stream> openRe
     public static Stream EnsureSeekable(Stream stream)
     {
         if (stream.CanSeek) return stream;
+        var buffer = new MemoryStream();
         try
         {
-            var buffer = new MemoryStream();
             stream.CopyTo(buffer);
             buffer.Position = 0;
             return buffer;
+        }
+        catch
+        {
+            buffer.Dispose(); // 拷贝失败时不留半成品，原流统一在 finally 关闭
+            throw;
         }
         finally
         {

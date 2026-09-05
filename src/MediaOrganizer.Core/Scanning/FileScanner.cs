@@ -28,7 +28,9 @@ public sealed class FileScanner : IFileScanner
         {
             RecurseSubdirectories = true,
             IgnoreInaccessible = true,
-            AttributesToSkip = FileAttributes.ReparsePoint | FileAttributes.System | FileAttributes.Hidden
+            // 仅跳过 ReparsePoint（符号链接/交接点）以避免递归死循环；System/Hidden 不再跳过（P2-11）：
+            // FR-1.1「递归扫描所有文件」要求隐藏文件也应参与归档，此前静默丢弃且无可关配置。
+            AttributesToSkip = FileAttributes.ReparsePoint
         };
 
         var dirInfo = new DirectoryInfo(sourceDir);

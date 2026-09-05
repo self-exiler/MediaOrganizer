@@ -30,6 +30,7 @@
                                                 <CheckBox Grid.Column="0" IsChecked="{Binding Enabled, Mode=TwoWay}" VerticalAlignment="Center"/>
                                                 <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" FontWeight="SemiBold"/>
                                                 <Slider Grid.Column="2" Minimum="0" Maximum="2" TickFrequency="0.1"
+                                                        IsSnapToTickEnabled="True"
                                                         Value="{Binding Weight, Mode=TwoWay}" VerticalAlignment="Center"/>
                                                 <TextBlock Grid.Column="3" Text="{Binding Weight, StringFormat={}{0:0.0}}"
                                                            VerticalAlignment="Center" Classes="muted"/>

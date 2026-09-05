@@ -1,9 +1,13 @@
 # 软件需求规格说明书（SRS）· Android 版
 
 **项目名称**：MediaOrganizer（媒体文件整理器 · Android 版）
-**版本**：1.0-android
-**日期**：2026-08-13
-**依据文档**：ADR-0003（技术架构）、ADR-0004（网络输出目标）、ADR-0005（Android 分支）、ADR-0006（源端抽象与共享层重构）、桌面版 SRS、docs/glossary.md
+**版本**：1.1-android（按 2026-08-30 评审反推修订，对齐实现现状）
+**日期**：2026-08-30
+**依据文档**：桌面版 `SRS.md`（**共同基线**）、ADR-0003（技术架构）、ADR-0004（网络输出目标，SMB 部分已被 ADR-0007 取代）、ADR-0005（Android 分支）、ADR-0006（源端抽象与共享层重构）、ADR-0007（SMB）、**ADR-0008（v1.0 范围冻结与文档反推原则）**、docs/glossary.md
+
+> **文档结构（ADR-0008 决策 3）**：本文只写 **Android 差异与专属条款**，双端共同需求以 `SRS.md` 为准，不再复制 FR 全文。
+> 与桌面版的对应关系：FR-A2 ↔ FR-2、FR-A4 ↔ FR-4、FR-A5 ↔ FR-5、FR-A6 ↔ FR-6、FR-A8 ↔ FR-8、FR-A9 ↔ FR-10、FR-A10 ↔ FR-11。
+> NFR 一律并列标注 **目标值 / 实测值 / 处置**。
 
 ---
 
@@ -49,7 +53,7 @@ MediaOrganizer Android 版访问用户指定的源目录（全局存储权限直
 | 操作系统 | Android 13（API 33）及以上 |
 | 架构 | arm64-v8a（主）；armeabi-v7a / x86_64（模拟器） |
 | 运行时 | .NET 10 for Android（自包含 APK） |
-| 存储 | 应用专有目录无需权限；本地源/目标经"所有文件访问"（MANAGE_EXTERNAL_STORAGE）直读真实路径，第三方文档提供方回退 SAF |
+| 存储 | 应用专有目录无需权限；本地源/目标经 MANAGE_EXTERNAL_STORAGE 直读真实路径，**该权限为强制前置**（未授予时目录选择器不弹出）；不可映射为真实路径的第三方文档提供方回退 SAF 树 URI |
 
 ### 2.3 用户画像
 
@@ -59,7 +63,8 @@ MediaOrganizer Android 版访问用户指定的源目录（全局存储权限直
 ### 2.4 设计约束
 
 1. Core 类库多目标 `net10.0;net10.0-android`，同一份代码（ADR-0005）
-2. 存储访问优先申请 `MANAGE_EXTERNAL_STORAGE` 全文件权限走真实路径（APK 侧载分发，不受 Play 政策约束）；SAF 仅作为第三方文档提供方回退
+2. 存储访问申请 `MANAGE_EXTERNAL_STORAGE` 全文件权限走真实路径（APK 侧载分发，不受 Play 政策约束）。**该权限为强制前置**：`SafFolderPicker.PickFolderAsync` 在权限未授予时直接返回 null，不弹目录选择器。SAF 树 URI 仅用于"不可映射为真实路径的第三方文档提供方"（网盘等）的回退，**不用于权限被拒场景**
+   - 已知风险：Manifest 未声明 `READ_MEDIA_IMAGES` / `READ_MEDIA_VIDEO`，一旦系统收紧 `MANAGE_EXTERNAL_STORAGE`，无降级路径（见 R-A8）
 3. 凭据加密使用 Android Keystore（非 DPAPI/Base64）
 4. 图片 EXIF 读取使用 `Android.Media.ExifInterface`（非 Magick.NET）
 5. UI 使用 Avalonia 12 Android + MVVM，ViewModel 复用桌面版，View 全新重写
@@ -123,7 +128,7 @@ MediaOrganizer Android 版访问用户指定的源目录（全局存储权限直
 | 编号 | 需求 |
 |------|------|
 | FR-A5.1 | 基于分析结果按分级目录归档：year（2024/）、month（2024/01/）、day（2024/01/15/，默认） |
-| FR-A5.2 | 操作类型：copy（默认）/ move。网络目标（WebDAV）下仅 copy |
+| FR-A5.2 | 操作类型：copy（默认）/ move。**网络目标（WebDAV / SMB）下仅 copy** |
 | FR-A5.3 | 同名处理：skip（默认）/ overwrite / rename（追加 `_1`、`_2`…） |
 | FR-A5.4 | 未来日期文件统一归入 `FutureDate/` |
 | FR-A5.5 | 可选 mtime 矫正：将目标文件修改时间设为提取日期（WebDAV 不支持时静默跳过） |
@@ -149,7 +154,7 @@ MediaOrganizer Android 版访问用户指定的源目录（全局存储权限直
 | FR-A7.1 | 抽屉导航：汉堡菜单切换页面（整理工作台 / 失败文件 / 分析报告 / 设置） |
 | FR-A7.2 | 状态栏：聚合当前页面操作反馈（进度、提示、计数），底部固定显示 |
 | FR-A7.3 | 返回键：抽屉打开时关闭抽屉，否则退出应用 |
-| FR-A7.4 | 语言切换实时刷新全部 UI 文本；首发仅提供 zh 资源 |
+| ~~FR-A7.4~~ | ~~语言切换~~ —— 已删除（ADR-0008 决策 2，v1.0 单一中文，不引入 resx） |
 
 ### FR-A8 设置（P1）
 
@@ -166,13 +171,14 @@ MediaOrganizer Android 版访问用户指定的源目录（全局存储权限直
 
 | 编号 | 需求 |
 |------|------|
-| FR-A9.1 | 输出目录支持本地 SAF 目录与 WebDAV 网络位置两类目标 |
+| FR-A9.1 | 输出目录支持三类目标：本地 SAF 目录、WebDAV 网络位置、**SMB 网络位置** |
 | FR-A9.2 | WebDAV 走协议客户端（WebDAVClient），与桌面版共享 `WebDavFileStorage` 实现 |
-| FR-A9.3 | 连接配置提供"测试连接"即时验证（认证 + 写权限探测） |
-| FR-A9.4 | WebDAV 目标下仅提供 copy，move 选项禁用并给出原因提示 |
-| FR-A9.5 | 分块流式拷贝（8MB 缓冲），逐文件 + 总体双进度；网络中断自动重试 3 次（指数退避） |
+| FR-A9.3 | 连接配置提供"测试连接"即时验证（认证 + 写权限探测）；**须带超时与取消**，不得阻塞 UI 线程 |
+| FR-A9.4 | 网络目标（WebDAV / SMB）下仅提供 copy，move 选项禁用并给出原因提示 |
+| FR-A9.5 | 流式拷贝，**单次写入载荷不得超过连接协商的写入上限**（SMB = `min(服务器 MaxWriteSize, 1MB)`；SMBLibrary 的 `WriteFile` 不自动分片，超限必失败）。逐文件 + 总体双进度；网络中断自动重试 3 次（指数退避 1/2/4s） |
 | FR-A9.6 | **支持 SMB**（ADR-0007）：SMBLibrary 纯托管客户端，双端统一实现；SMB profile 的用户名/密码显式 NTLM 认证（首版不支持 guest）；仅作输出目标，仅 copy |
-| FR-A9.7 | SMB 传输与 WebDAV 同一套可靠性语义：8MB 分块流式、`.mo-tmp` 临时名 + 大小校验、中断重试 3 次（指数退避）、WakeLock 保持 |
+| FR-A9.7 | SMB 传输与 WebDAV 同一套可靠性语义：按协商上限分块流式、`.mo-tmp` 临时名 + 大小校验（取不到长度须记失败而非跳过）、**失败须清理 `.mo-tmp` 残留**、中断重试 3 次（指数退避）、WakeLock 保持 |
+| FR-A9.8 | SMB 连接为 `IDisposable`，所有创建点（执行归档、测试连接）须释放，不得泄漏 TCP 连接与会话 |
 
 ### FR-A10 凭据管理（P0）
 
@@ -228,11 +234,11 @@ MediaOrganizer Android 版访问用户指定的源目录（全局存储权限直
 |------|------|------|
 | NFR-A1 | 性能 | 千张规模：分析吞吐 ≥ 50 文件/秒（手机存储，含 EXIF 读取）；UI 全程无阻塞 |
 | NFR-A2 | 性能 | 内存峰值 ≤ 300MB（不缓存原图/缩略图） |
-| NFR-A3 | 性能 | APK 包体 ≤ 40MB（.NET 运行时 + Core + Avalonia） |
+| NFR-A3 | 性能 | APK 包体 ≤ **60MB**（.NET 运行时 + Core + Avalonia + Magick.NET + SMBLibrary）。<br>**实测 50.0MB；原目标 40MB 已作废**（ADR-0008 决策 5：ADR-0007 曾预估 SMBLibrary 体积影响 <1MB，实测不成立）。60MB 为硬上限，超限须先评估 NativeAOT / 移除 Magick.NET，不得再次无条件放宽 |
 | NFR-A4 | 可靠性 | 单个文件解析失败不得中断整体分析；所有 IO 操作有异常捕获 |
-| NFR-A5 | 可靠性 | 执行阶段遇错（占用、权限）记录并继续，结束汇总报告 |
+| NFR-A5 | 可靠性 | 执行阶段遇错（占用、权限）记录并继续，结束汇总报告；**SAF 源删除失败须记录为失败而非计入成功** |
 | NFR-A6 | 可移植 | Core 多目标编译，`#if ANDROID` 切换平台实现；桌面版不受影响 |
-| NFR-A7 | 可测试 | Core 关键逻辑与桌面版共享测试；Android 专属逻辑（SAF/Keystore/ExifInterface）在 Android 项目内测试 |
+| NFR-A7 | 可测试 | Core 关键逻辑与桌面版共享测试。<br>**实测：Android 项目无测试宿主** —— Android 专属逻辑（SAF/Keystore/ExifInterface）在 v1.0 内**不引入测试宿主**，改为尽量下沉为可测的纯函数；列为技术债（ADR-0008 决策 5） |
 | NFR-A8 | 安全 | 凭据使用 Android Keystore 加密；密钥不可导出；日志/报告不含凭据 |
 | NFR-A9 | 电池 | 分析/执行过程持有 WakeLock 防止息屏中断；完成后释放 |
 | NFR-A10 | 分发 | GitHub Release 发布 APK + 校验和；不上架 Google Play |
@@ -257,9 +263,11 @@ MediaOrganizer Android 版访问用户指定的源目录（全局存储权限直
 |------|------|------|
 | R-A1 | ExifInterface 不支持 TIFF/BMP，EXIF 覆盖面低于桌面版 Magick.NET | 落入文件名提取器兜底；后续可引入第三方库 |
 | R-A2 | SAF 批量文件操作性能（ContentResolver 查询开销） | AndroidFileScanner 批量查询 + 缓存 URI 映射 |
-| R-A3 | Avalonia Android 性能/包体未验证 | MVP 先跑通核心流程；包体超 40MB 则评估 NativeAOT |
+| R-A3 | Avalonia Android 性能/包体未验证 | 已实测：包体 50.0MB（目标已按 ADR-0008 决策 5 放宽至 ≤60MB）；超过 60MB 硬上限则评估 NativeAOT / 移除 Magick.NET |
 | R-A4 | ViewModel 跨平台耦合（桌面版 VM 可能有 Avalonia.Desktop 依赖） | 审查现有 VM，平台相关逻辑抽到接口 |
 | R-A5 | Android Keystore 在不同厂商设备上行为差异 | 主流设备测试；降级方案：EncryptedSharedPreferences |
 | R-A5b | SMBLibrary 不支持 SMB 3.1.1 加密/签名，强制加密的服务器连不上；手机 Wi-Fi 下长传稳定性 | 覆盖主流家用 NAS（群晖/威联通默认不强制加密）；失败给明确文案；WakeLock + 重试 + `.mo-tmp` 保护（ADR-0007） |
 | R-A6 | 大文件 WebDAV 上传时网络中断 | 重试 3 次 + 指数退避（与桌面版一致）；WakeLock 保持上传 |
 | R-A7 | 无 Play Store 分发，用户需手动更新 | GitHub Release + 应用内版本检查 |
+| R-A8 | `MANAGE_EXTERNAL_STORAGE` 为强制前置且无降级路径，系统收紧该权限时应用将完全不可用 | 现状接受（侧载分发、自用与小众开源场景）；**待决**：是否补 `READ_MEDIA_IMAGES/VIDEO` + SAF 只读降级路径 |
+| R-A9 | 凭据随 `allowBackup` 进入设备迁移备份，而 Keystore 密钥不可导出 → 换机恢复后凭据永久无法解密 | 现状未处理。**待决**：关闭 `allowBackup` 或显式提示用户重新录入密码 |

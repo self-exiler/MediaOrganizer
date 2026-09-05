@@ -30,12 +30,12 @@ public sealed class AndroidSystemFileOpener(MainActivity activity) : ISystemFile
             var intent = new Intent(Intent.ActionView);
             intent.SetDataAndType(uri, mime);
             intent.AddFlags(ActivityFlags.GrantReadUriPermission | ActivityFlags.NewTask);
-            if (intent.ResolveActivity(activity.PackageManager) is null)
-            {
-                ShowToast(activity, "没有应用能打开此文件类型");
-                return Task.CompletedTask;
-            }
+            // 直接走系统解析（不受 软件包可见性 过滤约束），由 catch 处理「确无接收 App」的 ActivityNotFoundException
             activity.StartActivity(intent);
+        }
+        catch (ActivityNotFoundException)
+        {
+            ShowToast(activity, "没有应用能打开此文件类型");
         }
         catch
         {
@@ -57,7 +57,7 @@ public sealed class AndroidSystemFileOpener(MainActivity activity) : ISystemFile
     }
 
     private static string GetMimeType(string path)
-        => MimeTypeMap.Singleton.GetMimeTypeFromExtension(
+        => MimeTypeMap.Singleton?.GetMimeTypeFromExtension(
                System.IO.Path.GetExtension(path).TrimStart('.').ToLowerInvariant())
            ?? "application/octet-stream";
 

@@ -162,9 +162,9 @@
 
                         <StackPanel Spacing="6">
                             <TextBlock Text="操作类型" FontSize="12" Foreground="#616161"/>
-                            <ComboBox x:Name="OpSelect" SelectedIndex="{Binding OperationIndex, Mode=TwoWay}">
+                            <ComboBox SelectedIndex="{Binding OperationIndex, Mode=TwoWay}">
                                 <ComboBoxItem Content="复制 copy（保留原文件）"/>
-                                <ComboBoxItem Content="移动 move" IsEnabled="{Binding !IsMoveAllowed}"/>
+                                <ComboBoxItem Content="移动 move" IsEnabled="{Binding IsMoveAllowed}"/>
                             </ComboBox>
                         </StackPanel>
 

@@ -38,12 +38,16 @@ public sealed class PendingFileMover
             try
             {
                 var name = file.FileName;
-                var relative = await NameCollisionResolver.FindFreeNameOnlyAsync(target, name, ct);
+                var relative = await NameCollisionResolver.FindFreeAsync(target, name, ct);
                 await target.CopyFromAsync(file.Source, relative, null, ct);
 
                 var expected = file.Source.Length;
                 var actual = await target.GetLengthAsync(relative, ct);
-                if (actual >= 0 && actual != expected)
+                if (actual < 0)
+                    actual = await target.GetLengthAsync(relative, ct);
+                if (actual < 0)
+                    throw new IOException("无法获取目标文件长度，大小校验不可用");
+                if (actual != expected)
                     throw new IOException($"大小校验失败：期望 {expected}，实际 {actual}");
 
                 file.Source.Delete();

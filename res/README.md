@@ -7,13 +7,13 @@
 
 ## 文件清单
 
-| 文件 | 用途 | 画布尺寸 | 说明 |
-|------|------|----------|------|
-| `icon-win-desktop.svg` | Windows 桌面图标 | 256×256 | 带圆角方形底板的完整图标，含3张照片卡片堆叠 |
-| `icon-android-background.svg` | Android 自适应图标 · 背景层 | 108×108 | 蓝青渐变全填充，供 launcher 裁剪 |
-| `icon-android-foreground.svg` | Android 自适应图标 · 前景层 | 108×108 | 主体落在中心 66dp 安全区内 |
-| `icon-win-taskbar.svg` | Windows 任务栏图标（彩色） | 32×32 | 极简版，保留主卡片 + 山太阳符号 |
-| `icon-win-taskbar-mono.svg` | Windows 任务栏图标（单色） | 32×32 | 深色描边版，适配浅色任务栏；深色任务栏可反色使用 |
+| 文件                            | 用途                         | 画布尺寸 | 说明                                             |
+| ------------------------------- | ---------------------------- | -------- | ------------------------------------------------ |
+| `icon-win-desktop.svg`        | Windows 桌面图标             | 256×256 | 带圆角方形底板的完整图标，含3张照片卡片堆叠      |
+| `icon-android-background.svg` | Android 自适应图标 · 背景层 | 108×108 | 蓝青渐变全填充，供 launcher 裁剪                 |
+| `icon-android-foreground.svg` | Android 自适应图标 · 前景层 | 108×108 | 主体落在中心 66dp 安全区内                       |
+| `icon-win-taskbar.svg`        | Windows 任务栏图标（彩色）   | 32×32   | 极简版，保留主卡片 + 山太阳符号                  |
+| `icon-win-taskbar-mono.svg`   | Windows 任务栏图标（单色）   | 32×32   | 深色描边版，适配浅色任务栏；深色任务栏可反色使用 |
 
 ---
 
@@ -22,6 +22,7 @@
 **核心意象**：三张照片卡片扇形错落叠放，顶层主卡片内含「天空渐变 + 太阳 + 山脉」风景照，底部带标题/文字行，直观传达「照片整理 / 归类」。
 
 **配色**（蓝青色系）：
+
 - 底板渐变：`#3B82F6` → `#0EA5E9` → `#06B6D4`
 - 天空：`#7DD3FC` → `#0EA5E9`
 - 山脉：`#1E40AF` → `#1E3A8A`
@@ -56,12 +57,14 @@ magick icon-win-desktop.svg -define icon:auto-resize=256,128,96,64,48,32,16 app.
 Android 8.0+ 的 Adaptive Icon 需要前景层 + 背景层：
 
 **res/drawable/ic_launcher_background.xml**（或直接放 `icon-android-background.svg`）：
+
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 引用背景层 SVG -->
 ```
 
 **res/mipmap-anydpi-v26/ic_launcher.xml**：
+
 ```xml
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@drawable/ic_launcher_background"/>
@@ -86,11 +89,11 @@ node res/generate-android-icons.js
 
 生成目标：
 
-| 目录 | 文件 | 尺寸（按密度） |
-|------|------|----------------|
+| 目录                                      | 文件                           | 尺寸（按密度）                                       |
+| ----------------------------------------- | ------------------------------ | ---------------------------------------------------- |
 | `drawable-mdpi` … `drawable-xxxhdpi` | `ic_launcher_background.png` | 108×108 / 162×162 / 216×216 / 324×324 / 432×432 |
-| `drawable-mdpi` … `drawable-xxxhdpi` | `ic_launcher_foreground.png` | 同上 |
-| `mipmap-mdpi` … `mipmap-xxxhdpi` | `ic_launcher.png` | 48×48 / 72×72 / 96×96 / 144×144 / 192×192 |
+| `drawable-mdpi` … `drawable-xxxhdpi` | `ic_launcher_foreground.png` | 同上                                                 |
+| `mipmap-mdpi` … `mipmap-xxxhdpi`     | `ic_launcher.png`            | 48×48 / 72×72 / 96×96 / 144×144 / 192×192       |
 
 ---
 
@@ -99,6 +102,5 @@ node res/generate-android-icons.js
 - **改配色**：修改各 SVG `<defs>` 中的 `<linearGradient>` 的 `stop-color`。
 - **改意象**：如需换为「网格相册 / 文件夹+照片」等，可替换顶层卡片的照片内容区图形。
 - **导出 PNG**：`magick icon-win-desktop.svg -resize 512x512 app-icon.png`
-
 
 [DuMate AI生成]

@@ -42,8 +42,8 @@ public class AnalyzerTests : IDisposable
 
         Assert.Equal(3, result.Total);
         Assert.Equal(2, result.Parsed.Count);
-        Assert.Equal(1, result.Unparsed.Count);
-        Assert.Equal("scan001.tif", result.Unparsed[0].File.FileName);
+        var unparsed = Assert.Single(result.Unparsed);
+        Assert.Equal("scan001.tif", unparsed.File.FileName);
         Assert.All(result.Parsed, p => Assert.Equal("FileName", p.Source));
     }
 
@@ -69,10 +69,10 @@ public class AnalyzerTests : IDisposable
     }
 
     [Fact]
-    public void 报告包含统计与失败清单()
+    public async Task 报告包含统计与失败清单()
     {
         var analyzer = CoreFactory.CreateAnalyzer(Config(), PatternsStore.GetBuiltinPatterns());
-        var result = analyzer.AnalyzeAsync(_dir).GetAwaiter().GetResult();
+        var result = await analyzer.AnalyzeAsync(_dir);
         var report = AnalysisReportGenerator.Generate(result, @"D:\out");
 
         Assert.Contains("媒体文件分析报告", report);

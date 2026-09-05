@@ -62,8 +62,6 @@ public partial class MagicToolsViewModel : ViewModelBase
     [ObservableProperty]
     private string _regexInfo = "";
 
-    private AnalysisResult? _lastResult;
-
     public MagicToolsViewModel(AppState state, string dataDir)
     {
         _state = state;
@@ -105,7 +103,6 @@ public partial class MagicToolsViewModel : ViewModelBase
     /// <summary>从分析结果（成功或失败）载入文件名字样（FR-7.1）。</summary>
     public void LoadFromAnalysisResult(AnalysisResult? result, int max = 100)
     {
-        _lastResult = result;
         if (result is null)
         {
             SaveHint = "尚无分析结果，请先在工作台完成一次分析";
@@ -198,9 +195,8 @@ public partial class MagicToolsViewModel : ViewModelBase
 
         bool IsMediaFile(string? name) => name is not null && mediaExts.Contains(Path.GetExtension(name));
 
-        var json = await File.ReadAllTextAsync(path);
-
-        // 1. analysis-result.json 结构：优先用 AnalysisResultStore 解析
+        // 1. analysis-result.json 结构：优先用 AnalysisResultStore 解析，避免先 ReadAllText 又由其读一次同一文件（7.2）。
+        //    Load 读一次即可命中 analysis-result 结构。
         var result = AnalysisResultStore.Load(path);
         if (result is not null)
         {
@@ -213,7 +209,10 @@ public partial class MagicToolsViewModel : ViewModelBase
             if (names.Length > 0) return names;
         }
 
-        // 2. 兜底：顶层字符串数组
+        // 2. 兜底：顶层字符串数组（仅当非 analysis-result 结构时才读取原始文本）
+        string json;
+        try { json = await File.ReadAllTextAsync(path); }
+        catch { return []; }
         try
         {
             var doc = System.Text.Json.JsonDocument.Parse(json);
@@ -228,7 +227,8 @@ public partial class MagicToolsViewModel : ViewModelBase
                     .ToArray();
             }
         }
-        catch { }
+        // 兜底分支：JSON 非 analysis-result 结构且非字符串数组时，返回空样本列表（不视为错误）
+        catch { /* 顶层字符串数组解析失败不阻断流程 */ }
 
         return [];
     }
@@ -427,7 +427,8 @@ public partial class MagicToolsViewModel : ViewModelBase
         foreach (var sample in Samples)
         {
             var nameWithoutExt = Path.GetFileNameWithoutExtension(sample);
-            var date = PatternEngine.TryExtract(nameWithoutExt, pattern);
+            // P1-4：魔术工具实时测试用不缓存、不编译提取，避免逐键入字符泄漏 Compiled 正则
+            var date = PatternEngine.TryExtract(nameWithoutExt, pattern, cache: false);
             TestResults.Add(new RegexTestItem(sample, date is not null,
                 date is { } d ? d.ToString("yyyy-MM-dd HH:mm:ss") : "未命中"));
         }
@@ -522,7 +523,11 @@ public partial class MarkableCharVM : ObservableObject
 
     public string Tooltip => Role == MarkRole.None ? Char.ToString() : $"{Char} → {Role.Label()}";
 
-    partial void OnRoleChanged(MarkRole value) => OnPropertyChanged(nameof(Brush));
+    partial void OnRoleChanged(MarkRole value)
+    {
+        OnPropertyChanged(nameof(Brush));
+        OnPropertyChanged(nameof(Tooltip)); // Tooltip 也依赖 Role，不通知则标记后提示文本不刷新
+    }
 
     public void ResetRole() => Role = MarkRole.None;
 

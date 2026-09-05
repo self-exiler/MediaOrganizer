@@ -11,40 +11,15 @@ public static class NameCollisionResolver
     {
         if (!await target.ExistsAsync(relativePath, ct)) return relativePath;
 
-        var dir = relativePath[..relativePath.LastIndexOf('/')];
+        // 防御：路径不含 '/' 时退化为纯文件名查重，避免切片越界
+        var sep = relativePath.LastIndexOf('/');
+        var dir = sep <= 0 ? "" : relativePath[..sep];
         var name = Path.GetFileNameWithoutExtension(relativePath);
         var ext = Path.GetExtension(relativePath);
         for (var i = 1; ; i++)
         {
             var candidate = dir.Length == 0 ? $"{name}_{i}{ext}" : $"{dir}/{name}_{i}{ext}";
             if (!await target.ExistsAsync(candidate, ct)) return candidate;
-        }
-    }
-
-    /// <summary>异步查重名（仅文件名，无目录前缀）：用于 PendingFileMover 等不带目录的场景。</summary>
-    public static async Task<string> FindFreeNameOnlyAsync(
-        IFileStorage target, string name, CancellationToken ct)
-    {
-        if (!await target.ExistsAsync(name, ct)) return name;
-        var stem = Path.GetFileNameWithoutExtension(name);
-        var ext = Path.GetExtension(name);
-        for (var i = 1; ; i++)
-        {
-            var candidate = $"{stem}_{i}{ext}";
-            if (!await target.ExistsAsync(candidate, ct)) return candidate;
-        }
-    }
-
-    /// <summary>本地文件系统查重名：返回追加 _n 且不存在的目标路径（同步，用 File.Exists）。</summary>
-    public static string FindFreeLocalPath(string targetPath)
-    {
-        var dir = Path.GetDirectoryName(targetPath) ?? "";
-        var name = Path.GetFileNameWithoutExtension(targetPath);
-        var ext = Path.GetExtension(targetPath);
-        for (var i = 1; ; i++)
-        {
-            var candidate = Path.Combine(dir, $"{name}_{i}{ext}");
-            if (!File.Exists(candidate)) return candidate;
         }
     }
 }

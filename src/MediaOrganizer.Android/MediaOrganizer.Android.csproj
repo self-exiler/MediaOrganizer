@@ -11,14 +11,33 @@
     <ApplicationVersion>1</ApplicationVersion>
     <ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>
     <AndroidManifest>Properties\AndroidManifest.xml</AndroidManifest>
+    <!-- .NET Android 默认处理器 AndroidMessageHandler 底层是 Java HttpURLConnection，
+         不认识 WebDAV 扩展方法，PROPFIND 会被直接拒绝（"Expected one of [OPTIONS, GET, ...]
+         but was PROPFIND"，请求根本发不出去）。切到 .NET 自带 SocketsHttpHandler 后支持任意
+         HTTP 方法，且直连套接字不受 Java 层 HttpURLConnection 限制。 -->
+    <AndroidHttpClientHandlerType>System.Net.Http.SocketsHttpHandler, System.Net.Http</AndroidHttpClientHandlerType>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
+    <!-- 只打 arm64：实测设备为 arm64，默认会额外打 x86_64 一套。
+         .NET 10 为满足 Android 16 的 16KB 页面对齐，把每个程序集都包成独立
+         ELF 共享库（lib_<Assembly>.dll.so），本项目共 345 个程序集 → 双架构 690 个 .so，
+         APK 93MB、构建 6 分钟。限单架构后 APK 与构建时间约减半，启动加载的 .so 也减半。
+         注意：.NET 10 已废弃 AndroidSupportedAbis（XA0036），改用标准 RuntimeIdentifiers，
+         RID 名为 android-arm64 / android-x64 / android-arm / android-x86。 -->
+    <RuntimeIdentifiers>android-arm64</RuntimeIdentifiers>
     <!-- 完整打包：禁用共享运行时，APK 自包含、脱离 VS 可独立运行
-         （否则卸载重装后 APK 残缺，点击卡启动界面 ANR 闪退）。
-         注意：不要同时设 EmbedAssembliesIntoApk=true —— 实测会让打包阶段
-         （_CompressAssemblies 之后）长时间卡死；仅 AndroidUseSharedRuntime=false
-         已足以生成 26MB 的独立 APK，并经 adb 验证可独立启动。 -->
+         （否则卸载重装后 APK 残缺，点击卡启动界面 ANR 闪退）。 -->
     <AndroidUseSharedRuntime>false</AndroidUseSharedRuntime>
+    <!-- 关闭 VS「快速部署(Fast Deployment)」——这才是真正的开关。
+         注意：AndroidUseSharedRuntime=false 只禁用「共享 Mono 运行时」，并不关闭快速部署。
+         快速部署会走两段式流程：启动一次 → run-as 推送程序集到
+         /data/data/<pkg>/files/.__override__ → force-stop → 再启动一次。
+         在荣耀 PGT-AN10(Android 16/API 36) 上实测第二段启动未执行，进程在首次启动后
+         156ms 被 adb shell am force-stop 杀掉，表现为 VS 调试启动闪退（adb 手动启动正常）。
+         EmbedAssembliesIntoApk=true 让程序集直接进 APK，部署退化为
+         「install → 一次启动」，消除 force-stop 环节。
+         （此前记录的「打包卡死」实为 aapt2 daemon 挂死，已由下方 AndroidUseDaemonAapt2=false 解决。） -->
+    <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
     <!-- aapt2 daemon 模式在部分机器上挂死（dotnet/android 已知问题）：改用一次性调用，跨机可移植 -->
     <AndroidUseDaemonAapt2>false</AndroidUseDaemonAapt2>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
@@ -31,6 +50,10 @@
     <PackageReference Include="Xamarin.AndroidX.DocumentFile" Version="1.0.1.4" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.1" />
   </ItemGroup>
+
+  <!-- 8.3：已删除原 Magick.NET ExcludeAssets="native" 补丁——
+       Shared 现为条件多目标（net10.0-android），Android 下其引用的 Core 用 net10.0-android 版本（不含 Magick.NET），
+       Magick 原生库不再进入 Android 闭包，16KB 页面对齐（XA0141）问题随之消除。 -->
 
   <!-- 内嵌中文字体（Noto Sans SC，SIL OFL）：放 Fonts/ 而非 Assets/，避免 .NET Android 把
        Assets/** 自动标记为 AndroidAsset 与 AvaloniaResource 冲突 -->

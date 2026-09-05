@@ -12,7 +12,7 @@ namespace MediaOrganizer.Android.Platforms;
 /// </summary>
 public sealed class AndroidSafStorage : IFileStorage
 {
-    private const int ChunkSize = 8 * 1024 * 1024; // 8MB 分块（FR-A9.5 同语义）
+    private const int BufferSize = 1024 * 1024; // 池化读写缓冲 1MB（P2-10：原 8MB 一次性 new 进 LOH）
 
     private readonly ContentResolver _resolver;
     private readonly DocumentFile _root;
@@ -74,14 +74,21 @@ public sealed class AndroidSafStorage : IFileStorage
             await using var src = source.OpenRead();
             await using var dst = _resolver.OpenOutputStream(target.Uri)
                                   ?? throw new IOException($"无法打开输出流：{relativeTarget}");
-            var buffer = new byte[ChunkSize];
-            long copied = 0;
-            int read;
-            while ((read = await src.ReadAsync(buffer.AsMemory(), ct)) > 0)
+            var buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(BufferSize);
+            try
             {
-                await dst.WriteAsync(buffer.AsMemory(0, read), ct);
-                copied += read;
-                progress?.Report(copied);
+                long copied = 0;
+                int read;
+                while ((read = await src.ReadAsync(buffer.AsMemory(0, buffer.Length), ct)) > 0)
+                {
+                    await dst.WriteAsync(buffer.AsMemory(0, read), ct);
+                    copied += read;
+                    progress?.Report(copied);
+                }
+            }
+            finally
+            {
+                System.Buffers.ArrayPool<byte>.Shared.Return(buffer);
             }
         }, ct);
     }
@@ -96,23 +103,41 @@ public sealed class AndroidSafStorage : IFileStorage
     {
         var from = Resolve(relativeFrom, createDirs: false)
                    ?? throw new IOException($"临时文件不存在：{relativeFrom}");
-        var to = Resolve(relativeTo, createDirs: true)
-                 ?? throw new IOException($"无法创建目标：{relativeTo}");
+        var newName = relativeTo[(relativeTo.LastIndexOf('/') + 1)..];
         return Task.Run(() =>
         {
-            // SAF 无跨文档 rename：流复制 + 删除源（.mo-tmp → 最终名的等价语义）
+            // 同目录重命名优先 DocumentsContract.RenameDocument：元数据层操作，不重写文件数据。
+            // FileOperator 的 .mo-tmp 与最终名恒在同目录，满足其前提（评审 2.9：消除流复制导致的整文件双写）
+            try
+            {
+                var renamed = global::Android.Provider.DocumentsContract.RenameDocument(_resolver, from.Uri, newName);
+                if (renamed is not null) return;
+            }
+            catch (Exception ex)
+            {
+                // 提供方不支持/拒绝 rename（如跨存储卷）：回退流复制 + 删源，行为等价
+                System.Diagnostics.Debug.WriteLine($"[AndroidSafStorage] RenameDocument 不可用，回退流复制：{ex.Message}");
+            }
+
+            var to = Resolve(relativeTo, createDirs: true)
+                     ?? throw new IOException($"无法创建目标：{relativeTo}");
             using var src = _resolver.OpenInputStream(from.Uri)
                             ?? throw new IOException("无法读取临时文件");
             using var dst = _resolver.OpenOutputStream(to.Uri)
                             ?? throw new IOException("无法写入目标文件");
             src.CopyTo(dst);
             from.Delete();
-        });
+        }, ct);
     }
 
     public Task SetModifiedUtcAsync(string relativePath, DateTime utc, CancellationToken ct = default)
     {
         // SAF 不支持设置修改时间（DocumentsContract 无此 API）→ 静默跳过（FR-A5.5）
         return Task.CompletedTask;
+    }
+
+    /// <summary>SAF 存储无可释放资源（实现 IFileStorage 的 IDisposable 契约）。</summary>
+    public void Dispose()
+    {
     }
 }

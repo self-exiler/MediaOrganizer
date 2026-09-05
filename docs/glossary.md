@@ -21,8 +21,9 @@
 | 网络位置 | network target | 输出目录的扩展：SMB 或 WebDAV 连接配置（ADR-0004/0005；ADR-0007 起 SMB 双端均走 SMBLibrary，仅输出目标） |
 | 连接配置 | network profile | 一条网络位置记录：名称/协议/地址/用户名/密码（密码加密存储） |
 | 文件存储抽象 | IFileStorage | 执行层文件操作抽象：Local / Smb / WebDav / AndroidSaf 四种实现（ADR-0006 起 CopyFromAsync 源参数为 IMediaSource） |
-| 临时名传输 | .mo-tmp | 网络拷贝先写 `<name>.mo-tmp`，成功且大小校验一致后改名，杜绝半成品 |
-| 大小校验 | size verification | 网络传输完成的判定：目标大小 == 源大小；失败重试 3 次（指数退避） |
+| 临时名传输 | .mo-tmp | 网络拷贝先写 `<name>.mo-tmp`，成功且大小校验一致后改名，杜绝半成品。**传输或改名失败须删除该临时文件**，目标端不留垃圾（2026-08-30 补，见 ADR-0008） |
+| 大小校验 | size verification | 网络传输完成的判定：目标大小 == 源大小；失败重试 3 次（指数退避）。**目标取不到长度时须记为失败，不得跳过校验**（否则截断文件会被误判成功） |
+| 写入分片 | write chunking | SMB 单次 `WriteFile` 的载荷上限 = `min(服务器协商 MaxWriteSize, 1MB)`。SMBLibrary **不**自动分片，超限请求被服务器拒绝；分片由 `SmbFileStorage` 自行负责（2026-08-30 修正，原各处"8MB 分块"均为错误值） |
 | ~~FTP 支持~~ | — | 明确不支持（ADR-0004） |
 | ~~加权投票~~ | — | 旧称，见"加权链" |
 | ~~详细模式~~ | log_mode detailed | Python 版的 SQLite+MD5 指纹日志，C# 版已删除 |

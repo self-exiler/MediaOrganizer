@@ -2,7 +2,6 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-using Avalonia.Media;
 using Avalonia.Styling;
 using Button = Avalonia.Controls.Button;
 using MediaOrganizer.Android.Platforms;
@@ -54,6 +53,13 @@ public partial class App : Avalonia.Application
 
         var state = AppState.Load(configPath, patternsPath);
         var logger = new AppLogger();
+        // 配置加载异常不得静默（AppState 契约）：落日志提醒，损坏副本保留隔离路径供人工恢复
+        if (state.LoadError is not null)
+            logger.Warn($"配置文件加载异常，已回退默认值：{state.LoadError}");
+        if (state.QuarantinedConfigPath is not null)
+            logger.Warn($"损坏的配置文件已隔离至：{state.QuarantinedConfigPath}");
+        if (state.QuarantinedPatternsPath is not null)
+            logger.Warn($"损坏的模式文件已隔离至：{state.QuarantinedPatternsPath}");
 
         // 平台服务注入：Keystore 凭据 + 双模式本地存储（content: → SAF；真实路径 → System.IO）+ EXIF/选取/导出/确认。
         // 已获全局存储权限时把残留的 content: 树 URI 换算为真实路径（治愈旧配置/持久授权丢失），
@@ -79,28 +85,28 @@ public partial class App : Avalonia.Application
             state, logger, folderPicker,
             () =>
             {
-                // 源目录为真实路径时走 System.IO 快扫描；content: URI 回退 SAF 遍历
-                var source = state.Config.Paths.SourceDir;
-                IFileScanner scanner = SafPaths.IsSafIdentifier(source)
-                    ? new AndroidFileScanner(state.Config.Scan.SupportedFormats, state.Config.Scan.ScanAllFiles, activity.Resolver)
-                    : new FileScanner(state.Config.Scan.SupportedFormats, state.Config.Scan.ScanAllFiles);
-                return CoreFactory.CreateAnalyzer(state.Config, state.Patterns, scanner, new AndroidExifReader());
+                // 恒用 AndroidFileScanner：其内部已按 content:/真实路径 委托 FileScanner（快扫描或 SAF 遍历），
+                // 并自带「目录不存在」的友好报错（直接 new FileScanner 会静默返回空列表）
+                return CoreFactory.CreateAnalyzer(state.Config, state.Patterns,
+                    new AndroidFileScanner(state.Config.Scan.SupportedFormats, state.Config.Scan.ScanAllFiles, activity.Resolver),
+                    new AndroidExifReader());
             },
             dataDir);
 
         var failedFiles = new FailedFilesViewModel(state, logger, confirm, opener, new AndroidImageLoader());
         var settings = new SettingsViewModel(state);
         var report = new ReportViewModel(fileSaver);
-        var main = new MainViewModel(state, workbench, failedFiles, settings, report, wakeLock);
+        var main = new MainViewModel(workbench, failedFiles, settings, report, wakeLock);
 
         // 事件总线：分析完成 → 失败文件/报告刷新 + 状态栏摘要；规则变更 → 工作台重建链/目标刷新
         workbench.AnalysisCompleted += result =>
         {
             failedFiles.Refresh(result);
-            report.Set(result, state.Config.Paths.OutputDir);
+            report.Set(result, state.Config.Paths.OutputDir, workbench.LastReportText); // P1-1：复用 Session 报告，避免重复分组统计
             main.RefreshFailedBadge(result);
         };
         state.Changed += workbench.RebuildChain;
+        state.Changed += workbench.ReloadPathsFromConfig; // 恢复出厂等重置后回读路径，避免旧目录写回配置
         state.Changed += () => failedFiles.PendingDir = state.Config.Paths.PendingDir;
         state.Changed += workbench.ReloadOutputTargets;
         workbench.PropertyChanged += (_, e) =>
@@ -112,13 +118,10 @@ public partial class App : Avalonia.Application
         };
 
         Main = main;
-        MainWindowViewModel = main;
 
         if (ApplicationLifetime is ISingleViewApplicationLifetime singleView)
             singleView.MainView = new MainView { DataContext = main };
     }
-
-    public MainViewModel? MainWindowViewModel { get; private set; }
 }
 
 /// <summary>

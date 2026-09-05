@@ -24,14 +24,11 @@ public partial class ConfirmDialog : Window
     /// <summary>模态确认；返回用户是否确认。</summary>
     public static async Task<bool> AskAsync(Window owner, string title, string message)
     {
-        var dlg = new ConfirmDialog(title, message);
-        if (owner is not null)
+        var dlg = new ConfirmDialog(title, message)
         {
-            dlg.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-            return await dlg.ShowDialog<bool>(owner);
-        }
-        dlg.Show();
-        return true;
+            WindowStartupLocation = WindowStartupLocation.CenterOwner
+        };
+        return await dlg.ShowDialog<bool>(owner);
     }
 }
 

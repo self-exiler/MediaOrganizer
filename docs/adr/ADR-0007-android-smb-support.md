@@ -23,7 +23,8 @@ ADR-0005 §9 决策"Android 不支持 SMB"，其依据是"SMB = UNC 路径 = Win
   - 连接参数自 `profile.Address` 解析（`\\server\share[\path]` 或 `server/share`），凭据取 `profile.Username` / `CredentialCrypto.Decrypt(profile.Password)`；
   - NTLM 显式登录；首版**不支持 guest/匿名**；
   - 实现全部接口方法：Exists / CreateDirectory（逐级）/ GetLength / CopyFromAsync / Delete / Move（同 share 内 rename）/ SetModifiedUtc；
-  - `CopyFromAsync` 源参数按 ADR-0006 决策 3 为 IMediaSource：SAF→SMB 流式上传天然打通（ContentResolver 流 → SMB 写入流），沿用 8MB 分块、`.mo-tmp` 临时名、大小校验、3 次指数退避重试（FileOperator 层已有，无需重实现）。
+  - `CopyFromAsync` 源参数按 ADR-0006 决策 3 为 IMediaSource：SAF→SMB 流式上传天然打通（ContentResolver 流 → SMB 写入流），`mo-tmp` 临时名、大小校验、3 次指数退避重试（FileOperator 层已有，无需重实现）。
+    - **2026-08-30 勘误**：原文"沿用 8MB 分块"错误。SMBLibrary 的 `WriteFile` **不**按协商的 `MaxWriteSize` 自动分片，单次写入超过 `min(服务器 MaxWriteSize, SMB2Client.ClientMaxWriteSize = 1MB)` 会被服务器直接拒绝。已改为按协商上限分块，见 SRS FR-10.6。
 - 连接管理：每个 FileOperator 执行周期内复用单个 SMB 连接（连接 + 登录开销大）；并行度沿用网络目标默认 4， SMB 写入线程安全由实现内串行化保证。
 
 ### 2. 双端统一切换
@@ -41,6 +42,7 @@ ADR-0005 §9 决策"Android 不支持 SMB"，其依据是"SMB = UNC 路径 = Win
 
 - `SMBLibrary` 包引用**全平台保留**（不再加 Android 条件排除——ADR-0006 决策 8 中该项作废）；`System.Security.Cryptography.ProtectedData` 仍按 TFM 排除。
 - APK 体积影响：SMBLibrary 为纯托管小库（< 1MB），NFR-A3（≤ 40MB）不受影响。
+  - **2026-08-30 勘误**：该预估不成立。实测 APK 为 **50.0MB**（主因为自包含 .NET 运行时 + Magick.NET + Avalonia，非 SMBLibrary 单项）。NFR-A3 已按 ADR-0008 决策 5 放宽至 ≤60MB。
 
 ### 5. 配置与 UI
 

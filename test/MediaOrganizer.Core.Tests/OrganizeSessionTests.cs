@@ -174,9 +174,9 @@ public class AnalysisResultStoreRoundTripTests
             AnalysisResultStore.Save(path, result);
             var loaded = AnalysisResultStore.Load(path);
             Assert.NotNull(loaded);
-            Assert.Equal(1, loaded!.Parsed.Count);
-            Assert.Equal("a.jpg", loaded.Parsed[0].File.FileName);
-            Assert.Equal("FileName", loaded.Parsed[0].Source);
+            var parsed = Assert.Single(loaded!.Parsed);
+            Assert.Equal("a.jpg", parsed.File.FileName);
+            Assert.Equal("FileName", parsed.Source);
             Assert.Equal("b.tif", loaded.Unparsed[0].File.FileName);
         }
         finally

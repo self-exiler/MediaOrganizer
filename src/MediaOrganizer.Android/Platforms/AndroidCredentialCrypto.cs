@@ -26,16 +26,18 @@ public sealed class AndroidCredentialCrypto : ICredentialCrypto
             var cipher = Cipher.GetInstance(Transformation)!;
             cipher.Init(CipherMode.EncryptMode, GetOrCreateKey());
             var cipherText = cipher.DoFinal(Encoding.UTF8.GetBytes(plain));
-            var iv = cipher.GetIV()!;
+            var iv = cipher.GetIV();
+            if (cipherText is null || iv is null) return ""; // 加密失败宁可不存凭据，不明文落盘
             var buf = new byte[iv.Length + cipherText.Length];
             Buffer.BlockCopy(iv, 0, buf, 0, iv.Length);
             Buffer.BlockCopy(cipherText, 0, buf, iv.Length, cipherText.Length);
             return CredentialCrypto.KeystorePrefix + Convert.ToBase64String(buf);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Keystore 异常时宁可不保存凭据，也不能明文落盘（FR-A10.4）
-            return "";
+            // 加密失败抛异常由调用方提示（评审 2.7：不得静默存空密码导致“看似保存成功、连接时原因不明”）；
+            // 同时满足 FR-A10.4：宁可不保存凭据，也不明文落盘。
+            throw new System.Security.Cryptography.CryptographicException("Keystore 加密失败，无法安全存储凭据", ex);
         }
     }
 
@@ -51,7 +53,7 @@ public sealed class AndroidCredentialCrypto : ICredentialCrypto
             var spec = new GCMParameterSpec(128, buf, 0, GcmIvLength);
             var cipher = Cipher.GetInstance(Transformation)!;
             cipher.Init(CipherMode.DecryptMode, GetOrCreateKey(), spec);
-            var plain = cipher.DoFinal(buf, GcmIvLength, buf.Length - GcmIvLength);
+            var plain = cipher.DoFinal(buf, GcmIvLength, buf.Length - GcmIvLength) ?? [];
             return Encoding.UTF8.GetString(plain);
         }
         catch

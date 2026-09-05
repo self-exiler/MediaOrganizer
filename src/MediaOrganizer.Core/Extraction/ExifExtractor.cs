@@ -42,9 +42,16 @@ public sealed class ExifExtractor(bool enabled, double weight, IExifReader? exif
         }
     }
 
+    /// <summary>视频元数据内存闸门（P2-6 / ADR-0006 风险表）：SAF 等不可 seek 流会被整文件读入
+    /// MemoryStream，超过此阈值直接跳过视频 TagLib 提取，交给 FileName 提取器兜底，避免 OOM。</summary>
+    private const long MaxVideoBytesForTagRead = 200L * 1024 * 1024;
+
     private static DateTimeOffset? ExtractFromVideo(MediaFile file)
     {
         if (file.Source is null) return null;
+        // 长度不可知（-1）或超大文件：不确定能否安全读完，跳过 TagLib（P2-6）
+        var len = file.Source.Length;
+        if (len < 0 || len > MaxVideoBytesForTagRead) return null;
         try
         {
             var abstraction = new TagLibStreamFileAbstraction(file.FileName, file.Source.OpenRead);

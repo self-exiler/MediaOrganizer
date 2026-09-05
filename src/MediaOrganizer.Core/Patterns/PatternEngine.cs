@@ -23,6 +23,14 @@ public static class PatternEngine
             catch { return null; }
         });
 
+    /// <summary>不缓存、不编译的新正则（供魔术工具实时测试）。Compiled 会生成无法卸载的动态程序集，
+    /// 逐键入字符地编译会永久泄漏（P1-4），故仅用于固定 patterns.json 的预编译热路径。</summary>
+    private static Regex? NewRegex(string pattern)
+    {
+        try { return new Regex(pattern, RegexOptions.CultureInvariant); }
+        catch { return null; }
+    }
+
     /// <summary>快速预扫描：文件名中是否可能存在日期（年份或 ≥10 位连续数字时间戳），避免对每个文件跑全部正则。</summary>
     public static bool ContainsLikelyDate(string fileName, IReadOnlyList<PatternDefinition> patterns)
     {
@@ -48,11 +56,11 @@ public static class PatternEngine
         return null;
     }
 
-    public static DateTimeOffset? TryExtract(string fileName, PatternDefinition pattern)
+    public static DateTimeOffset? TryExtract(string fileName, PatternDefinition pattern, bool cache = true)
     {
         if (!pattern.Enabled || string.IsNullOrEmpty(pattern.Pattern)) return null;
 
-        var regex = GetCachedRegex(pattern.Pattern);
+        var regex = cache ? GetCachedRegex(pattern.Pattern) : NewRegex(pattern.Pattern);
         if (regex is null) return null;
 
         var m = regex.Match(fileName);

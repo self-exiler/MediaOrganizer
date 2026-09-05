@@ -25,10 +25,12 @@ public sealed class Analyzer
 
     public async Task<AnalysisResult> AnalyzeAsync(string sourceDir, IProgress<AnalysisProgress>? progress = null, CancellationToken ct = default)
     {
-        var files = _scanner.Scan(sourceDir);
+        // 扫描本身是同步阻塞（真实路径递归遍历 / SAF 每目录 Binder IPC），必须先移出 UI 线程（P0-2）
+        var files = await Task.Run(() => _scanner.Scan(sourceDir), ct);
         var parsed = new ConcurrentQueue<ParsedFile>();
         var unparsed = new ConcurrentQueue<UnparsedFile>();
         long processed = 0;
+        int parsedCount = 0, unparsedCount = 0;
         var total = files.Count;
 
         var options = new ParallelOptions { MaxDegreeOfParallelism = _maxDegreeOfParallelism, CancellationToken = ct };
@@ -37,13 +39,22 @@ public sealed class Analyzer
             token.ThrowIfCancellationRequested();
             var result = _chain.TryExtract(file);
             if (result is not null)
+            {
                 parsed.Enqueue(new ParsedFile(file, result.Date, result.Source));
+                Interlocked.Increment(ref parsedCount);
+            }
             else
+            {
                 unparsed.Enqueue(new UnparsedFile(file, "NoValidDate"));
+                Interlocked.Increment(ref unparsedCount);
+            }
 
             var done = Interlocked.Increment(ref processed);
             if (progress is not null && (done % _progressInterval == 0 || done == total))
-                progress.Report(new AnalysisProgress((int)done, total, parsed.Count, unparsed.Count));
+            {
+                // 7.4：进度读 Interlocked 计数器，避免反复读取 ConcurrentQueue.Count
+                progress.Report(new AnalysisProgress((int)done, total, parsedCount, unparsedCount));
+            }
             return ValueTask.CompletedTask;
         });
 

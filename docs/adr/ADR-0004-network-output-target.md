@@ -1,8 +1,8 @@
 # ADR-0004: 网络输出目标（SMB / WebDAV）
 
-- 状态：已接受（Accepted）
-- 日期：2026-08-09
-- 关联：ADR-0001（迁移）、ADR-0003（架构）、SRS FR-10/FR-11
+- 状态：**部分已被取代（Partially Superseded）** —— 决策 3 的 SMB 实现方式（UNC 路径）由 ADR-0007 取代，其余决策仍有效
+- 日期：2026-08-09（2026-08-30 由 ADR-0008 标注取代状态）
+- 关联：ADR-0001（迁移）、ADR-0003（架构）、ADR-0007（取代 SMB 实现）、ADR-0008（文档治理）、SRS FR-10/FR-11
 
 ## 背景
 
@@ -46,7 +46,7 @@ public interface IFileStorage
 ### 4. 传输语义
 
 - **网络目标仅提供 copy**，UI 上 move 选项在网络目标下禁用（防止误删源文件）
-- 分块流式拷贝（8MB 缓冲），逐文件+总体双进度上报
+- 分块流式拷贝（~~8MB 缓冲~~ → **2026-08-30 勘误**：单次写入载荷不得超过连接协商的写入上限，SMB 为 `min(服务器 MaxWriteSize, 1MB)`；SMBLibrary 的 `WriteFile` 不自动分片，8MB 缓冲在 SMB 上 100% 失败。已修，见 SRS FR-10.6），逐文件+总体双进度上报
 - 完成校验：目标文件大小 == 源大小；失败自动重试 3 次（指数退避），仍失败计入错误清单
 - 半成品处理：拷贝前写 `<name>.mo-tmp`，成功后改名
 - mtime 矫正：SMB 走 SetLastWriteTime；WebDAV 走 PROPPATCH getlastmodified（服务端不支持则静默跳过）

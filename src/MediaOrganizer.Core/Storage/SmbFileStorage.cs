@@ -11,11 +11,19 @@ namespace MediaOrganizer.Core.Storage;
 /// 限制：首版不支持 guest/匿名；SMBLibrary 不支持 SMB 3.1.1 强制加密的服务器（主流家用 NAS 默认不强制）。
 /// 连接在首次操作时懒建立并在存储生命周期内复用（连接 + NTLM 登录开销大）；
 /// SMBLibrary 客户端非线程安全，所有操作经 _gate 串行化（FileOperator 并行度 > 1 时退化为顺序写）。
-/// 8MB 分块流式、.mo-tmp 临时名 + 大小校验、重试退避由 FileOperator 层统一保证。
+/// 写入按 min(协商 MaxWriteSize, 1MB) 分块（SMBLibrary 的 WriteFile 不自动分片，超限必失败）；
+/// .mo-tmp 临时名 + 大小校验、重试退避由 FileOperator 层统一保证。
 /// </summary>
-public sealed class SmbFileStorage : IFileStorage, IDisposable
+public sealed class SmbFileStorage : IFileStorage
 {
-    private const int ChunkSize = 8 * 1024 * 1024;
+    /// <summary>
+    /// 单次 SMB2 Write 的硬上限。SMBLibrary 的 WriteFile 不会按协商值自动分片，
+    /// 超过 MaxWriteSize 的写请求会被服务器直接拒绝（STATUS_INVALID_PARAMETER）。
+    /// </summary>
+    private const int MaxWriteChunkSize = 1024 * 1024;
+
+    /// <summary>协商值不可用时的保守写入块大小（SMB 2.0.2 常见上限）。</summary>
+    private const int FallbackWriteChunkSize = 64 * 1024;
 
     private readonly string _server;
     private readonly string _share;
@@ -50,6 +58,22 @@ public sealed class SmbFileStorage : IFileStorage, IDisposable
 
     private string ToSmbPath(string relativePath)
         => string.Join('\\', new[] { _baseSmbPath, relativePath.Replace('/', '\\') }.Where(s => !string.IsNullOrEmpty(s)));
+
+    /// <summary>
+    /// 单次 SMB2 写入字节数：取「协商的 MaxWriteSize」与「1MB 硬上限」的较小值。
+    /// 连接建立后才有意义，EnsureConnected 之后调用。
+    /// </summary>
+    private int WriteChunkSize
+    {
+        get
+        {
+            var negotiated = (long)(_client?.MaxWriteSize ?? 0);
+            var limit = negotiated > 0
+                ? Math.Min(negotiated, MaxWriteChunkSize)
+                : FallbackWriteChunkSize;
+            return (int)Math.Clamp(limit, 4096, MaxWriteChunkSize);
+        }
+    }
 
     private void EnsureConnected()
     {
@@ -95,23 +119,27 @@ public sealed class SmbFileStorage : IFileStorage, IDisposable
         try { client?.Disconnect(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[SmbFileStorage] Client disconnect failed: {ex.Message}"); }
     }
 
-    /// <summary>串行执行一次 SMB 操作；传输层失效（连接被断/会话失效）时重建连接重试一次。</summary>
+    /// <summary>串行执行一次 SMB 操作；传输层失效（连接被断/会话失效）时置脏连接，让下次调用重建（P2-1）。</summary>
     private async Task<T> InvokeAsync<T>(Func<ISMBFileStore, T> action, CancellationToken ct)
     {
         await _gate.WaitAsync(ct);
         try
         {
             EnsureConnected();
-            try
-            {
-                return action(_store!);
-            }
-            catch (Exception ex) when (ex is ObjectDisposedException)
-            {
-                ResetConnection();
-                EnsureConnected();
-                return action(_store!);
-            }
+            return action(_store!);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            // P2-1：真实的连接断开（WiFi 漫游、手机休眠、NAS 重启）在 SMBLibrary 里表现为
+            // IOException/SocketException/NTStatus 错误码，而非 ObjectDisposedException。
+            // 只认 ObjectDisposedException 重连会让 FileOperator 的三次退避重试全部撞在死连接上。
+            // 此处对任何操作异常都置脏并重建，确保下一次操作走新连接；具体错误交由上层重试。
+            ResetConnection();
+            throw;
         }
         finally
         {
@@ -193,7 +221,10 @@ public sealed class SmbFileStorage : IFileStorage, IDisposable
                 throw SmbError("写入", status, path);
             try
             {
-                var buffer = new byte[ChunkSize];
+                // 关键：每次 WriteFile 的载荷不得超过协商的 MaxWriteSize，
+                // SMBLibrary 不会自动分片，超限请求会被服务器拒绝。
+                var writeChunk = WriteChunkSize;
+                var buffer = new byte[writeChunk];
                 using var src = source.OpenRead();
                 long offset = 0;
                 int read;
@@ -202,7 +233,10 @@ public sealed class SmbFileStorage : IFileStorage, IDisposable
                     ct.ThrowIfCancellationRequested();
                     var writeStatus = store.WriteFile(out var written, handle, offset, buffer[..read]);
                     if (writeStatus != NTStatus.STATUS_SUCCESS)
-                        throw SmbError("写入", writeStatus, path);
+                        throw SmbError("写入", writeStatus,
+                            $"{path}（偏移 {offset}，长度 {read}，单次写入上限 {writeChunk}）");
+                    if (written <= 0)
+                        throw new IOException($"SMB 写入未推进（{path}，偏移 {offset}，长度 {read}）：{writeStatus}");
                     offset += written;
                     progress?.Report(offset);
                 }
@@ -234,6 +268,10 @@ public sealed class SmbFileStorage : IFileStorage, IDisposable
         {
             var from = ToSmbPath(relativeFrom);
             var to = ToSmbPath(relativeTo);
+
+            // rename 不带 ReplaceIfExists：目标若有残留（上次中断/重试）会撞 OBJECT_NAME_COLLISION，先清掉
+            DeleteIfExists(store, to);
+
             var status = store.CreateFile(out var handle, out _, from,
                 AccessMask.DELETE | AccessMask.GENERIC_READ | AccessMask.SYNCHRONIZE,
                 FileAttributes.Normal, ShareAccess.None, CreateDisposition.FILE_OPEN,
@@ -242,11 +280,17 @@ public sealed class SmbFileStorage : IFileStorage, IDisposable
                 throw SmbError("重命名(打开)", status, from);
             try
             {
-                // 同一 share 内 rename（.mo-tmp → 最终名）
-                var rename = new FileRenameInformationType2 { FileName = to };
-                var renameStatus = store.SetFileInformation(handle, rename);
+                // 同一 share 内 rename（.mo-tmp → 最终名），info level 10
+                var renameStatus = store.SetFileInformation(handle,
+                    new FileRenameInformationType2 { ReplaceIfExists = true, FileName = to });
                 if (renameStatus != NTStatus.STATUS_SUCCESS)
-                    throw SmbError("重命名", renameStatus, $"{from} → {to}");
+                {
+                    // 部分老设备（SMB 2.0.2）不支持 info level 10，退回 level 3 的 FileRenameInformation
+                    var legacyStatus = store.SetFileInformation(handle,
+                        new FileRenameInformationType1 { ReplaceIfExists = true, FileName = to });
+                    if (legacyStatus != NTStatus.STATUS_SUCCESS)
+                        throw SmbError("重命名", renameStatus, $"{from} → {to}（旧式重命名：{legacyStatus}）");
+                }
             }
             finally
             {
@@ -254,6 +298,16 @@ public sealed class SmbFileStorage : IFileStorage, IDisposable
             }
             return null;
         }, ct);
+
+    /// <summary>存在则删除（FILE_DELETE_ON_CLOSE 语义）；不存在或删除失败均静默返回。</summary>
+    private static void DeleteIfExists(ISMBFileStore store, string path)
+    {
+        var status = store.CreateFile(out var handle, out _, path, AccessMask.DELETE | AccessMask.SYNCHRONIZE,
+            FileAttributes.Normal, ShareAccess.None, CreateDisposition.FILE_OPEN,
+            CreateOptions.FILE_DELETE_ON_CLOSE | CreateOptions.FILE_SYNCHRONOUS_IO_ALERT, null);
+        if (status == NTStatus.STATUS_SUCCESS)
+            store.CloseFile(handle);
+    }
 
     public Task SetModifiedUtcAsync(string relativePath, DateTime utc, CancellationToken ct = default)
         => InvokeAsync<object?>(store =>

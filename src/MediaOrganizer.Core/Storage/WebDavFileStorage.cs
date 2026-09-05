@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net;
 using MediaOrganizer.Core.Sources;
 using WebDAVClient;
@@ -10,12 +11,15 @@ public sealed class WebDavFileStorage : IFileStorage
 {
     private readonly IClient _client;
     private readonly string _basePath;
-    private readonly HashSet<string> _knownDirs = new();
+    // FileOperator 对网络目标以并行度 4 并发调用 CreateDirectoryAsync，
+    // 此处必须是并发安全集合 —— HashSet 并发 Add 会损坏内部桶结构。
+    private readonly ConcurrentDictionary<string, bool> _knownDirs = new();
 
     public WebDavFileStorage(string baseAddress, string username, string password)
     {
         _client = new Client(new NetworkCredential(username, password));
-        var uri = new Uri(baseAddress.EndsWith('/') ? baseAddress : baseAddress + "/");
+        // 防御性清洗：旧配置可能含不可见/全角污染字符（手机输入法），清洗后再解析（含合法性校验）
+        var uri = new Uri(WebDavAddress.Sanitize(baseAddress));
         _client.Server = uri.Host;
         _client.BasePath = uri.AbsolutePath.TrimEnd('/');
         if (!uri.IsDefaultPort) _client.Port = uri.Port;
@@ -57,7 +61,7 @@ public sealed class WebDavFileStorage : IFileStorage
         foreach (var seg in segments)
         {
             current = current.Length == 0 ? seg : current + "/" + seg;
-            if (_knownDirs.Contains(current)) continue;
+            if (_knownDirs.ContainsKey(current)) continue;
             if (!await ExistsAsync(current + "/", ct))
             {
                 try
@@ -70,7 +74,7 @@ public sealed class WebDavFileStorage : IFileStorage
                     // 并发/已存在
                 }
             }
-            _knownDirs.Add(current);
+            _knownDirs[current] = true;
         }
     }
 
@@ -111,4 +115,8 @@ public sealed class WebDavFileStorage : IFileStorage
         // WebDAV 的 DAV:getlastmodified 属保留命名空间，客户端库无法写入 → 静默跳过（ADR FR-10.8）
         return Task.CompletedTask;
     }
+
+    /// <summary>释放底层 HTTP 客户端（若库实现 IDisposable）。</summary>
+    public void Dispose()
+        => (_client as IDisposable)?.Dispose();
 }

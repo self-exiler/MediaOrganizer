@@ -1,3 +1,4 @@
+using MediaOrganizer.Core.Extraction;
 using MediaOrganizer.Core.Platforms;
 // 别名引入避免 using Android.Media（其 Stream 类型与 System.IO.Stream 冲突）
 using ExifInterface = Android.Media.ExifInterface;
@@ -27,7 +28,7 @@ public sealed class AndroidExifReader : IExifReader
             foreach (var tag in DateTags)
             {
                 var value = exif.GetAttribute(tag);
-                if (!string.IsNullOrEmpty(value) && TryParseExifString(value, out var dt))
+                if (!string.IsNullOrEmpty(value) && ExifDateParser.TryParse(value, out var dt))
                     return new DateTimeOffset(dt, TimeZoneInfo.Local.GetUtcOffset(dt));
             }
         }
@@ -36,16 +37,5 @@ public sealed class AndroidExifReader : IExifReader
             // 损坏文件/流读取失败：一律视为该提取器无结果
         }
         return null;
-    }
-
-    internal static bool TryParseExifString(string value, out DateTime dt)
-    {
-        value = value.Trim();
-        return DateTime.TryParseExact(value, "yyyy:MM:dd HH:mm:ss",
-                   System.Globalization.CultureInfo.InvariantCulture,
-                   System.Globalization.DateTimeStyles.None, out dt)
-               || DateTime.TryParseExact(value, "yyyy:MM:dd",
-                   System.Globalization.CultureInfo.InvariantCulture,
-                   System.Globalization.DateTimeStyles.None, out dt);
     }
 }

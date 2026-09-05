@@ -10,10 +10,17 @@ public class LocalFileStorage(string rootPath) : IFileStorage
         ? throw new ArgumentException("rootPath cannot be null or empty.", nameof(rootPath))
         : Path.GetFullPath(rootPath);
 
+    // Windows 文件系统大小写不敏感；Linux/Android 大小写敏感但不会因大小写产生路径逃逸，统一用 OrdinalIgnoreCase 更宽松安全。
+    private static readonly StringComparison PathComparison = StringComparison.OrdinalIgnoreCase;
+
     protected string Resolve(string relativePath)
     {
         var rel = relativePath.Replace('/', Path.DirectorySeparatorChar);
         var full = Path.GetFullPath(Path.Combine(Root, rel));
+        // 防路径穿越：相对路径含 ".." 段时不允许逃出根目录（文件名来自扫描结果，属不可信输入）
+        var rootPrefix = Path.TrimEndingDirectorySeparator(Root) + Path.DirectorySeparatorChar;
+        if (!full.StartsWith(rootPrefix, PathComparison) && !full.Equals(Root, PathComparison))
+            throw new IOException($"目标路径越出输出根目录：{relativePath}");
         return full;
     }
 
@@ -27,7 +34,11 @@ public class LocalFileStorage(string rootPath) : IFileStorage
     }
 
     public virtual Task<long> GetLengthAsync(string relativePath, CancellationToken ct = default)
-        => Task.FromResult(new FileInfo(Resolve(relativePath)).Length);
+    {
+        var info = new FileInfo(Resolve(relativePath));
+        // P3-7：与契约一致——文件不可用返回 -1，而非抛 FileNotFoundException
+        return Task.FromResult(info.Exists ? info.Length : -1L);
+    }
 
     public virtual async Task CopyFromAsync(IMediaSource source, string relativeTarget, IProgress<long>? progress = null, CancellationToken ct = default)
     {
@@ -75,5 +86,10 @@ public class LocalFileStorage(string rootPath) : IFileStorage
     {
         File.SetLastWriteTimeUtc(Resolve(relativePath), utc);
         return Task.CompletedTask;
+    }
+
+    /// <summary>本地存储无可释放资源（实现 IFileStorage 的 IDisposable 契约）。</summary>
+    public virtual void Dispose()
+    {
     }
 }

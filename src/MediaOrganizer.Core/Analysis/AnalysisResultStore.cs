@@ -3,7 +3,10 @@ using MediaOrganizer.Core.Models;
 
 namespace MediaOrganizer.Core.Analysis;
 
-/// <summary>分析结果的 JSON 持久化（analysis-result.json，结构见 SRS §5.2）。读写对称，支持跨会话恢复执行。</summary>
+/// <summary>分析结果的 JSON 持久化（analysis-result.json，结构见 SRS §5.2）。
+/// 注意：MediaFile.Source（源端流抽象）不参与序列化（P2-5），回读结果仅供展示/取文件名/喂给计划重建；
+/// 若真要跨会话执行，调用方须按 Path 重建 Source，否则 FileOperator 会报错。
+/// 故注释不再声称"支持跨会话恢复执行"。</summary>
 public static class AnalysisResultStore
 {
     private sealed class ResultFile

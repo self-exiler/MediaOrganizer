@@ -60,6 +60,58 @@ public class FileOperatorTests : IDisposable
         Assert.False(File.Exists(Path.Combine(_out, "2024", "01", "15", "a.jpg.mo-tmp")), "临时文件应已改名");
     }
 
+    /// <summary>在「临时名 → 最终名」这一步必定失败的存储，模拟 SMB 写入上限被拒等持久化失败。</summary>
+    private sealed class FailingMoveStorage : IFileStorage
+    {
+        private readonly IFileStorage _inner;
+        public List<string> Deleted { get; } = [];
+
+        public FailingMoveStorage(IFileStorage inner) => _inner = inner;
+
+        public Task<bool> ExistsAsync(string relativePath, CancellationToken ct = default)
+            => _inner.ExistsAsync(relativePath, ct);
+
+        public Task CreateDirectoryAsync(string relativePath, CancellationToken ct = default)
+            => _inner.CreateDirectoryAsync(relativePath, ct);
+
+        public Task<long> GetLengthAsync(string relativePath, CancellationToken ct = default)
+            => _inner.GetLengthAsync(relativePath, ct);
+
+        public Task CopyFromAsync(IMediaSource source, string relativeTarget, IProgress<long>? progress = null, CancellationToken ct = default)
+            => _inner.CopyFromAsync(source, relativeTarget, progress, ct);
+
+        public Task DeleteAsync(string relativePath, CancellationToken ct = default)
+        {
+            Deleted.Add(relativePath);
+            return _inner.DeleteAsync(relativePath, ct);
+        }
+
+        public Task MoveAsync(string relativeFrom, string relativeTo, CancellationToken ct = default)
+            => Task.FromException(new IOException("模拟 SMB 重命名失败"));
+
+        public Task SetModifiedUtcAsync(string relativePath, DateTime utc, CancellationToken ct = default)
+            => _inner.SetModifiedUtcAsync(relativePath, utc, ct);
+
+        public void Dispose() => _inner.Dispose();
+    }
+
+    [Fact]
+    public async Task 改名失败后不留moTmp残留()
+    {
+        WriteFile(Path.Combine(_src, "a.jpg"));
+        var plan = Plan(("a.jpg", new DateTimeOffset(2024, 1, 15, 0, 0, 0, TimeSpan.Zero)));
+        var storage = new FailingMoveStorage(new LocalFileStorage(_out));
+
+        var r = await new FileOperator(storage, FileOperation.Copy, ExistAction.Skip, fixMtime: false)
+            .ExecuteAsync(plan);
+
+        var temp = Path.Combine(_out, "2024", "01", "15", "a.jpg.mo-tmp");
+        Assert.Equal(1, r.Failed);
+        Assert.False(File.Exists(temp), "失败后不得在目标端留下 .mo-tmp 残留");
+        Assert.Contains(storage.Deleted, d => d.EndsWith(".mo-tmp"));
+        Assert.Contains("a.jpg", r.Errors[0]);
+    }
+
     [Fact]
     public async Task Move删除源文件()
     {

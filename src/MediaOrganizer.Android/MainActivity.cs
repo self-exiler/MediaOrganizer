@@ -5,7 +5,7 @@ using Android.OS;
 using Android.Runtime;
 using Avalonia;
 using Avalonia.Android;
-using MediaOrganizer.Android.Views;
+using MediaOrganizer.Android.Platforms;
 
 namespace MediaOrganizer.Android;
 
@@ -23,6 +23,13 @@ public static class RequestCodes
 [Application]
 public class Application(IntPtr javaReference, JniHandleOwnership transfer) : AvaloniaAndroidApplication<App>(javaReference, transfer)
 {
+    public override void OnCreate()
+    {
+        // 崩溃落盘钩子必须在一切初始化之前（Honor 机型加密 logcat，只能自建现场日志）
+        CrashLogger.Install(this);
+        base.OnCreate();
+    }
+
     protected override AppBuilder CustomizeAppBuilder(AppBuilder builder)
         => base.CustomizeAppBuilder(builder);
 }
@@ -85,13 +92,14 @@ public class MainActivity : AvaloniaMainActivity
             cb(resultCode == Result.Ok ? data : null);
     }
 
-    /// <summary>启动一次需要回调的 Activity（SAF 选取等），回调在 UI 线程触发；60s 超时防泄漏。</summary>
+    /// <summary>启动一次需要回调的 Activity（SAF 选取等），回调在 UI 线程触发。
+    /// 不设超时：Activity 结果回调可靠，等待时间长（用户翻目录）不应导致进程崩溃。</summary>
     public Task<Intent?> StartForResultAsync(Intent intent, int requestCode)
     {
         var tcs = new TaskCompletionSource<Intent?>(TaskCreationOptions.RunContinuationsAsynchronously);
         _pending[requestCode] = data => tcs.TrySetResult(data);
         RunOnUiThread(() => StartActivityForResult(intent, requestCode));
-        return tcs.Task.WaitAsync(TimeSpan.FromSeconds(60));
+        return tcs.Task;
     }
 
     /// <summary>返回键拦截：仅在抽屉打开时启用（Enabled 由 MainActivity 按 DrawerOpen 同步）。</summary>

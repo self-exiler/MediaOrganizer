@@ -11,93 +11,98 @@
         <SolidColorBrush x:Key="ErrorBrush" Color="#C42B1C"/>
     </UserControl.Resources>
 
-    <Grid RowDefinitions="*,Auto">
-        <ScrollViewer Grid.Row="0">
-            <StackPanel Margin="16" Spacing="12">
+    <Grid RowDefinitions="Auto,*,Auto">
 
-                <!-- 警示条（FR-A6.1） -->
-                <Border Background="#FFF9F5" BorderBrush="#F4D1BC" BorderThickness="1" CornerRadius="8"
-                        Padding="12,10">
-                    <TextBlock FontSize="13" Foreground="#8A3714" TextWrapping="Wrap"
-                               Text="⚠ 以下文件未能提取日期，已按文件名结构指纹聚类。可勾选后批量移动到待处理目录，或在桌面版用魔术工具添加规则后重新分析。"/>
-                </Border>
+        <!-- 顶部非滚动提示区：警示 / 移动进度 / 结果（P2-8：从整页滚动中拆出，列表区独立滚动以虚拟化） -->
+        <StackPanel Grid.Row="0" Margin="16,16,16,0" Spacing="12">
+            <!-- 警示条（FR-A6.1） -->
+            <Border Background="#FFF9F5" BorderBrush="#F4D1BC" BorderThickness="1" CornerRadius="8"
+                    Padding="12,10">
+                <TextBlock FontSize="13" Foreground="#8A3714" TextWrapping="Wrap"
+                           Text="⚠ 以下文件未能提取日期，已按文件名结构指纹聚类。可勾选后批量移动到待处理目录，或在桌面版用魔术工具添加规则后重新分析。"/>
+            </Border>
 
-                <!-- 移动进行中进度 -->
-                <Border Background="{StaticResource CardBrush}" CornerRadius="12" Padding="16"
-                        BorderBrush="{StaticResource DividerBrush}" BorderThickness="1" IsVisible="{Binding IsMoving}">
-                    <StackPanel Spacing="8">
-                        <ProgressBar MinHeight="6" Value="{Binding MoveProgress}" Maximum="100"/>
-                        <TextBlock Text="正在移动到待处理目录…" FontSize="12" Foreground="{StaticResource MutedBrush}"/>
-                    </StackPanel>
-                </Border>
+            <!-- 移动进行中进度 -->
+            <Border Background="{StaticResource CardBrush}" CornerRadius="12" Padding="16"
+                    BorderBrush="{StaticResource DividerBrush}" BorderThickness="1" IsVisible="{Binding IsMoving}">
+                <StackPanel Spacing="8">
+                    <ProgressBar MinHeight="6" Value="{Binding MoveProgress}" Maximum="100"/>
+                    <TextBlock Text="正在移动到待处理目录…" FontSize="12" Foreground="{StaticResource MutedBrush}"/>
+                </StackPanel>
+            </Border>
 
-                <!-- 移动结果提示 -->
-                <Border Background="#F2FBF2" BorderBrush="#BFE6BF" BorderThickness="1" CornerRadius="8"
-                        Padding="12,10" IsVisible="{Binding MoveHint, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                    <TextBlock Text="{Binding MoveHint}" FontSize="13" Foreground="#0B5A0B" TextWrapping="Wrap"/>
-                </Border>
+            <!-- 移动结果提示 -->
+            <Border Background="#F2FBF2" BorderBrush="#BFE6BF" BorderThickness="1" CornerRadius="8"
+                    Padding="12,10" IsVisible="{Binding MoveHint, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                <TextBlock Text="{Binding MoveHint}" FontSize="13" Foreground="#0B5A0B" TextWrapping="Wrap"/>
+            </Border>
+        </StackPanel>
 
-                <!-- 列表卡片（FR-A6.1/A6.2/A6.3）：勾选 + 名称/路径/大小 + 失败原因 chip + 展开详情 -->
-                <Border Background="{StaticResource CardBrush}" CornerRadius="12" Padding="4,8,16,8"
-                        BorderBrush="{StaticResource DividerBrush}" BorderThickness="1"
-                        BoxShadow="0 1 3 0 #14000000">
-                    <ItemsControl ItemsSource="{Binding Items}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="vm:FailedItem">
-                                <StackPanel>
-                                    <Grid ColumnDefinitions="Auto,8,*" MinHeight="56">
-                                        <CheckBox Grid.Column="0" IsChecked="{Binding IsChecked}" VerticalAlignment="Center"/>
-                                        <ToggleButton Grid.Column="2" x:Name="Row" Background="Transparent"
-                                                      BorderThickness="0" HorizontalContentAlignment="Stretch"
-                                                      HorizontalAlignment="Stretch" Padding="0,8">
-                                            <Grid ColumnDefinitions="*,Auto" MinHeight="48">
-                                                <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="Medium"
-                                                               Foreground="{StaticResource TextBrush}" TextTrimming="CharacterEllipsis"/>
-                                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                                        <TextBlock Text="{Binding Path}" FontSize="11"
-                                                                   Foreground="{StaticResource MutedBrush}"
-                                                                   TextTrimming="CharacterEllipsis" MaxWidth="220"/>
-                                                        <Border Background="#FDECEB" CornerRadius="10" Padding="8,2" VerticalAlignment="Center">
-                                                            <TextBlock Text="{Binding Reason}" FontSize="10" Foreground="#A4262C"/>
-                                                        </Border>
-                                                    </StackPanel>
-                                                </StackPanel>
-                                                <TextBlock Grid.Column="1" Text="›" FontSize="18"
-                                                           Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
-                                            </Grid>
-                                        </ToggleButton>
-                                    </Grid>
-
-                                    <!-- 展开详情（FR-A6.3）：完整路径 / 大小 / 原因 / 系统打开 -->
-                                    <Border IsVisible="{Binding #Row.IsChecked}" Margin="32,0,0,12"
-                                            Background="#FAFAFA" CornerRadius="8" Padding="12,8">
-                                        <StackPanel Spacing="4">
-                                            <TextBlock FontSize="12" Foreground="#616161" TextWrapping="Wrap">
-                                                <Run Text="完整路径："/><Run Text="{Binding Path}"/>
-                                            </TextBlock>
-                                            <TextBlock FontSize="12" Foreground="#616161">
-                                                <Run Text="大小："/><Run Text="{Binding Size}"/><Run Text=" 字节"/>
-                                            </TextBlock>
-                                            <TextBlock FontSize="12" Foreground="#616161" TextWrapping="Wrap">
-                                                <Run Text="指纹："/><Run Text="{Binding Fingerprint}"/>
-                                            </TextBlock>
-                                            <Button Content="↗ 用系统应用打开" FontSize="12" MinHeight="36" Margin="0,4,0,0"
-                                                    HorizontalAlignment="Left" Click="OnOpenItem"/>
+        <!-- 列表卡片（FR-A6.1/A6.2/A6.3）：勾选 + 名称/路径/大小 + 失败原因 chip + 展开详情。
+             P2-8：原 ScrollViewer 套 ItemsControl 不虚拟化，上千失败文件一次性实例化上千模板；
+             改独立滚动的虚拟化 ListBox，失败条目多时流畅。 -->
+        <Border Grid.Row="1" Margin="16,12,16,12"
+                Background="{StaticResource CardBrush}" CornerRadius="12" Padding="4,8,16,8"
+                BorderBrush="{StaticResource DividerBrush}" BorderThickness="1"
+                BoxShadow="0 1 3 0 #14000000">
+            <ListBox ItemsSource="{Binding Items}" SelectionMode="None"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     Background="Transparent">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:FailedItem">
+                        <StackPanel>
+                            <Grid ColumnDefinitions="Auto,8,*" MinHeight="56">
+                                <CheckBox Grid.Column="0" IsChecked="{Binding IsChecked}" VerticalAlignment="Center"/>
+                                <ToggleButton Grid.Column="2" x:Name="Row" Background="Transparent"
+                                              BorderThickness="0" HorizontalContentAlignment="Stretch"
+                                              HorizontalAlignment="Stretch" Padding="0,8">
+                                    <Grid ColumnDefinitions="*,Auto" MinHeight="48">
+                                        <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="Medium"
+                                                       Foreground="{StaticResource TextBrush}" TextTrimming="CharacterEllipsis"/>
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <TextBlock Text="{Binding Path}" FontSize="11"
+                                                           Foreground="{StaticResource MutedBrush}"
+                                                           TextTrimming="CharacterEllipsis" MaxWidth="220"/>
+                                                <Border Background="#FDECEB" CornerRadius="10" Padding="8,2" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Reason}" FontSize="10" Foreground="#A4262C"/>
+                                                </Border>
+                                            </StackPanel>
                                         </StackPanel>
-                                    </Border>
+                                        <TextBlock Grid.Column="1" Text="›" FontSize="18"
+                                                   Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </ToggleButton>
+                            </Grid>
 
-                                    <Separator Background="#F0F0F0" Margin="0,4"/>
+                            <!-- 展开详情（FR-A6.3）：完整路径 / 大小 / 原因 / 系统打开 -->
+                            <Border IsVisible="{Binding #Row.IsChecked}" Margin="32,0,0,12"
+                                    Background="#FAFAFA" CornerRadius="8" Padding="12,8">
+                                <StackPanel Spacing="4">
+                                    <TextBlock FontSize="12" Foreground="#616161" TextWrapping="Wrap">
+                                        <Run Text="完整路径："/><Run Text="{Binding Path}"/>
+                                    </TextBlock>
+                                    <TextBlock FontSize="12" Foreground="#616161">
+                                        <Run Text="大小："/><Run Text="{Binding Size}"/><Run Text=" 字节"/>
+                                    </TextBlock>
+                                    <TextBlock FontSize="12" Foreground="#616161" TextWrapping="Wrap">
+                                        <Run Text="指纹："/><Run Text="{Binding Fingerprint}"/>
+                                    </TextBlock>
+                                    <Button Content="↗ 用系统应用打开" FontSize="12" MinHeight="36" Margin="0,4,0,0"
+                                            HorizontalAlignment="Left" Click="OnOpenItem"/>
                                 </StackPanel>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </Border>
-            </StackPanel>
-        </ScrollViewer>
+                            </Border>
+
+                            <Separator Background="#F0F0F0" Margin="0,4"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Border>
 
         <!-- 底部批量操作栏（FR-A6.5） -->
-        <Border Grid.Row="1" Background="{StaticResource CardBrush}" Padding="16,12"
+        <Border Grid.Row="2"
+                Background="{StaticResource CardBrush}" Padding="16,12"
                 BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,1,0,0">
             <Grid ColumnDefinitions="*,8,*">
                 <Button Grid.Column="0" Content="全选" Command="{Binding ToggleSelectAllCommand}"
@@ -109,6 +114,17 @@
     </Grid>
 
     <UserControl.Styles>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Focusable" Value="False"/>
+        </Style>
+        <Style Selector="ListBoxItem:selected">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ListBoxItem:pointerover">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
         <Style Selector="Button.primary">
             <Setter Property="Background" Value="#0067C0"/>
             <Setter Property="Foreground" Value="White"/>

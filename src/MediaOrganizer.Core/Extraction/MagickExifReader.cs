@@ -27,7 +27,7 @@ public sealed class MagickExifReader : IExifReader
             foreach (var tag in DateTags)
             {
                 var value = profile.GetValue(tag);
-                if (value?.Value is string s && TryParseExifString(s, out var dt))
+                if (value?.Value is string s && ExifDateParser.TryParse(s, out var dt))
                     return new DateTimeOffset(dt, TimeZoneInfo.Local.GetUtcOffset(dt));
             }
 
@@ -35,7 +35,7 @@ public sealed class MagickExifReader : IExifReader
             foreach (var tag in DateTags)
             {
                 var attr = image.GetAttribute($"exif:{tag}");
-                if (attr is not null && TryParseExifString(attr, out var dt2))
+                if (attr is not null && ExifDateParser.TryParse(attr, out var dt2))
                     return new DateTimeOffset(dt2, TimeZoneInfo.Local.GetUtcOffset(dt2));
             }
         }
@@ -45,19 +45,6 @@ public sealed class MagickExifReader : IExifReader
             System.Diagnostics.Debug.WriteLine($"[MagickExifReader] EXIF read failed: {ex.Message}");
         }
         return null;
-    }
-
-    internal static bool TryParseExifString(string value, out DateTime dt)
-    {
-        // EXIF 日期格式 "yyyy:MM:dd HH:mm:ss"
-        if (DateTime.TryParseExact(value.Trim(), "yyyy:MM:dd HH:mm:ss",
-                System.Globalization.CultureInfo.InvariantCulture,
-                System.Globalization.DateTimeStyles.None, out dt))
-            return true;
-        // 兼容 "yyyy:MM:dd"
-        return DateTime.TryParseExact(value.Trim(), "yyyy:MM:dd",
-            System.Globalization.CultureInfo.InvariantCulture,
-            System.Globalization.DateTimeStyles.None, out dt);
     }
 }
 #endif

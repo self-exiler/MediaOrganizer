@@ -15,10 +15,11 @@ namespace MediaOrganizer.Shared.ViewModels;
 /// <summary>失败文件列表项。IsChecked 为批量移动的目标选择（Android 触屏勾选；桌面单选不受影响）。</summary>
 public partial class FailedItem : ObservableObject
 {
-    public FailedItem(UnparsedFile file)
+    public FailedItem(UnparsedFile file, string? fingerprint = null)
     {
         File = file;
-        Fingerprint = StructureFingerprint.Compute(file.File.FileName);
+        // Refresh 排序时已算过一次指纹，此处复用避免重复计算（7.2）
+        Fingerprint = fingerprint ?? StructureFingerprint.Compute(file.File.FileName);
     }
 
     public UnparsedFile File { get; }
@@ -41,7 +42,6 @@ public partial class FailedFilesViewModel : ViewModelBase
 {
     private readonly AppConfig _config;
     private readonly AppLogger _logger;
-    private readonly AppState _state;
     private readonly IConfirmDialog _confirm;
     private readonly ISystemFileOpener _opener;
     private readonly IImageLoader _imageLoader;
@@ -78,7 +78,6 @@ public partial class FailedFilesViewModel : ViewModelBase
         ISystemFileOpener opener,
         IImageLoader imageLoader)
     {
-        _state = state;
         _config = state.Config;
         _logger = logger;
         _confirm = confirm;
@@ -90,31 +89,53 @@ public partial class FailedFilesViewModel : ViewModelBase
     public void Refresh(AnalysisResult? result)
     {
         Items.Clear();
-        Preview = null;
+        ReplacePreview(null);
         if (result is null) return;
-        // FR-A6.1：按结构指纹聚类排序（指纹一致的相邻）
+        // FR-A6.1：按结构指纹聚类排序（指纹一致的相邻）。排序与 FailedItem 各算一次，显式预计算复用（7.2）
         foreach (var u in result.Unparsed
-                     .OrderBy(f => StructureFingerprint.Compute(f.File.FileName))
-                     .ThenBy(f => f.File.FileName))
-            Items.Add(new FailedItem(u));
+                     .Select(u => (Item: u, Fp: StructureFingerprint.Compute(u.File.FileName)))
+                     .OrderBy(x => x.Fp)
+                     .ThenBy(x => x.Item.File.FileName))
+            Items.Add(new FailedItem(u.Item, u.Fp));
         _logger.Info($"失败文件列表已刷新：{Items.Count} 个（按指纹聚类排序）");
     }
 
     partial void OnSelectedChanged(FailedItem? value)
     {
-        Preview = null;
+        ReplacePreview(null);
         PreviewInfo = value is null ? "选择文件查看预览" : value.Path;
         if (value is null) return;
         _ = LoadPreviewAsync(value);
     }
 
+    /// <summary>替换预览位图并释放旧实例（评审 2.14：Bitmap 是 IDisposable，不释放则原生位图持续增长）。</summary>
+    private void ReplacePreview(Bitmap? next)
+    {
+        var old = Preview;
+        Preview = next;
+        old?.Dispose();
+    }
+
     private async Task LoadPreviewAsync(FailedItem item)
     {
-        var bmp = await Task.Run(() => _imageLoader.LoadThumbnail(item.Path, _config.General.PreviewSize));
+        Bitmap? bmp = null;
+        try
+        {
+            bmp = await Task.Run(() => _imageLoader.LoadThumbnail(item.Path, _config.General.PreviewSize));
+        }
+        catch (Exception ex)
+        {
+            // fire-and-forget 任务里的异常不会冒泡到调用方，必须自行吞掉并记录，否则成为未观察异常
+            _logger.Warn($"预览加载失败 {item.Name}：{ex.Message}");
+        }
         if (ReferenceEquals(Selected, item) && bmp is not null)
         {
-            Preview = bmp;
+            ReplacePreview(bmp);
             PreviewInfo = $"{item.Name}\n{item.Size:N0} 字节";
+        }
+        else
+        {
+            bmp?.Dispose(); // 选中项已切走：加载结果不再使用，直接释放
         }
     }
 
@@ -179,11 +200,13 @@ public partial class FailedFilesViewModel : ViewModelBase
         {
             var target = StorageFactory.CreateLocalStorage(targetDir);
             var progress = new Progress<double>(p => MoveProgress = p * 100);
-            var result = await new PendingFileMover()
-                .MoveAsync(items.Select(i => i.File.File).ToArray(), target, progress);
+            var files = items.Select(i => i.File.File).ToArray();
+            // 批量移动内含大量同步文件 IO（Exists/Length/Delete/CreateDirectory），移出 UI 线程（P1-1）
+            var result = await Task.Run(() => new PendingFileMover().MoveAsync(files, target, progress));
 
-            // 从列表移除已移动的条目
-            foreach (var item in items.Where(i => result.MovedNames.Contains(i.Name)))
+            // 从列表移除已移动的条目（HashSet 避免 List.Contains 的 O(n²)）
+            var movedSet = result.MovedNames.ToHashSet();
+            foreach (var item in items.Where(i => movedSet.Contains(i.Name)))
                 Items.Remove(item);
 
             MoveHint = $"移动完成：成功 {result.Moved}，失败 {result.Failed}";

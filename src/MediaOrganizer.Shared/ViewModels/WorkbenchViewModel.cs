@@ -18,16 +18,18 @@ namespace MediaOrganizer.Shared.ViewModels;
 public partial class WorkbenchViewModel : ViewModelBase
 {
     private readonly AppConfig _config;
-    private readonly List<PatternDefinition> _patterns;
     private readonly AppLogger _logger;
     private readonly AppState _state;
     private readonly OrganizeSession _session;
     private readonly IFolderPicker _folderPicker;
-    private readonly Func<Analyzer> _analyzerFactory;
-    private readonly string _dataDir;
     private CancellationTokenSource? _cts;
+    // 从配置回读路径期间挂落盘，避免 ReloadPathsFromConfig 把回读值又写一遍（并触发多余的磁盘写）
+    private bool _suspendPersist;
 
     public event Action<AnalysisResult>? AnalysisCompleted;
+
+    /// <summary>最近一次分析生成的报告文本（透传 Session 缓存，P1-1 报告页复用）。</summary>
+    public string? LastReportText => _session.LastReportText;
 
     public string[] OperationOptions { get; } = ["复制 copy（保留原文件）", "移动 move"];
     public string[] ExistActionOptions { get; } = ["跳过 skip", "覆盖 overwrite", "重命名 rename（_1、_2…）"];
@@ -110,11 +112,8 @@ public partial class WorkbenchViewModel : ViewModelBase
     {
         _state = state;
         _config = state.Config;
-        _patterns = state.Patterns;
         _logger = logger;
         _folderPicker = folderPicker;
-        _analyzerFactory = analyzerFactory;
-        _dataDir = dataDir;
 
         _sourceDir = _config.Paths.SourceDir;
         _outputDir = _config.Paths.OutputDir;
@@ -126,8 +125,8 @@ public partial class WorkbenchViewModel : ViewModelBase
 
         _session = new OrganizeSession(
             _config,
-            _analyzerFactory,
-            _dataDir,
+            analyzerFactory,
+            dataDir,
             _config.Execute.ClassificationLevel,
             _config.Execute.Operation,
             _config.Execute.ExistAction,
@@ -219,16 +218,32 @@ public partial class WorkbenchViewModel : ViewModelBase
 
     // ---- 目录变更实时保存 ----
 
+    /// <summary>从配置回读路径（设置页恢复出厂等全局重置后调用），否则 VM 持有的旧目录会在下次分析时写回配置，使重置失效。</summary>
+    public void ReloadPathsFromConfig()
+    {
+        _suspendPersist = true;
+        try
+        {
+            SourceDir = _config.Paths.SourceDir;
+            OutputDir = _config.Paths.OutputDir;
+            PendingDir = _config.Paths.PendingDir;
+        }
+        finally
+        {
+            _suspendPersist = false;
+        }
+    }
+
     partial void OnSourceDirChanged(string value)
     {
         _config.Paths.SourceDir = value;
-        _state.SaveConfig(notifyChanged: false);
+        if (!_suspendPersist) _state.SaveConfig(notifyChanged: false);
     }
 
     partial void OnOutputDirChanged(string value)
     {
         _config.Paths.OutputDir = value;
-        _state.SaveConfig(notifyChanged: false);
+        if (!_suspendPersist) _state.SaveConfig(notifyChanged: false);
         // 计划摘要里的目标根目录是分析时的快照，改目录后需同步刷新，否则 PlanText 仍显示旧目标（或空）
         if (_session.LastResult is { } result)
             _session.SetResult(result, DisplayTarget());
@@ -237,7 +252,7 @@ public partial class WorkbenchViewModel : ViewModelBase
     partial void OnPendingDirChanged(string value)
     {
         _config.Paths.PendingDir = value;
-        _state.SaveConfig(notifyChanged: false);
+        if (!_suspendPersist) _state.SaveConfig(notifyChanged: false);
     }
 
     [RelayCommand]

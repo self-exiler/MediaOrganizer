@@ -26,8 +26,47 @@ public sealed class AppState
     /// <summary>任意配置/模式变更后触发（保存或即时生效均通知，工作台据此重建提取链）。</summary>
     public event Action? Changed;
 
+    /// <summary>加载时配置/模式文件的解析错误；正常加载为 null。UI 须据此提示用户，不得静默回退出厂设置。</summary>
+    public string? LoadError { get; private init; }
+
+    /// <summary>损坏配置文件被隔离后的副本路径（保留供人工恢复）；未发生隔离时为 null。</summary>
+    public string? QuarantinedConfigPath { get; private init; }
+
+    /// <summary>损坏 patterns.json 被隔离后的副本路径；未发生隔离时为 null（P2-4：与配置同规则，免被 SavePatterns 覆盖而永久丢失）。</summary>
+    public string? QuarantinedPatternsPath { get; private init; }
+
     public static AppState Load(string configPath, string patternsPath)
-        => new(JsonFileStore.Load<AppConfig>(configPath) ?? new AppConfig(), PatternsStore.Load(patternsPath), configPath, patternsPath);
+    {
+        string? configError = null;
+        var config = JsonFileStore.Load<AppConfig>(configPath, e => configError = e);
+
+        string? quarantined = null;
+        if (config is null && configError is not null && File.Exists(configPath))
+            quarantined = JsonFileStore.QuarantineCorrupt(configPath);
+
+        string? patternsError = null;
+        var patterns = PatternsStore.Load(patternsPath, e => patternsError = e);
+
+        // 与 config 对齐：解析失败且文件确实存在 → 隔离，避免随后某次 SavePatterns 用内置模式覆盖损坏文件、用户自定义模式永久丢失。
+        string? quarantinedPatterns = null;
+        if (patternsError is not null && File.Exists(patternsPath))
+            quarantinedPatterns = JsonFileStore.QuarantineCorrupt(patternsPath);
+
+        var error = (configError, patternsError) switch
+        {
+            (null, null) => null,
+            (not null, null) => configError,
+            (null, not null) => patternsError,
+            _ => $"{configError}；{patternsError}"
+        };
+
+        return new AppState(config ?? new AppConfig(), patterns, configPath, patternsPath)
+        {
+            LoadError = error,
+            QuarantinedConfigPath = quarantined,
+            QuarantinedPatternsPath = quarantinedPatterns
+        };
+    }
 
     /// <summary>
     /// 保存配置。默认触发 Changed（配置变更 → 工作台重建提取链并失效旧计划）；

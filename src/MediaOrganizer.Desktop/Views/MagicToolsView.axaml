@@ -3,11 +3,10 @@
              xmlns:vm="using:MediaOrganizer.Desktop.ViewModels"
              xmlns:cv="using:Avalonia.Data.Converters"
              x:Class="MediaOrganizer.Desktop.Views.MagicToolsView"
-             x:Name="Root"
              x:DataType="vm:MagicToolsViewModel">
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-        <Grid x:Name="LayoutRoot" Margin="24,20" RowDefinitions="Auto,Auto,*">
+        <Grid Margin="24,20" RowDefinitions="Auto,Auto,*">
 
             <!-- 页头 -->
             <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,14">

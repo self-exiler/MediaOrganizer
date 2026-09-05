@@ -30,10 +30,15 @@ public sealed class PatternsFile
 /// <summary>patterns.json 的读写。</summary>
 public static class PatternsStore
 {
-    public static List<PatternDefinition> Load(string path)
-        => JsonFileStore.Load<PatternsFile>(path) is { Patterns.Count: > 0 } file
-            ? file.Patterns
-            : GetBuiltinPatterns();
+    /// <summary>
+    /// 文件不存在或解析失败 → 内置模式；文件存在且解析成功则尊重内容（含用户清空全部模式的空列表）。
+    /// </summary>
+    public static List<PatternDefinition> Load(string path, Action<string>? onError = null)
+    {
+        if (!File.Exists(path)) return GetBuiltinPatterns();
+        var file = JsonFileStore.Load<PatternsFile>(path, onError);
+        return file is null ? GetBuiltinPatterns() : file.Patterns;
+    }
 
     public static void Save(string path, IReadOnlyList<PatternDefinition> patterns)
         => JsonFileStore.Save(path, new PatternsFile { Patterns = patterns.ToList() });
@@ -48,7 +53,8 @@ public static class PatternsStore
         },
         new()
         {
-            Name = "小红书", Pattern = @"(\d{4})(\d{2})(\d{2})[-_](\d{6})",
+            // 时分秒必须拆为 3 个 2 位捕获组：合成单个 6 位组会被当 hour 解析（143022）而抛异常
+            Name = "小红书", Pattern = @"(\d{4})(\d{2})(\d{2})[-_](\d{2})(\d{2})(\d{2})",
             GroupMapping = new() { ["year"] = 1, ["month"] = 2, ["day"] = 3, ["hour"] = 4, ["minute"] = 5, ["second"] = 6 },
             Weight = 0.9, Builtin = true
         },
@@ -84,7 +90,8 @@ public static class PatternsStore
         },
         new()
         {
-            Name = "OPPO 相机", Pattern = @"IMG_(\d{4})(\d{2})(\d{2})_(\d{6})",
+            // 同上：时分秒拆为 3 个 2 位捕获组
+            Name = "OPPO 相机", Pattern = @"IMG_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})",
             GroupMapping = new() { ["year"] = 1, ["month"] = 2, ["day"] = 3, ["hour"] = 4, ["minute"] = 5, ["second"] = 6 },
             Weight = 0.8, Builtin = true
         },
