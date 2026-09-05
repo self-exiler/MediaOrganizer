@@ -231,7 +231,7 @@
                         </ComboBox>
                     </StackPanel>
                     <StackPanel Spacing="6">
-                        <TextBlock Text="执行并行度" FontSize="12" Foreground="#616161"/>
+                        <TextBlock Text="执行并行度（SMB 目标单连接串行，此设置无效）" FontSize="12" Foreground="#616161"/>
                         <ComboBox x:Name="ExecParallelCombo" SelectionChanged="OnExecParallelChanged">
                             <ComboBoxItem Content="自动（本地 2 / 网络 4）"/>
                             <ComboBoxItem Content="1"/>

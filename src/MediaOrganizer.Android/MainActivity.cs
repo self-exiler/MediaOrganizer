@@ -9,11 +9,12 @@ using MediaOrganizer.Android.Platforms;
 
 namespace MediaOrganizer.Android;
 
-/// <summary>请求码常量：SAF 选取 / 另存为。</summary>
+/// <summary>请求码常量：SAF 选取 / 另存为 / 通知权限。</summary>
 public static class RequestCodes
 {
     public const int FolderPick = 0x1001;
     public const int CreateDocument = 0x1002;
+    public const int PostNotifications = 0x1003;
 }
 
 /// <summary>
@@ -28,6 +29,8 @@ public class Application(IntPtr javaReference, JniHandleOwnership transfer) : Av
         // 崩溃落盘钩子必须在一切初始化之前（Honor 机型加密 logcat，只能自建现场日志）
         CrashLogger.Install(this);
         base.OnCreate();
+        // 通知渠道：前台服务（dataSync）进度/完成通知的载体，App 启动即创建
+        NotificationChannels.EnsureCreated(this);
     }
 
     protected override AppBuilder CustomizeAppBuilder(AppBuilder builder)
@@ -75,6 +78,11 @@ public class MainActivity : AvaloniaMainActivity
                     SyncBackCallback(main.DrawerOpen);
             };
         }
+
+        // Android 13+ 通知运行时权限（SupportedOS=33 全量命中）：前台服务进度通知的可见性依赖它，
+        // 未授权不影响任务运行本身（通知静默丢弃，App 内进度仍可见），故启动时静默申请一次。
+        if (CheckSelfPermission(global::Android.Manifest.Permission.PostNotifications) != Permission.Granted)
+            RequestPermissions([global::Android.Manifest.Permission.PostNotifications], RequestCodes.PostNotifications);
     }
 
     private void SyncBackCallback(bool drawerOpen) => _backCallback!.Enabled = drawerOpen;

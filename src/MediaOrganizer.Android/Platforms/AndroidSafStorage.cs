@@ -65,11 +65,11 @@ public sealed class AndroidSafStorage : IFileStorage
     public Task<long> GetLengthAsync(string relativePath, CancellationToken ct = default)
         => Task.FromResult(Resolve(relativePath, createDirs: false)?.Length() ?? -1L);
 
-    public Task CopyFromAsync(IMediaSource source, string relativeTarget, IProgress<long>? progress = null, CancellationToken ct = default)
+    public async Task<long> CopyFromAsync(IMediaSource source, string relativeTarget, IProgress<long>? progress = null, CancellationToken ct = default)
     {
         var target = Resolve(relativeTarget, createDirs: true)
                      ?? throw new IOException($"无法创建目标：{relativeTarget}");
-        return Task.Run(async () =>
+        return await Task.Run(async () =>
         {
             await using var src = source.OpenRead();
             await using var dst = _resolver.OpenOutputStream(target.Uri)
@@ -85,6 +85,7 @@ public sealed class AndroidSafStorage : IFileStorage
                     copied += read;
                     progress?.Report(copied);
                 }
+                return copied;
             }
             finally
             {

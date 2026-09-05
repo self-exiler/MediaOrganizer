@@ -8,6 +8,7 @@ using MediaOrganizer.Android.Platforms;
 using MediaOrganizer.Android.ViewModels;
 using MediaOrganizer.Android.Views;
 using MediaOrganizer.Core;
+using MediaOrganizer.Core.Diagnostics;
 using MediaOrganizer.Core.Logging;
 using MediaOrganizer.Core.Scanning;
 using MediaOrganizer.Core.Security;
@@ -65,6 +66,8 @@ public partial class App : Avalonia.Application
         // 已获全局存储权限时把残留的 content: 树 URI 换算为真实路径（治愈旧配置/持久授权丢失），
         // 输出与待处理目录同样受益（PendingFileMover 经 CreateLocalStorage 创建）。
         CredentialCrypto.Current = new AndroidCredentialCrypto();
+        // Core 内部诊断（SMB 协商 MaxWriteSize、FGS 启动失败等）落到应用日志（评估文档 M0/P1）
+        CoreLog.Sink = message => logger.Info(message);
         StorageFactory.CustomLocalStorageFactory = path =>
         {
             var real = SafPaths.IsSafIdentifier(path) && AndroidStorageAccess.HasAllFilesAccess
@@ -81,6 +84,11 @@ public partial class App : Avalonia.Application
         var opener = new AndroidSystemFileOpener(activity);
         var wakeLock = new WakeLockHolder();
 
+        // 进程级任务宿主（评估文档 M1）：分析/执行交 dataSync 前台服务保活，退后台/锁屏不中断；
+        // CTS 随宿主，Activity 重建不失效。VM 图仅构建一次，宿主同样进程内单例。
+        var jobHost = new OrganizeJobHost(confirm);
+        OrganizeJobHost.Current = jobHost;
+
         var workbench = new WorkbenchViewModel(
             state, logger, folderPicker,
             () =>
@@ -91,7 +99,8 @@ public partial class App : Avalonia.Application
                     new AndroidFileScanner(state.Config.Scan.SupportedFormats, state.Config.Scan.ScanAllFiles, activity.Resolver),
                     new AndroidExifReader());
             },
-            dataDir);
+            dataDir,
+            jobHost);
 
         var failedFiles = new FailedFilesViewModel(state, logger, confirm, opener, new AndroidImageLoader());
         var settings = new SettingsViewModel(state);

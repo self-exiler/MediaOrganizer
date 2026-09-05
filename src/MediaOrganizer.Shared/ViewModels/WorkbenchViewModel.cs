@@ -22,6 +22,7 @@ public partial class WorkbenchViewModel : ViewModelBase
     private readonly AppState _state;
     private readonly OrganizeSession _session;
     private readonly IFolderPicker _folderPicker;
+    private readonly IJobHost? _jobHost;
     private CancellationTokenSource? _cts;
     // 从配置回读路径期间挂落盘，避免 ReloadPathsFromConfig 把回读值又写一遍（并触发多余的磁盘写）
     private bool _suspendPersist;
@@ -108,12 +109,14 @@ public partial class WorkbenchViewModel : ViewModelBase
         AppLogger logger,
         IFolderPicker folderPicker,
         Func<Analyzer> analyzerFactory,
-        string dataDir)
+        string dataDir,
+        IJobHost? jobHost = null)
     {
         _state = state;
         _config = state.Config;
         _logger = logger;
         _folderPicker = folderPicker;
+        _jobHost = jobHost;
 
         _sourceDir = _config.Paths.SourceDir;
         _outputDir = _config.Paths.OutputDir;
@@ -265,20 +268,35 @@ public partial class WorkbenchViewModel : ViewModelBase
         IsBusy = true;
         CanExecute = false;
         Progress = 0;
+
+        if (_jobHost is not null)
+        {
+            // 托管路径（Android）：任务交进程级宿主 + dataSync 前台服务，退后台/锁屏不中断；
+            // CTS 归宿主持有，Activity 重建不失效；回调由宿主 marshal 回 UI 线程。
+            var sourceDir = SourceDir;
+            var target = DisplayTarget();
+            _logger.Info($"开始分析 {sourceDir}");
+            _jobHost.StartAnalysis(_session, sourceDir, target, CreateAnalysisProgress(),
+                onCompleted: () => IsBusy = false,
+                onFailed: ex =>
+                {
+                    StatusText = $"分析失败：{ex.Message}";
+                    _logger.Error(StatusText);
+                    IsBusy = false;
+                },
+                onCanceled: () =>
+                {
+                    StatusText = "分析已取消";
+                    IsBusy = false;
+                });
+            return;
+        }
+
         _cts = new CancellationTokenSource();
         try
         {
-            var progress = new Progress<AnalysisProgress>(p =>
-            {
-                TotalFiles = p.Total;
-                SuccessFiles = p.Succeeded;
-                FailedFiles = p.Failed;
-                Progress = p.Total == 0 ? 0 : (double)p.Processed / p.Total * 100;
-                StatusText = $"正在分析 {p.Processed}/{p.Total}…";
-            });
-
             _logger.Info($"开始分析 {SourceDir}");
-            await _session.AnalyzeAsync(SourceDir, DisplayTarget(), progress, _cts.Token);
+            await _session.AnalyzeAsync(SourceDir, DisplayTarget(), CreateAnalysisProgress(), _cts.Token);
         }
         catch (OperationCanceledException)
         {
@@ -297,10 +315,24 @@ public partial class WorkbenchViewModel : ViewModelBase
         }
     }
 
+    private Progress<AnalysisProgress> CreateAnalysisProgress()
+        => new(p =>
+        {
+            TotalFiles = p.Total;
+            SuccessFiles = p.Succeeded;
+            FailedFiles = p.Failed;
+            Progress = p.Total == 0 ? 0 : (double)p.Processed / p.Total * 100;
+            StatusText = $"正在分析 {p.Processed}/{p.Total}…";
+        });
+
     [RelayCommand]
     private void CancelAnalysis()
     {
-        _cts?.Cancel();
+        // 托管任务取消归宿主（VM 的 _cts 与宿主 CTS 二选一，谁在跑取消谁）
+        if (_jobHost?.IsJobRunning == true)
+            _jobHost.Cancel();
+        else
+            _cts?.Cancel();
         StatusText = "正在取消…";
     }
 
@@ -345,17 +377,39 @@ public partial class WorkbenchViewModel : ViewModelBase
 
         IsBusy = true;
         Progress = 0;
+
+        if (_jobHost is not null)
+        {
+            // 托管路径（Android）：同 AnalyzeAsync 注释；取消走 CancelAnalysisCommand → host.Cancel()
+            _jobHost.StartExecution(_session, CreateExecuteProgress(),
+                onCompleted: result =>
+                {
+                    StatusText = JobText.DescribeExecution(result);
+                    _logger.Info(StatusText);
+                    foreach (var err in result.Errors.Take(10))
+                        _logger.Warn(err);
+                    IsBusy = false;
+                },
+                onFailed: ex =>
+                {
+                    StatusText = $"执行失败：{ex.Message}";
+                    _logger.Error(StatusText);
+                    IsBusy = false;
+                },
+                onCanceled: () =>
+                {
+                    StatusText = "执行已取消";
+                    IsBusy = false;
+                });
+            return;
+        }
+
         _cts = new CancellationTokenSource();
         try
         {
-            var progress = new Progress<double>(p =>
-            {
-                Progress = p * 100;
-                StatusText = $"正在执行 {p:P0}…";
-            });
-            var result = await _session.ExecuteAsync(progress, _cts.Token);
+            var result = await _session.ExecuteAsync(CreateExecuteProgress(), _cts.Token);
 
-            StatusText = $"执行完成：成功 {result.Succeeded}，跳过 {result.Skipped}，覆盖 {result.Overwritten}，重命名 {result.Renamed}，失败 {result.Failed}";
+            StatusText = JobText.DescribeExecution(result);
             _logger.Info(StatusText);
             foreach (var err in result.Errors.Take(10))
                 _logger.Warn(err);
@@ -375,6 +429,20 @@ public partial class WorkbenchViewModel : ViewModelBase
             _cts?.Dispose();
             _cts = null;
         }
+    }
+
+    private Progress<double> CreateExecuteProgress()
+    {
+        var lastFlush = DateTime.UtcNow;
+        return new Progress<double>(p =>
+        {
+            // 节流（评估文档 P3）：大批量时每文件一次 UI 刷新过频；终值 1.0 恒刷，其余 200ms 一刷
+            if (p < 1.0 && (DateTime.UtcNow - lastFlush).TotalMilliseconds < 200)
+                return;
+            lastFlush = DateTime.UtcNow;
+            Progress = p * 100;
+            StatusText = $"正在执行 {p:P0}…";
+        });
     }
 
     /// <summary>规则或配置变更后重建提取链（由主 VM 事件接线）。</summary>

@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+using MediaOrganizer.Core.Diagnostics;
 using MediaOrganizer.Core.Sources;
 using SMBLibrary;
 using SMBLibrary.Client;
@@ -10,9 +12,10 @@ namespace MediaOrganizer.Core.Storage;
 /// 替代旧 UNC/OS 重定向器方式——连接配置的用户名/密码真正生效。
 /// 限制：首版不支持 guest/匿名；SMBLibrary 不支持 SMB 3.1.1 强制加密的服务器（主流家用 NAS 默认不强制）。
 /// 连接在首次操作时懒建立并在存储生命周期内复用（连接 + NTLM 登录开销大）；
-/// SMBLibrary 客户端非线程安全，所有操作经 _gate 串行化（FileOperator 并行度 > 1 时退化为顺序写）。
+/// SMBLibrary 客户端非线程安全，除 CopyFromAsync 的写入环节按块持锁外，其余操作经 _gate 整体串行化。
 /// 写入按 min(协商 MaxWriteSize, 1MB) 分块（SMBLibrary 的 WriteFile 不自动分片，超限必失败）；
-/// .mo-tmp 临时名 + 大小校验、重试退避由 FileOperator 层统一保证。
+/// .mo-tmp 临时名 + 写入自证大小校验、重试退避由 FileOperator 层统一保证。
+/// 提速（评估文档 §5）：目录创建缓存 + 目录列表缓存（ExistsAsync 免往返）+ 读写流水线（预读与写重叠）。
 /// </summary>
 public sealed class SmbFileStorage : IFileStorage
 {
@@ -34,6 +37,15 @@ public sealed class SmbFileStorage : IFileStorage
     private SMB2Client? _client;
     private ISMBFileStore? _store;
     private readonly SemaphoreSlim _gate = new(1, 1);
+
+    // 目录创建缓存（实例生命周期 = 一次执行，OrganizeSession 每次执行新建实例，天然隔离）
+    private readonly ConcurrentDictionary<string, bool> _knownDirs = new();
+
+    // 目录列表缓存：父目录 SMB 路径 → (条目名 → 是否目录)。依据：同一目标子树的读写全部经由本实例，
+    // 且同一目标路径被 FileOperator._targetGates 串行化、写操作同步维护缓存 → 实例内一致。
+    // 外部进程并发写同一目录不感知（个人备份场景可接受）；加载失败不入缓存，回退单文件探测。
+    // 两层都用 ConcurrentDictionary：ExistsAsync 免锁快路径的读与锁外缓存更新的写并发共存。
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, bool>> _dirCache = new();
 
     public SmbFileStorage(string address, string username, string password)
     {
@@ -58,6 +70,13 @@ public sealed class SmbFileStorage : IFileStorage
 
     private string ToSmbPath(string relativePath)
         => string.Join('\\', new[] { _baseSmbPath, relativePath.Replace('/', '\\') }.Where(s => !string.IsNullOrEmpty(s)));
+
+    /// <summary>按 '/' 拆出父目录与叶子名（计划路径恒为 '/' 分隔）。</summary>
+    private static (string Dir, string Leaf) SplitParent(string relativePath)
+    {
+        var idx = relativePath.LastIndexOf('/');
+        return idx < 0 ? ("", relativePath) : (relativePath[..idx], relativePath[(idx + 1)..]);
+    }
 
     /// <summary>
     /// 单次 SMB2 写入字节数：取「协商的 MaxWriteSize」与「1MB 硬上限」的较小值。
@@ -94,6 +113,8 @@ public sealed class SmbFileStorage : IFileStorage
                 throw new IOException($"连接共享 \\{_server}\\{_share} 失败：{treeStatus}");
             _client = client;
             _store = store;
+            // 弱网下若协商到 64KB，单流吞吐会掉一个数量级（评估文档 §3.3），此日志是排查首要检查项
+            CoreLog.Info($"[SMB] \\\\{_server}\\{_share} 已连接：协商 MaxWriteSize={client.MaxWriteSize}，实际写入块={WriteChunkSize} 字节");
         }
         catch (Exception ex)
         {
@@ -150,7 +171,62 @@ public sealed class SmbFileStorage : IFileStorage
     private static IOException SmbError(string operation, NTStatus status, string path)
         => new($"SMB {operation}失败（{path}）：{status}");
 
-    public Task<bool> ExistsAsync(string relativePath, CancellationToken ct = default)
+    public async Task<bool> ExistsAsync(string relativePath, CancellationToken ct = default)
+    {
+        var (dirPath, leaf) = SplitParent(relativePath);
+        if (_dirCache.TryGetValue(dirPath, out var listing))
+            return listing.TryGetValue(leaf, out var isDir) && !isDir;
+
+        // 目录列表加载失败（目录不存在等 NTStatus 错误）→ 回退单文件探测，保持原语义
+        if (await InvokeAsync(store => TryListDir(store, dirPath), ct))
+            return _dirCache[dirPath].TryGetValue(leaf, out var isDir2) && !isDir2;
+        return await ProbeExistsAsync(relativePath, ct);
+    }
+
+    /// <summary>
+    /// 拉取目录完整列表入缓存。NTStatus 失败（含目录不存在）返回 false 且不入缓存；
+    /// socket 级异常照抛（经 InvokeAsync 置脏重连）。SMBLibrary 的 QueryDirectory 内部已按
+    /// MaxTransactSize 循环续传至 NO_MORE_FILES，单次调用即完整列表（SMB2FileStore.cs 已核实）。
+    /// </summary>
+    private bool TryListDir(ISMBFileStore store, string dirPath)
+    {
+        if (_dirCache.ContainsKey(dirPath)) return true;
+
+        var openPath = dirPath.Length == 0 ? "\\" : dirPath;
+        var status = store.CreateFile(out var handle, out _, openPath, AccessMask.GENERIC_READ,
+            FileAttributes.Normal, ShareAccess.Read | ShareAccess.Write, CreateDisposition.FILE_OPEN,
+            CreateOptions.FILE_DIRECTORY_FILE, null);
+        if (status != NTStatus.STATUS_SUCCESS)
+            return false;
+        try
+        {
+            var queryStatus = store.QueryDirectory(out var entries, handle, "*", FileInformationClass.FileDirectoryInformation);
+            if (queryStatus != NTStatus.STATUS_SUCCESS && queryStatus != NTStatus.STATUS_NO_MORE_FILES)
+                return false;
+            var listing = new ConcurrentDictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+            foreach (var entry in entries)
+                if (entry is FileDirectoryInformation info && info.FileName is not "." and not "..")
+                    listing[info.FileName] = info.FileAttributes.HasFlag(FileAttributes.Directory);
+            _dirCache[dirPath] = listing;
+            return true;
+        }
+        finally
+        {
+            store.CloseFile(handle);
+        }
+    }
+
+    /// <summary>写操作后同步维护目录列表缓存（仅当该目录列表已被加载过；present=false 表示条目已消失）。</summary>
+    private void UpdateDirCache(string relativePath, bool present, bool isDir = false)
+    {
+        var (dirPath, leaf) = SplitParent(relativePath);
+        if (!_dirCache.TryGetValue(dirPath, out var listing)) return;
+        if (present) listing[leaf] = isDir;
+        else listing.TryRemove(leaf, out _);
+    }
+
+    /// <summary>缓存未命中/加载失败时的原语义路径：CreateFile 单文件探测。</summary>
+    private Task<bool> ProbeExistsAsync(string relativePath, CancellationToken ct)
         => InvokeAsync(store =>
         {
             var path = ToSmbPath(relativePath);
@@ -171,19 +247,25 @@ public sealed class SmbFileStorage : IFileStorage
     public Task CreateDirectoryAsync(string relativePath, CancellationToken ct = default)
         => InvokeAsync<object?>(store =>
         {
-            // 逐级创建（幂等）：已存在（OBJECT_NAME_COLLISION / OBJECT_NAME_EXISTS）视为成功
+            // 逐级创建（幂等）：实例内 _knownDirs 命中即跳过（每文件省 3~4 次往返）
             var segments = relativePath.Replace('\\', '/').Split('/', StringSplitOptions.RemoveEmptyEntries);
-            var current = _baseSmbPath;
+            var dir = _baseSmbPath;
             foreach (var segment in segments)
             {
-                current = string.IsNullOrEmpty(current) ? segment : current + '\\' + segment;
-                var status = store.CreateFile(out var handle, out _, current, AccessMask.GENERIC_WRITE,
+                var parent = dir;
+                dir = string.IsNullOrEmpty(dir) ? segment : dir + '\\' + segment;
+                if (_knownDirs.ContainsKey(dir)) continue;
+                var status = store.CreateFile(out var handle, out _, dir, AccessMask.GENERIC_WRITE,
                     FileAttributes.Normal, ShareAccess.None, CreateDisposition.FILE_CREATE,
                     CreateOptions.FILE_DIRECTORY_FILE, null);
                 if (status == NTStatus.STATUS_SUCCESS)
                     store.CloseFile(handle);
                 else if (status is not (NTStatus.STATUS_OBJECT_NAME_COLLISION or NTStatus.STATUS_OBJECT_NAME_EXISTS))
-                    throw SmbError("创建目录", status, current);
+                    throw SmbError("创建目录", status, dir);
+                _knownDirs[dir] = true;
+                // 已缓存的父列表补上新目录条目，保持列表完整
+                if (_dirCache.TryGetValue(parent, out var parentListing))
+                    parentListing[segment] = true;
             }
             return null;
         }, ct);
@@ -210,46 +292,88 @@ public sealed class SmbFileStorage : IFileStorage
             }
         }, ct);
 
-    public Task CopyFromAsync(IMediaSource source, string relativeTarget, IProgress<long>? progress = null, CancellationToken ct = default)
-        => InvokeAsync<object?>(store =>
+    public async Task<long> CopyFromAsync(IMediaSource source, string relativeTarget, IProgress<long>? progress = null, CancellationToken ct = default)
+    {
+        var path = ToSmbPath(relativeTarget);
+
+        // 打开句柄（持锁，懒建连接）：FILE_OVERWRITE_IF 覆盖上次重试/崩溃残留的 .mo-tmp
+        object? handle = null;
+        await InvokeAsync<object?>(store =>
         {
-            var path = ToSmbPath(relativeTarget);
-            var status = store.CreateFile(out var handle, out _, path, AccessMask.GENERIC_WRITE | AccessMask.SYNCHRONIZE,
+            var status = store.CreateFile(out var h, out _, path, AccessMask.GENERIC_WRITE | AccessMask.SYNCHRONIZE,
                 FileAttributes.Normal, ShareAccess.None, CreateDisposition.FILE_OVERWRITE_IF,
                 CreateOptions.FILE_NON_DIRECTORY_FILE | CreateOptions.FILE_SYNCHRONOUS_IO_ALERT, null);
             if (status != NTStatus.STATUS_SUCCESS)
                 throw SmbError("写入", status, path);
-            try
-            {
-                // 关键：每次 WriteFile 的载荷不得超过协商的 MaxWriteSize，
-                // SMBLibrary 不会自动分片，超限请求会被服务器拒绝。
-                var writeChunk = WriteChunkSize;
-                var buffer = new byte[writeChunk];
-                using var src = source.OpenRead();
-                long offset = 0;
-                int read;
-                while ((read = src.Read(buffer, 0, buffer.Length)) > 0)
-                {
-                    ct.ThrowIfCancellationRequested();
-                    var writeStatus = store.WriteFile(out var written, handle, offset, buffer[..read]);
-                    if (writeStatus != NTStatus.STATUS_SUCCESS)
-                        throw SmbError("写入", writeStatus,
-                            $"{path}（偏移 {offset}，长度 {read}，单次写入上限 {writeChunk}）");
-                    if (written <= 0)
-                        throw new IOException($"SMB 写入未推进（{path}，偏移 {offset}，长度 {read}）：{writeStatus}");
-                    offset += written;
-                    progress?.Report(offset);
-                }
-            }
-            finally
-            {
-                store.CloseFile(handle);
-            }
+            handle = h;
             return null;
         }, ct);
+        UpdateDirCache(relativeTarget, present: true);
 
-    public Task DeleteAsync(string relativePath, CancellationToken ct = default)
-        => InvokeAsync<object?>(store =>
+        // 读写流水线：源端预读（不持锁，Task.Run 强制线程池并行，SAF 流的同步 Read 不会阻塞写）
+        // 与 SMB 写入（每块独立过 _gate）重叠，隐藏源端读取时间——原实现读写在锁内完全串行。
+        // 连接失效时 InvokeAsync 置脏，FileOperator 按整文件退避重试（FILE_OVERWRITE_IF 重开覆盖半成品）。
+        var writeChunk = WriteChunkSize;
+        var buffers = new[] { new byte[writeChunk], new byte[writeChunk] };
+        Stream? src = null;
+        Task<int>? prefetch = null;
+        long offset = 0, total = 0;
+        try
+        {
+            src = source.OpenRead();
+            var currentLen = await src.ReadAsync(buffers[0].AsMemory(), ct);
+            var cur = 0;
+            while (currentLen > 0)
+            {
+                ct.ThrowIfCancellationRequested();
+                var next = cur ^ 1;
+                prefetch = Task.Run(() => src.ReadAsync(buffers[next].AsMemory(), ct).AsTask(), ct);
+                var buffer = buffers[cur];
+                var len = currentLen;
+                int written = 0;
+                await InvokeAsync<object?>(store =>
+                {
+                    // 单次 WriteFile 载荷不得超过协商 MaxWriteSize（SMBLibrary 不自动分片，超限必被拒）
+                    var writeStatus = store.WriteFile(out written, handle!, offset, buffer[..len]);
+                    if (writeStatus != NTStatus.STATUS_SUCCESS)
+                        throw SmbError("写入", writeStatus, $"{path}（偏移 {offset}，长度 {len}，单次写入上限 {writeChunk}）");
+                    if (written <= 0)
+                        throw new IOException($"SMB 写入未推进（{path}，偏移 {offset}，长度 {len}）：{writeStatus}");
+                    return null;
+                }, ct);
+                offset += written;
+                total += written;
+                progress?.Report(offset);
+
+                currentLen = await prefetch;
+                prefetch = null;
+                cur = next;
+            }
+            return total;
+        }
+        finally
+        {
+            // 未消费的预读必须等待收尾，避免对已释放流的未观察异常
+            if (prefetch is not null)
+            {
+                try { await prefetch; }
+                catch { /* 主流程已报错，吞掉预读失败 */ }
+            }
+            try { src?.Dispose(); }
+            catch { /* 尽力释放 */ }
+
+            // 关闭句柄（持锁）；连接已被置脏时句柄随连接丢弃，无需 CloseFile
+            if (_store is not null && handle is not null)
+            {
+                try { await InvokeAsync<object?>(s => { s.CloseFile(handle); return null; }, CancellationToken.None); }
+                catch { /* 尽力关闭 */ }
+            }
+        }
+    }
+
+    public async Task DeleteAsync(string relativePath, CancellationToken ct = default)
+    {
+        await InvokeAsync<object?>(store =>
         {
             var path = ToSmbPath(relativePath);
             var status = store.CreateFile(out var handle, out _, path, AccessMask.DELETE | AccessMask.SYNCHRONIZE,
@@ -262,16 +386,26 @@ public sealed class SmbFileStorage : IFileStorage
             store.CloseFile(handle);
             return null;
         }, ct);
+        UpdateDirCache(relativePath, present: false);
 
-    public Task MoveAsync(string relativeFrom, string relativeTo, CancellationToken ct = default)
-        => InvokeAsync<object?>(store =>
+        // 删的是目录时，同步失效目录创建缓存与父列表中的条目
+        if (_knownDirs.TryRemove(ToSmbPath(relativePath), out _))
+        {
+            var (parentPath, leaf) = SplitParent(relativePath);
+            if (_dirCache.TryGetValue(ToSmbPath(parentPath), out var parentListing))
+                parentListing.TryRemove(leaf, out _);
+        }
+    }
+
+    public async Task MoveAsync(string relativeFrom, string relativeTo, CancellationToken ct = default)
+    {
+        await InvokeAsync<object?>(store =>
         {
             var from = ToSmbPath(relativeFrom);
             var to = ToSmbPath(relativeTo);
 
-            // rename 不带 ReplaceIfExists：目标若有残留（上次中断/重试）会撞 OBJECT_NAME_COLLISION，先清掉
-            DeleteIfExists(store, to);
-
+            // 注：不再前置 DeleteIfExists——.mo-tmp 临时名唯一（_targetGates 保证同路径互斥），
+            // SetFileInformation(ReplaceIfExists=true) 自身即可覆盖上次中断/重试的残留（每文件省 2 次往返）
             var status = store.CreateFile(out var handle, out _, from,
                 AccessMask.DELETE | AccessMask.GENERIC_READ | AccessMask.SYNCHRONIZE,
                 FileAttributes.Normal, ShareAccess.None, CreateDisposition.FILE_OPEN,
@@ -299,14 +433,9 @@ public sealed class SmbFileStorage : IFileStorage
             return null;
         }, ct);
 
-    /// <summary>存在则删除（FILE_DELETE_ON_CLOSE 语义）；不存在或删除失败均静默返回。</summary>
-    private static void DeleteIfExists(ISMBFileStore store, string path)
-    {
-        var status = store.CreateFile(out var handle, out _, path, AccessMask.DELETE | AccessMask.SYNCHRONIZE,
-            FileAttributes.Normal, ShareAccess.None, CreateDisposition.FILE_OPEN,
-            CreateOptions.FILE_DELETE_ON_CLOSE | CreateOptions.FILE_SYNCHRONOUS_IO_ALERT, null);
-        if (status == NTStatus.STATUS_SUCCESS)
-            store.CloseFile(handle);
+        // rename 成功后同步维护两个目录的列表缓存
+        UpdateDirCache(relativeFrom, present: false);
+        UpdateDirCache(relativeTo, present: true);
     }
 
     public Task SetModifiedUtcAsync(string relativePath, DateTime utc, CancellationToken ct = default)
@@ -343,6 +472,8 @@ public sealed class SmbFileStorage : IFileStorage
     public void Dispose()
     {
         ResetConnection();
+        _knownDirs.Clear();
+        _dirCache.Clear();
         _gate.Dispose();
     }
 }

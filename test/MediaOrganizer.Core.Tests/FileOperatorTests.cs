@@ -77,7 +77,7 @@ public class FileOperatorTests : IDisposable
         public Task<long> GetLengthAsync(string relativePath, CancellationToken ct = default)
             => _inner.GetLengthAsync(relativePath, ct);
 
-        public Task CopyFromAsync(IMediaSource source, string relativeTarget, IProgress<long>? progress = null, CancellationToken ct = default)
+        public Task<long> CopyFromAsync(IMediaSource source, string relativeTarget, IProgress<long>? progress = null, CancellationToken ct = default)
             => _inner.CopyFromAsync(source, relativeTarget, progress, ct);
 
         public Task DeleteAsync(string relativePath, CancellationToken ct = default)
@@ -268,5 +268,58 @@ public class FileOperatorTests : IDisposable
         Assert.Equal(0, r.Failed);
         var dir = Path.Combine(_out, "2024", "07", "08");
         Assert.Single(Directory.GetFiles(dir));
+    }
+
+    // ---- M0 埋点 / M3 写入自证大小 ----
+
+    /// <summary>Length 属性与流内容不一致的假源（模拟扫描后源文件被截断）。</summary>
+    private sealed class TruncatedSource : IMediaSource
+    {
+        public string Identifier => "fake://truncated.jpg";
+        public string DisplayName => "truncated.jpg";
+        public long Length => 100; // 声明 100 字节
+        public DateTimeOffset? ModifiedTime => null;
+        public Stream OpenRead() => new MemoryStream(new byte[10], writable: false); // 实际 10 字节
+        public void Delete() { }
+    }
+
+    [Fact]
+    public async Task 写入自证大小不一致计入失败()
+    {
+        var date = new DateTimeOffset(2024, 1, 15, 0, 0, 0, TimeSpan.Zero);
+        var parsed = new ParsedFile(
+            new MediaFile("fake://truncated.jpg", 100, "jpg") { Source = new TruncatedSource() },
+            date, "FileName");
+        var plan = new ArchivePlanner(ClassificationLevel.Day)
+            .Plan(new AnalysisResult(_src, DateTimeOffset.Now, [parsed], []), _out);
+
+        var r = await Run(plan, FileOperation.Copy, ExistAction.Skip, fixMtime: false);
+
+        Assert.Equal(1, r.Failed);
+        Assert.DoesNotContain(Directory.GetFiles(Path.Combine(_out, "2024", "01", "15")), f => f.EndsWith(".jpg", StringComparison.Ordinal));
+        Assert.False(File.Exists(Path.Combine(_out, "2024", "01", "15", "truncated.jpg.mo-tmp")), "失败后不得留 .mo-tmp 残留");
+        Assert.Contains(r.Errors, e => e.Contains("大小校验失败"));
+    }
+
+    [Fact]
+    public async Task 执行结果携带计时报告()
+    {
+        WriteFile(Path.Combine(_src, "t.jpg"), "0123456789");
+        var plan = Plan(("t.jpg", new DateTimeOffset(2024, 1, 15, 0, 0, 0, TimeSpan.Zero)));
+        var r = await Run(plan, FileOperation.Copy, ExistAction.Skip, fixMtime: false);
+
+        Assert.NotNull(r.Timing);
+        Assert.Equal(1, r.Timing!.FileCount);
+        Assert.True(r.Timing.TransferMeanMs >= 0);
+        Assert.True(r.Timing.MetadataMeanMs >= 0);
+        Assert.Equal(10, r.Timing.TotalBytes);
+    }
+
+    [Fact]
+    public async Task 空计划不产生计时报告()
+    {
+        var plan = Plan();
+        var r = await Run(plan, FileOperation.Copy, ExistAction.Skip, fixMtime: false);
+        Assert.Null(r.Timing);
     }
 }

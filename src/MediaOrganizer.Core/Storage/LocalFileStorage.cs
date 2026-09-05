@@ -40,7 +40,7 @@ public class LocalFileStorage(string rootPath) : IFileStorage
         return Task.FromResult(info.Exists ? info.Length : -1L);
     }
 
-    public virtual async Task CopyFromAsync(IMediaSource source, string relativeTarget, IProgress<long>? progress = null, CancellationToken ct = default)
+    public virtual async Task<long> CopyFromAsync(IMediaSource source, string relativeTarget, IProgress<long>? progress = null, CancellationToken ct = default)
     {
         var target = Resolve(relativeTarget);
         Directory.CreateDirectory(Path.GetDirectoryName(target)!);
@@ -58,6 +58,7 @@ public class LocalFileStorage(string rootPath) : IFileStorage
                 copied += read;
                 progress?.Report(copied);
             }
+            return copied;
         }
         finally
         {

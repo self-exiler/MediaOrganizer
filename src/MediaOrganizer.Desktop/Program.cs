@@ -18,6 +18,9 @@ sealed class Program
         => AppBuilder.Configure<App>()
             .UseWin32()
             .UseSkia()
+            // Avalonia 12 起文本整形必须显式接入（HarfBuzz），否则 Setup 抛
+            // "No text shaping system configured"
+            .UseHarfBuzz()
 #if DEBUG
             .WithDeveloperTools()
 #endif

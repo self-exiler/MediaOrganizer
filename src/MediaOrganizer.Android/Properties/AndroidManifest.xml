@@ -19,4 +19,10 @@
   <uses-permission android:name="android.permission.INTERNET" />
   <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
   <uses-permission android:name="android.permission.WAKE_LOCK" />
+  <!-- 网络备份后台化（评估文档 M1）：dataSync 前台服务需要 FOREGROUND_SERVICE 系权限 +
+       类型专用的 FOREGROUND_SERVICE_DATA_SYNC（Android 14+ 起 type 必须在清单声明）；
+       POST_NOTIFICATIONS 为 Android 13+ 通知运行时权限（MainActivity.OnCreate 动态申请）。 -->
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 </manifest>

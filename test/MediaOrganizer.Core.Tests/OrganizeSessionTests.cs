@@ -86,7 +86,9 @@ public class AppStateNotifyTests
     }
 }
 
-public class PatternInferrerTests
+// 原名 PatternInferrerTests 与 PatternInferrerTests.cs 的同名类冲突（CS0101，提交 7beb8ae 遗留），
+// 此处专注 Infer 手工模式推断，另一文件专注 GenerateVariantRegex 生成链路。
+public class PatternInferrerInferTests
 {
     [Fact]
     public void 命名组优先()
@@ -136,12 +138,11 @@ public class PatternInferrerTests
     [Fact]
     public void 多变体生成覆盖差异位()
     {
-        var regex = PatternInferrer.GenerateVariantRegex(
-            ["mm_export1718012345678.jpg", "mm_export1718012398745.jpg", "mm_export1718012456123.jpg"]);
-        // 公共前缀 mm_export + 13 位数字 + .jpg
-        Assert.Contains(@"mm_export", regex);
+        var samples = new[] { "mm_export1718012345678.jpg", "mm_export1718012398745.jpg", "mm_export1718012456123.jpg" };
+        var regex = PatternInferrer.GenerateVariantRegex(samples);
+        // 公共前缀（mm 可能被量词化为 m{2}，等价但非字面量）+ 13 位时间戳 + .jpg；以样本全命中为准
         Assert.Contains(@"\.jpg", regex);
-        foreach (var s in new[] { "mm_export1718012345678.jpg", "mm_export1718012456123.jpg" })
+        foreach (var s in samples)
             Assert.Matches(regex, s);
     }
 

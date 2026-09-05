@@ -22,8 +22,12 @@ public interface IFileStorage : IDisposable
     /// <summary>目标文件字节长度；不可用返回 -1。</summary>
     Task<long> GetLengthAsync(string relativePath, CancellationToken ct = default);
 
-    /// <summary>从源端抽象分块流式拷贝到目标，逐字节回报进度（分块尺寸为实现细节，不在契约内）。</summary>
-    Task CopyFromAsync(IMediaSource source, string relativeTarget, IProgress<long>? progress = null, CancellationToken ct = default);
+    /// <summary>
+    /// 从源端抽象分块流式拷贝到目标，逐字节回报进度（分块尺寸为实现细节，不在契约内）。
+    /// 返回实际写入目标端的字节总数：调用方据此自证大小（写入自证替代拷贝后重查目标长度，
+    /// 网络目标下省去逐文件 3 次 SMB 往返，FR-10.7 的大小校验语义不变）。
+    /// </summary>
+    Task<long> CopyFromAsync(IMediaSource source, string relativeTarget, IProgress<long>? progress = null, CancellationToken ct = default);
 
     Task DeleteAsync(string relativePath, CancellationToken ct = default);
 
