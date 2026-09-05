@@ -1,87 +1,116 @@
-# ADR-0009: 桌面版分发与打包策略（运行时外置）
+# ADR-0009: 桌面版分发与打包策略（自包含 + ReadyToRun）
 
-- 状态：已接受（Accepted）
-- 日期：2026-09-01
+- 状态：已接受（Accepted）——重写版，取代 2026-09-01 的"运行时外置"决策
+- 日期：2026-09-05
 - 关联：ADR-0006（Core/Shared/Desktop 分层）、ADR-0008（v1.0 范围冻结）
-- 关联文件：`packaging/publish.ps1`、`packaging/pack-velopack.ps1`、`packaging/MediaOrganizer.iss`
+- 关联文件：`packaging/publish.ps1`、`packaging/MediaOrganizer.iss`、`packaging/README.md`
 
 ## 背景
 
-桌面版功能趋于稳定，进入可交付阶段。首次按现有 `FolderProfile` 实测发布产物，结果不可用：
+桌面版进入可交付阶段，需要固化为可分发的安装程序。历史上有过两轮实测结论，仍是本次决策的有效输入：
 
-| 指标 | 实测值 |
+### 1. 原生调试符号污染发布目录（2026-09-01 实测）
+
+首轮按 FolderProfile 发布，产物 174 MB / 49 个文件，其中 59% 是终端用户用不到的原生符号：
+
+| 冗余项 | 体积 |
 | --- | --- |
-| 发布目录体积 | **174 MB** |
-| 文件数 | 49 |
-| 其中 `libSkiaSharp.pdb` | 82 MB |
-| 其中 `libHarfBuzzSharp.pdb` | 20 MB |
-| 其中 `Magick.Native-Q16-x64.dll` | 23 MB |
+| `libSkiaSharp.pdb` | 82 MB |
+| `libHarfBuzzSharp.pdb` | 20 MB |
+| `Magick.Native-Q16-x64.dll`（有用的原生库，非符号，列出仅供对比） | 23 MB |
 
-即 **59% 的体积是终端用户完全用不到的原生调试符号**。根因：`SkiaSharp.NativeAssets.Win32` 与 `HarfBuzzSharp.NativeAssets.Win32` 把 `libSkiaSharp.pdb` / `libHarfBuzzSharp.pdb` 放在 `runtimes/win-x64/native/` 下，SDK 作为原生运行时资产原样拷贝——**不受 `DebugType` 控制**，因此改 `DebugType=none` 无效。
+根因：`SkiaSharp.NativeAssets.Win32` 与 `HarfBuzzSharp.NativeAssets.Win32` 把 `libSkiaSharp.pdb` / `libHarfBuzzSharp.pdb` 放在 `runtimes/win-x64/native/` 下，SDK 作为原生运行时资产原样拷贝——**不受 `DebugType` 控制**，改 `DebugType=none` 无效，只能在 Publish 后清理。
 
-另有两个约束性发现：
+### 2. Avalonia 只依赖 `Microsoft.NETCore.App`
 
-1. **`PublishTrimmed` 与运行时外置互斥**。实测 `-p:PublishTrimmed=true --self-contained false` 直接报 `NETSDK1102: 所选发布配置不支持优化程序集的大小。请确保你发布的是独立应用。` 想要裁剪就必须自包含，二者不可兼得。
-2. **Avalonia 只依赖 `Microsoft.NETCore.App`**。发布产物的 `runtimeconfig.json` 只声明 `Microsoft.NETCore.App 10.0.0`，**不含 `Microsoft.WindowsDesktop.App`**。因此用户只需装体积更小的 .NET Runtime，不是 .NET Desktop Runtime（WPF/WinForms 才需要后者）。
+发布产物的 `runtimeconfig.json` 只声明 `Microsoft.NETCore.App`，**不含 `Microsoft.WindowsDesktop.App`**（Avalonia 不是 WPF/WinForms）。
+
+### 3. 需求变更（2026-09-05）
+
+用户明确要求：安装程序**运行时自包含**、**默认安装到用户目录**、启用 **AOT 或 ReadyToRun**。原"运行时外置"决策（框架依赖 + Velopack 引导在线补运行时）与"自包含"直接冲突，故整体重写本 ADR。
 
 ## 决策
 
-### 1. 分发形态：框架依赖（运行时外置），不自包含
+### 1. 分发形态：自包含（内嵌 .NET 10 Runtime），取代原"运行时外置"
 
-`--self-contained false`，运行时由安装器按需引导下载。理由：
+`--self-contained true`。理由：
 
-- 自包含需额外 ~65MB 运行时，且对每个目标架构各发一份；本项目面向自用与开源小众分发，不值得。
-- 运行时外置后可用 Velopack / Inno 的 `--framework` 引导，首次安装自动补环境，用户体验不打折。
-- 代价是必须放弃 `PublishTrimmed`（见背景 1）。本决策下体积治理只能靠"剔除无用文件 + 压缩"，不能靠裁剪。
+- 目标机**无需预装任何 .NET 组件，离线可装**。原方案依赖安装时联网引导下载运行时，离线机器直接失败，这是用户明确不接受的场景。
+- 免去安装器内的运行时检测 / 下载 / 静默安装逻辑，安装脚本大幅简化、失败面收窄。
+- 代价是安装包 +约 30 MB（运行时经 LZMA2 压缩后），实测安装包约 47 MB，对桌面应用属可接受量级。
 
-### 2. 打包工具：Velopack 为主，Inno Setup 为备
+### 2. 预编译：ReadyToRun，明确不采用 NativeAOT
 
-- **主路线 Velopack**（`dotnet tool install -g vpk`）。纯 dotnet 工具链，不引入 Inno/NSIS/WiX 等外部安装器依赖；产出 LZMA 压缩的单文件 `Setup.exe` + 便携 zip + 增量更新包；`--framework net10.0-x64-runtime` 原生支持运行时引导；自带自动更新 API。
-- **备选 Inno Setup**（`winget install -e --id JRSoftware.InnoSetup`，需 6.3+）。脚本化、中文向导、LZMA2 压缩，运行时检测走注册表 `SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.NETCore.App`。保留为备用的原因是 Velopack 为第三方活跃项目，留一条不依赖它的退路。
+选 **`PublishReadyToRun=true`**：
 
-不采用：MSIX（需签名、分发受商店/策略约束）、WiX/MSI（脚本成本高）、Squirrel.Windows（已停止维护，Velopack 是其继任者）。
+- R2R 只是把 IL 预编译成本机代码，**不做裁剪**，运行行为与 JIT 完全一致，是零风险换冷启动的开关。
+- **NativeAOT 不采用**：Avalonia 依赖大量反射与编译绑定（XAML、`CompiledBindings`、MVVM、转换器、ViewLocator），AOT 要求全量反射标注与裁剪友好改造，工作量和运行时崩溃风险都不可控，且本项目无"禁用 JIT"类的硬约束支撑这笔投入。
 
-### 3. 体积治理：在 csproj 内固化，而非靠外部脚本
+### 3. 不启用 PublishTrimmed
 
-`MediaOrganizer.Desktop.csproj` 增加：
+自包含后裁剪在技术上可用（原 ADR 记录的 `NETSDK1102` 互斥问题随自包含消失），但裁剪对 Avalonia 的反射路径极不友好，容易运行时崩溃。体积治理仍走"剔除无用文件 + 高压缩"路线，不走裁剪。
 
-- `StripNativeDebugSymbols` 目标（`AfterTargets="Publish"`）删除发布目录全部 `*.pdb`。这是本 ADR 收益最大的一项，**174 MB → 74 MB**。放在 csproj 而非打包脚本里，是因为任何发布路径（VS 发布、CLI、CI）都会走到。
-- `SatelliteResourceLanguages=zh-Hans;en`。v1.0 单一中文界面（ADR-0008 决策 2），无谓的卫星资源程序集不该进包。
+### 4. 打包工具：Inno Setup，弃用 Velopack
 
-### 4. 排除的瘦身手段（记录以免重复尝试）
+主路线改为 **Inno Setup**（6.3+，本机为用户级安装于 `%LocalAppData%\Programs\Inno Setup 6`）：
+
+- 自包含后不再需要 Velopack 的 `--framework` 运行时引导——那是选它的核心理由，理由已消失。
+- Inno 提供中文向导（`ChineseSimplified.isl`，置于 `packaging/Languages/` 随脚本走，因用户级安装可能不带非英文语言包）、LZMA2/ultra64 压缩、标准卸载体验。
+- 弃用 Velopack 同时意味着**放弃自动更新通道**；v1.0 范围内可接受，后续若要增量更新可重新评估。
+
+### 5. 安装目录：用户目录，全程不提权
+
+- `DefaultDirName={localappdata}\Programs\MediaOrganizer`（即 `%LocalAppData%\Programs\MediaOrganizer`）
+- `PrivilegesRequired=lowest`：受限账户/企业管控环境也能安装。
+- 代价：多用户共用一台机器时各自装一份。对本项目（自用/小众分发）可接受。
+
+### 6. 体积治理：沿用既有机制，新增自包含校验
+
+沿用并固化在代码/脚本内（任何发布路径都生效）：
+
+- `MediaOrganizer.Desktop.csproj` 的 `PrunePublishOutput` 目标：Publish 后删除全部 `*.pdb` 与 RID 无关的 `runtimes\` 目录（指定 RID 发布时原生库已扁平化到根目录，`runtimes\` 下其余 7 个平台约 476MB 纯属冗余）。
+- `SatelliteResourceLanguages=zh-Hans;en`。
+- `publish.ps1` 兜底校验：发布目录不得残留 `.pdb`；必须存在 `coreclr.dll`（确认确为自包含产物）。
+
+### 7. 排除的瘦身手段（沿用原 ADR 结论）
 
 | 手段 | 结论 |
 | --- | --- |
-| `DebugType=none` / `embedded` | 对原生 PDB 无效（见背景） |
-| `PublishTrimmed` | `NETSDK1102`，与运行时外置互斥 |
-| `PublishSingleFile` | 框架依赖下不支持压缩，体积不降反增，且拖慢启动；安装包本来就不暴露目录结构 |
-| 删 Linux-only Avalonia 程序集（X11 / FreeDesktop / AtSpi / Tmds.DBus，约 3.3MB） | 收益仅 8%，却要赌 `Avalonia.Win32` 不反射加载它们。收益风险比不划算，暂不做 |
+| `DebugType=none` / `embedded` | 对原生 PDB 无效（见背景 1） |
+| `PublishTrimmed` | Avalonia 反射风险（见决策 3） |
+| `PublishSingleFile` | 启动变慢且体积不降反增；安装包本就不暴露目录结构 |
+| NativeAOT | 见决策 2 |
+| 删 Linux-only Avalonia 程序集（约 3.3MB） | 收益仅 8%，却要赌 `Avalonia.Win32` 不反射加载它们，不划算 |
 
-### 5. 保留可调开关：ReadyToRun
+## 实测结果（2026-09-05）
 
-`PublishReadyToRun=true` 使体积 +约 17 MB（74 MB → 91 MB 裸 IL 对应值），换来更快的冷启动。`publish.ps1` 提供 `-NoReadyToRun` 开关，需要极限体积时关掉。默认保留。
+| 指标 | 值 |
+| --- | --- |
+| 发布目录（自包含 + R2R，已剔除符号） | 149.5 MB / 231 个文件 |
+| 安装包 `MediaOrganizer_Setup_1.0.0.exe`（LZMA2/ultra64） | **约 47 MB** |
+| R2R 生效验证 | 主程序 DLL 含 RTR 标记 |
+| 安装过程 | 中文向导，无运行时检测/下载，无提权 |
 
-### 6. 待决（Open）：Magick.NET 的去留
+## 构建流程
 
-Magick.NET 在桌面端**仅用于 `MagickExifReader` 读 EXIF 拍摄时间**，却带来 27 MB（原生 23 MB + 托管 4 MB）。三个方案尚未定夺，见 `packaging/README.md` §Magick.NET 处置。本 ADR 不强行决策，因涉及格式覆盖面的产品权衡而非纯技术权衡。
+```powershell
+# 1) 发布（自包含 + R2R）
+packaging\publish.ps1
+#    可选：packaging\publish.ps1 -NoReadyToRun   关掉 R2R，省约 17MB（启动略慢）
 
-## 实测收益
+# 2) 打安装包
+ISCC.exe packaging\MediaOrganizer.iss
+#    产物：packaging\releases\MediaOrganizer_Setup_<版本>.exe
+```
 
-| 阶段 | 发布目录 | ZIP(deflate) |
-| --- | --- | --- |
-| 现状（含 102MB 原生 PDB） | 174 MB | — |
-| ① 剔除原生 PDB（已落地） | **74 MB** | **31 MB** |
-| ② ①+ 移除 Magick.NET 与 Linux-only 程序集（方案模拟） | **42.7 MB** | **17.6 MB** |
-
-① 已验证落地。② 为删除文件后的模拟值，尚未改代码。Inno/Velopack 用 LZMA/LZMA2，通常比 deflate 再小 15–25%，故最终安装包体量预计：
-
-- 仅做 ①：**约 24 MB**
-- 做到 ②：**约 14 MB**
+版本号在 `packaging/MediaOrganizer.iss` 的 `#define MyAppVersion` 维护。
 
 ## 后果
 
-- 正面：发布产物从不可用（174MB）降到可分发（74MB / 安装包约 24MB）；打包流程固化为两个脚本，可接入 CI。
+- 正面：安装即用，零运行时依赖，离线可装；用户目录安装无提权门槛；安装器逻辑极简，失败面小。
 - 负面：
-  - 首次安装若目标机无 .NET 10 Runtime 需联网下载。离线场景需改用自包含发布（与决策 1 冲突，届时走 `packaging/publish.ps1` 之外的独立流程）。
-  - 发布目录不再含 PDB，线上崩溃只能拿到无行号的栈。如需诊断，改为发布到单独目录自行归档符号，不要回退本决策。
-- 中性：`Magick.NET` 去留未定，在其定论前 ② 不成立，安装包停在约 24 MB 一档。
+  - 安装包约 47 MB，其中运行时占大头（压缩前约 65 MB）。原方案约 24 MB，但需联网补运行时。
+  - 每个 RID（win-x64 / win-arm64）各出一包。
+  - 放弃 Velopack 即放弃自动更新。
+  - 发布目录不含 PDB，线上崩溃栈无行号。如需诊断，单独发布一份带符号的副本归档，不要回退本决策。
+- 中性：`Magick.NET`（27 MB，仅用于 HEIC 等格式的 EXIF 读取）去留仍为待决项，结论不影响本 ADR 的形态选择。

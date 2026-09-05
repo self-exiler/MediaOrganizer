@@ -6,6 +6,8 @@ obj/
 
 # 构建输出
 artifacts/
+packaging/publish/
+packaging/releases/
 
 # IDE
 .vs/
@@ -33,3 +35,4 @@ TestResults/
 .debug/
 
 参考代码（python）/*
+

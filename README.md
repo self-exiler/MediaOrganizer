@@ -2,16 +2,16 @@
 
 MediaOrganizer 是一个用于整理照片和视频文件的桌面工具。它会扫描指定源目录，提取文件的拍摄日期，并按「年/月/日」结构将文件复制或移动到目标目录，帮助你快速建立清晰的媒体归档结构。
 
-该项目是他人 Python 版《媒体文件整理器》的 C# 重构，重点保持功能简洁、扩展性与跨平台兼容性，并在此基础上提供网络共享（SMB / WebDAV）能力。**安卓版作为长远任务规划**，当前阶段以桌面端为重心，安卓端仅处于早期探索与架构验证阶段，不纳入近期发布目标。
+该项目是他人 Python 版《媒体文件整理器》的 C# 重构，重点保持功能简洁、扩展性与跨平台兼容性，并在此基础上提供网络共享（SMB / WebDAV）能力。桌面端与安卓端**同为 v1.0 正式发布目标**（见 ADR-0008），共享同一套核心逻辑。
 
 ## 平台定位
 
-| 平台                       | 状态               | 说明                                                                           |
-| -------------------------- | ------------------ | ------------------------------------------------------------------------------ |
-| 桌面端（Windows / 跨平台） | **当前主力** | 功能完整、可日常使用，是本项目的主要交付目标                                   |
-| 安卓端                     | **长远任务** | 已搭建工程骨架并打通基础启动链路，但距离可用产品仍远，作为长期演进方向持续投入 |
+| 平台              | 状态                    | 说明                                                            |
+| ----------------- | ----------------------- | --------------------------------------------------------------- |
+| 桌面端（Windows） | **v1.0 发布目标** | 功能完整、可日常使用，提供自包含安装包                          |
+| 安卓端            | **v1.0 发布目标** | 功能已完成并通过全面代码审查，覆盖 SMB / WebDAV、后台传输与保活 |
 
-> 安卓版目前是「长期任务」而非「当前任务」：其定位是在桌面端能力稳定后，逐步将核心整理逻辑复用到移动端。现阶段不承诺功能完整度、稳定性或发布时间。
+> 两端共用同一套 Core（整理逻辑）与 Shared（ViewModel）分层，交互逻辑一致；平台差异通过条件编译与源端抽象（ADR-0006）隔离。
 
 ## 功能概览
 
@@ -36,7 +36,7 @@ MediaOrganizer 是一个用于整理照片和视频文件的桌面工具。它�
 ## 技术栈
 
 - .NET 10
-- Avalonia 12（UI 框架，桌面端主力；安卓端复用同一套 UI 抽象）
+- Avalonia 12（UI 框架，桌面端与安卓端复用同一套 UI 抽象）
 - MVVM（CommunityToolkit.Mvvm）
 - C# Core Library（无 UI 依赖，桌面 / 安卓两端共享）
 - Magick.NET（图片/EXIF 读取）
@@ -48,11 +48,12 @@ MediaOrganizer 是一个用于整理照片和视频文件的桌面工具。它�
 ```text
 MediaOrganizer/
 ├─ docs/                            # 需求文档、ADR、功能说明
+├─ packaging/                       # 桌面版打包：发布脚本 + Inno Setup 安装包脚本
 ├─ src/
 │  ├─ MediaOrganizer.Core/         # 核心扫描、分析、提取、归档逻辑（net10.0 + net10.0-android 双目标）
 │  ├─ MediaOrganizer.Shared/       # 桌面 / 安卓共享的 ViewModel 层（net10.0 单目标）
-│  ├─ MediaOrganizer.Desktop/      # Avalonia 桌面应用界面（当前主力）
-│  └─ MediaOrganizer.Android/      # 安卓端（长远任务，早期骨架）
+│  ├─ MediaOrganizer.Desktop/      # Avalonia 桌面应用界面
+│  └─ MediaOrganizer.Android/      # Avalonia 安卓应用
 ├─ test/
 │  └─ MediaOrganizer.Core.Tests/   # 单元测试
 ├─ MediaOrganizer.slnx             # 解决方案文件
@@ -82,64 +83,57 @@ Shared 项目承载**两端共享的 ViewModel 层**（MVVM 中的 VM），与�
 
 ### 3. Desktop
 
-Desktop 项目为当前主力界面，采用 Avalonia + MVVM 架构，主要提供：
+Desktop 项目为 Avalonia + MVVM 架构的桌面界面，主要提供：
 
 - 工作台：选择源目录、输出目录，执行分析与归档
 - 报告查看：查看分析摘要与失败清单
 - 设置页：配置提取器、模式、网络目标
 - 魔术工具：生成和测试文件名规则
 
-### 4. Android（长远任务）
+### 4. Android
 
-安卓端（`MediaOrganizer.Android`）目前处于**早期工程骨架与架构验证阶段**，定位为长远任务：
+安卓端（`MediaOrganizer.Android`）与桌面端同为 v1.0 发布目标，功能已完成：
 
-- 已搭建基于 Avalonia.Android 的工程结构，复用 Core 与 Shared
-- 已打通应用冷启动、清单合并、AppCompat 主题等基础链路
-- 尚未覆盖完整功能与稳定体验，不纳入近期发布计划
-- 后续将随桌面端能力成熟，逐步把核心整理流程迁移到移动端
+- 基于 Avalonia.Android，复用 Core 与 Shared 的完整整理链路
+- 支持 SMB / WebDAV 网络输出（SMBLibrary + WebDAVClient，ADR-0007）
+- 网络传输采用临时名传输 + 完成改名 + 大小校验，与桌面版一致
+- 已做后台传输与进程保活优化，并通过全面代码审查修复
+- 以侧载 APK 分发，非商店上架
 
 ## 运行要求
 
-### 桌面端
+### 桌面端（最终用户）
 
-- Windows 10 1809+（主目标平台，亦可跨平台运行）
-- .NET 10 SDK
+- Windows 10 1809+ x64
+- **无需安装 .NET**：安装包自包含运行时，离线可装
 - 4GB 以上内存（大批量照片场景下更佳）
 
-### 安卓端（长远任务，仅供开发参考）
+### 桌面端（从源码构建）
 
-- .NET 10 工作负载 `android`
-- Android SDK（build-tools 与对应 platform）
-- 仅用于工程验证，不建议作为日常工具使用
+- .NET 10 SDK
 
-## 快速开始（桌面端）
+### 安卓端
 
-### 1. 安装 .NET 10 SDK
+- Android 侧载安装，无需额外依赖
+- 从源码构建需 .NET 10 工作负载 `android` 与对应 Android SDK
 
-请先确保本机已安装 .NET 10 SDK。
+## 快速开始
 
-### 2. 克隆代码
+### 桌面端（最终用户）
+
+使用安装包 `MediaOrganizer_Setup_<版本>.exe`（构建方式见 `packaging/README.md`）：
+
+- 中文向导，全程无需管理员权限
+- 默认安装到用户目录 `%LocalAppData%\Programs\MediaOrganizer`
+- 自包含 .NET 10 Runtime + ReadyToRun 预编译，目标机无需任何运行时，离线可装
+
+### 桌面端（开发者）
 
 ```bash
 git clone <repository-url>
 cd MediaOrganizer
-```
-
-### 3. 恢复依赖
-
-```bash
 dotnet restore MediaOrganizer.slnx
-```
-
-### 4. 构建项目
-
-```bash
 dotnet build MediaOrganizer.slnx
-```
-
-### 5. 运行桌面应用
-
-```bash
 dotnet run --project src/MediaOrganizer.Desktop/MediaOrganizer.Desktop.csproj
 ```
 
@@ -154,13 +148,13 @@ dotnet test MediaOrganizer.slnx
 
 # 仅运行桌面应用
 dotnet run --project src/MediaOrganizer.Desktop/MediaOrganizer.Desktop.csproj
-```
 
-> 安卓端如需本地验证构建（非发布用途）：
->
-> ```bash
-> dotnet build src/MediaOrganizer.Android/MediaOrganizer.Android.csproj -f net10.0-android
-> ```
+# 打包桌面版安装包（自包含 + ReadyToRun，详见 packaging/README.md）
+cd packaging && ./publish.ps1 && ISCC.exe MediaOrganizer.iss
+
+# 安卓端本地验证构建
+dotnet build src/MediaOrganizer.Android/MediaOrganizer.Android.csproj -f net10.0-android
+```
 
 ## 应用流程
 
@@ -192,23 +186,32 @@ dotnet run --project src/MediaOrganizer.Desktop/MediaOrganizer.Desktop.csproj
 - 优先保证桌面端的日期识别稳定性与可调试性
 - 让「分析」和「执行」保持明确边界，方便用户在执行前确认计划
 - 支持复杂文件命名规则场景，减少归档失败率
-- 安卓端作为长远任务，沿用同一套分层，控制未来的迁移成本
+- 两端共用同一套分层，控制双端维护成本
 
 ## 开发路线
 
-- **近期（桌面端）**：完善魔术工具、失败文件处理体验、更丰富的规则配置能力
-- **中期**：打磨桌面端稳定性与跨平台体验
-- **长远（安卓端）**：在桌面端能力稳定后，将核心整理流程延伸到移动端；当前不承诺时间表
+- **v1.0（当前）**：双端功能冻结收尾，以打磨性能、修复潜在错误为第一优先级（ADR-0008）
+- **后续**：视需求重启国际化、自动更新通道、Magick.NET 体积优化等技术债
 
 ## 文档
 
 更多设计与需求资料位于 `docs/` 目录：
 
-- `docs/SRS.md`：软件需求规格说明
+- `docs/SRS.md`：软件需求规格说明（桌面端）
+- `docs/SRS-Android.md`：安卓端需求规格说明
 - `docs/glossary.md`：术语表
 - `docs/adr/`：架构决策记录
-- `docs/功能需求要点.md`：功能要点说明
+- `docs/功能需求要点.md`：原python版功能要点说明
+- `packaging/README.md`：桌面版打包说明
 
 ## 说明
 
-当前项目以桌面端为重心，核心整理链路已可用，并具备扩展式配置与网络输出能力。安卓端作为长远任务，目前仅为早期骨架，后续会随桌面端成熟而逐步推进。
+核心整理链路两端均已完成，桌面端提供自包含安装包，安卓端以侧载 APK 分发；当前处于 v1.0 收尾打磨阶段。
+
+## 致谢
+
+原型项目：图片分类器
+
+作者：Justin·HUgh(浅笑子)
+
+原作者联系方式：2911237699@qq.com
