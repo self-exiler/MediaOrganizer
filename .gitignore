@@ -36,3 +36,8 @@ TestResults/
 
 参考代码（python）/*
 
+
+# 安卓签名 keystore 与密码(只在本地保留,绝不入库)
+keystore/*.jks
+keystore/*.keystore
+keystore/*password*

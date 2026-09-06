@@ -1,0 +1,93 @@
+name: release
+
+# 打 tag(v* 或以 v 开头的分支推送亦可手动触发)时:
+# 桌面版(自包含 + R2R + Inno Setup 安装包)与安卓版(签名 APK)一并构建,
+# 发布到对应 tag 的 GitHub Release。
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    env:
+      # 从 tag 提取版本号(去掉前导 v);手动触发时用日期兜底
+      APP_VERSION: ${{ github.event_name == 'push' && startswith(github.ref, 'refs/tags/v') && github.ref_name || format('0.0.0-{0}', github.sha) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      # ---------- 桌面版 ----------
+      - name: Publish desktop (self-contained + ReadyToRun)
+        shell: pwsh
+        run: ./packaging/publish.ps1 -OutputDir packaging/publish/win-x64
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup -y --no-progress
+
+      - name: Build installer
+        shell: cmd
+        env:
+          ISCC: C:\Program Files (x86)\Inno Setup 6\ISCC.exe
+        run: '"%ISCC%" /DMyAppVersion=${{ env.APP_VERSION }} packaging/MediaOrganizer.iss'
+
+      # ---------- 安卓版 ----------
+      - name: Restore Android keystore from secrets
+        shell: pwsh
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          New-Item -ItemType Directory -Force keystore | Out-Null
+          [IO.File]::WriteAllBytes('keystore/mediaorganizer-release.jks',
+            [Convert]::FromBase64String($env:KEYSTORE_B64))
+
+      - name: Publish Android APK (arm64, signed)
+        shell: pwsh
+        run: >
+          dotnet publish src/MediaOrganizer.Android/MediaOrganizer.Android.csproj
+          -c Release -f net10.0-android
+          -p:ApplicationDisplayVersion=${{ env.APP_VERSION }}
+          -p:AndroidSigningKeyStore=${{ github.workspace }}\keystore\mediaorganizer-release.jks
+          -p:AndroidSigningKeyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          -p:AndroidSigningKeyPass=${{ secrets.ANDROID_KEYSTORE_PASS }}
+          -p:AndroidSigningStorePass=${{ secrets.ANDROID_KEYSTORE_PASS }}
+
+      - name: Locate artifacts
+        id: artifacts
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem packaging/releases/*.exe | Select-Object -First 1
+          $apk   = Get-ChildItem src/MediaOrganizer.Android/*-Signed.apk -Recurse |
+                   Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          if (-not $setup) { throw "未找到桌面安装包" }
+          if (-not $apk)   { throw "未找到签名 APK" }
+          Add-Content $env:GITHUB_OUTPUT "setup=$($setup.FullName)"
+          Add-Content $env:GITHUB_OUTPUT "apk=$($apk.FullName)"
+
+      # ---------- 发布 ----------
+      - name: Create GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SETUP: ${{ steps.artifacts.outputs.setup }}
+          APK: ${{ steps.artifacts.outputs.apk }}
+        run: |
+          if ("${{ github.event_name }}" -eq 'push') {
+            gh release create "${{ github.ref_name }}" "$env:SETUP" "$env:APK" `
+              --title "MediaOrganizer ${{ env.APP_VERSION }}" `
+              --generate-notes
+          } else {
+            gh release delete "ci-test" --yes --cleanup-tag 2>$null
+            gh release create "ci-test" "$env:SETUP" "$env:APK" `
+              --title "CI 测试构建 (${{ github.sha }})" `
+              --notes "workflow_dispatch 手动触发的测试发布,产物不作为正式版本。" `
+              --prerelease --target "${{ github.sha }}"
+          }

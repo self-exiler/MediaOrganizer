@@ -10,7 +10,10 @@
 ;           全程无需管理员提权。
 
 #define MyAppName      "MediaOrganizer"
+; 版本号可由 CI 用 /DMyAppVersion=1.2.3 覆盖,本地构建默认 1.0.0
+#ifndef MyAppVersion
 #define MyAppVersion   "1.0.0"
+#endif
 #define MyAppPublisher "dioha"
 #define MyAppExeName   "MediaOrganizer.Desktop.exe"
 #define MyAppId        "{7E4C1B52-3A9D-4E58-9C1F-6D2A8B70F431}"
