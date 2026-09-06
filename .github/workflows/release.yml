@@ -24,6 +24,10 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
+      - name: Install Android workload
+        shell: pwsh
+        run: dotnet workload install android
+
       # ---------- 桌面版 ----------
       - name: Publish desktop (self-contained + ReadyToRun)
         shell: pwsh
