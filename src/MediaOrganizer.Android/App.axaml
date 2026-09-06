@@ -4,32 +4,20 @@
              x:Class="MediaOrganizer.Android.App"
              RequestedThemeVariant="Light">
     <Application.Resources>
-        <!-- 自打包中文字体（Noto Sans SC，SIL OFL 许可，可随 APK 分发）：
-             彻底绕开 Avalonia 12 Android 系统字体回退缺陷导致的 CJK 空白问题。
-             注意 UI 文本避免使用 emoji/生僻符号（本字体不含，见 docs 字体说明）。 -->
-        <FontFamily x:Key="AppFont">avares://MediaOrganizer.Android/Fonts/NotoSansSC-Regular.otf#Noto Sans SC</FontFamily>
-        <!-- 覆盖 FluentTheme 模板内部引用的主题字体资源键（Button/ComboBox/ContentControl 等）。
-             注意：FontFamily 元素的内容按“字体族名字符串”解析，不会展开 {} 标记扩展；
-             写成 {StaticResource AppFont} 会构造出同名字符串的非法字体，
-             导致依赖 ContentControlThemeFontFamily 的控件中文全部不可见（只有 ASCII/符号可见）。 -->
-        <FontFamily x:Key="ContentControlThemeFontFamily">avares://MediaOrganizer.Android/Fonts/NotoSansSC-Regular.otf#Noto Sans SC</FontFamily>
+        <!-- 字体策略：使用系统默认字体 + Avalonia 按码点系统回退（FluentTheme 默认主题字体键
+             均指向 FontManager 默认族，CJK 由各机型系统字体命中：荣耀 HarmonyOS/HONOR Sans、
+             原生 Noto Sans CJK SC、小米 MiSans 等）。
+             历史：初版曾自打包 NotoSansSC 并覆盖主题字体键，彼时「中文不可见」实为
+             ContentControlThemeFontFamily 写成元素内容形式 {StaticResource AppFont} 的代码错误
+             （FontFamily 元素内容按字面族名解析 → 非法字体 → 按码点回退一并失效），d1104aa 修复；
+             系统字体路径当时从未被真正验证。2026-09-06 移除全部字体覆盖与自打包字体
+             （APK 预计减 3.5~5MB，评估与真机验证清单见 docs/review/2026-09-05-系统字体与并行度评估.md）。
+             若个别机型 CJK 空白：首选 git 还原本次改动，其次 FontManagerOptions.FontFallbacks
+             显式列出系统 CJK 族名。 -->
     </Application.Resources>
     <Application.Styles>
         <FluentTheme />
         <local:AppTheme />
-        <!-- 全局字体兜底：TextElement.FontFamily 为可继承附加属性，作用于所有控件
-             （含 PopupRoot 弹出层；TextBlock/AccessText 显式命中，避免 ContentPresenter
-             生成文本框时漏继承）。注意 Selector 中必须写成 TextElement.FontFamily 附加属性形式，
-             裸写 FontFamily 在 Control 上会触发 AVLN2000。 -->
-        <Style Selector="Control">
-            <Setter Property="TextElement.FontFamily" Value="{StaticResource AppFont}"/>
-        </Style>
-        <Style Selector="TextBlock">
-            <Setter Property="TextElement.FontFamily" Value="{StaticResource AppFont}"/>
-        </Style>
-        <Style Selector="AccessText">
-            <Setter Property="TextElement.FontFamily" Value="{StaticResource AppFont}"/>
-        </Style>
     </Application.Styles>
     <Application.DataTemplates>
         <local:ViewLocator />

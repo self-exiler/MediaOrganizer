@@ -221,32 +221,41 @@
                             <Border Grid.Column="0" Background="#FAFAFA" BorderBrush="{StaticResource DividerBrush}"
                                     BorderThickness="1" CornerRadius="10" Padding="6">
                                 <StackPanel>
-                                    <TextBlock Text="{Binding TotalFiles}" FontSize="24" FontWeight="Bold"
-                                               Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center"/>
+                                    <!-- Viewbox DownOnly: 数值超宽（如 96.8%、5 位数）时整体等比缩小，避免被等宽卡片裁切 -->
+                                            <Viewbox MaxHeight="30" Stretch="Uniform" StretchDirection="DownOnly">
+                                                <TextBlock Text="{Binding TotalFiles}" FontSize="24" FontWeight="Bold"
+                                                           Foreground="{StaticResource AccentBrush}"/>
+                                            </Viewbox>
                                     <TextBlock Text="总计" FontSize="11" Foreground="#8A8A8A" HorizontalAlignment="Center"/>
                                 </StackPanel>
                             </Border>
                             <Border Grid.Column="2" Background="#FAFAFA" BorderBrush="{StaticResource DividerBrush}"
                                     BorderThickness="1" CornerRadius="10" Padding="6">
                                 <StackPanel>
-                                    <TextBlock Text="{Binding SuccessFiles}" FontSize="24" FontWeight="Bold"
-                                               Foreground="{StaticResource SuccessBrush}" HorizontalAlignment="Center"/>
+                                    <Viewbox MaxHeight="30" Stretch="Uniform" StretchDirection="DownOnly">
+                                                <TextBlock Text="{Binding SuccessFiles}" FontSize="24" FontWeight="Bold"
+                                                           Foreground="{StaticResource SuccessBrush}"/>
+                                            </Viewbox>
                                     <TextBlock Text="成功" FontSize="11" Foreground="#8A8A8A" HorizontalAlignment="Center"/>
                                 </StackPanel>
                             </Border>
                             <Border Grid.Column="4" Background="#FAFAFA" BorderBrush="{StaticResource DividerBrush}"
                                     BorderThickness="1" CornerRadius="10" Padding="6">
                                 <StackPanel>
-                                    <TextBlock Text="{Binding FailedFiles}" FontSize="24" FontWeight="Bold"
-                                               Foreground="{StaticResource ErrorBrush}" HorizontalAlignment="Center"/>
+                                    <Viewbox MaxHeight="30" Stretch="Uniform" StretchDirection="DownOnly">
+                                                <TextBlock Text="{Binding FailedFiles}" FontSize="24" FontWeight="Bold"
+                                                           Foreground="{StaticResource ErrorBrush}"/>
+                                            </Viewbox>
                                     <TextBlock Text="失败" FontSize="11" Foreground="#8A8A8A" HorizontalAlignment="Center"/>
                                 </StackPanel>
                             </Border>
                             <Border Grid.Column="6" Background="#FAFAFA" BorderBrush="{StaticResource DividerBrush}"
                                     BorderThickness="1" CornerRadius="10" Padding="6">
                                 <StackPanel>
-                                    <TextBlock Text="{Binding SuccessRate}" FontSize="24" FontWeight="Bold"
-                                               Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center"/>
+                                    <Viewbox MaxHeight="30" Stretch="Uniform" StretchDirection="DownOnly">
+                                                <TextBlock Text="{Binding SuccessRate}" FontSize="24" FontWeight="Bold"
+                                                           Foreground="{StaticResource AccentBrush}"/>
+                                            </Viewbox>
                                     <TextBlock Text="成功率" FontSize="11" Foreground="#8A8A8A" HorizontalAlignment="Center"/>
                                 </StackPanel>
                             </Border>
