@@ -124,20 +124,24 @@ public sealed class OrganizeForegroundService : Service
         return builder.Build()!;
     }
 
+    // GetActivity/GetService 的返回值在绑定里标了可空（targeting API 31+ 时必须带 immutable flag，
+    // 取不到才为 null；此处调用参数恒定合法），加 ! 表明契约非空。
     private PendingIntent BuildContentIntent()
         => PendingIntent.GetActivity(this, 0, new Intent(this, typeof(MainActivity)),
-            PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable);
+            PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable)!;
 
     private PendingIntent BuildCancelIntent()
         => PendingIntent.GetService(this, 1,
             new Intent(this, typeof(OrganizeForegroundService)).SetAction(ActionCancel),
-            PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable);
+            PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable)!;
 
     private void NotifyOrIgnore(int id, Notification notification)
     {
+        var manager = NotificationManagerCompat.From(this);
+        if (manager is null) return; // 理论上不会；取不到就静默丢弃，不影响任务本身
         try
         {
-            NotificationManagerCompat.From(this).Notify(id, notification);
+            manager.Notify(id, notification);
         }
         catch (Exception ex)
         {
