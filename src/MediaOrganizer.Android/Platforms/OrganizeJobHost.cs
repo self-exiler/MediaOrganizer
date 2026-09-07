@@ -69,7 +69,10 @@ public sealed class OrganizeJobHost : IJobHost
             progress.Report(p);
         });
         var analyzeCt = BeginToken();
-        _ = RunJobAsync(onCompleted, onFailed, onCanceled,
+        // onCompleted 是无参 Action（分析结果经 session.AnalysisCompleted 事件下发，不走回调），
+        // 而 RunJobAsync<T> 要求 Action<T>，此处适配丢弃结果参数。
+        _ = RunJobAsync<MediaOrganizer.Core.Models.AnalysisResult>(
+            _ => onCompleted(), onFailed, onCanceled,
             () => session.AnalyzeAsync(sourceDir, outputRoot, observed, analyzeCt),
             _ => "分析完成，回应用查看结果");
     }
@@ -161,7 +164,8 @@ public sealed class OrganizeJobHost : IJobHost
             _lastOutcome = describe(result);
             Post(() => onCompleted(result));
         }
-        catch (OperationCanceledException)
+        // System.OperationCanceledException 必须全限定：using Android.OS 引入了同名类型（CS0104）
+        catch (System.OperationCanceledException)
         {
             _lastOutcome = _systemTimeout ? "已达系统后台时长上限，任务已停止" : "任务已取消，已完成文件保留";
             Post(onCanceled);
@@ -276,7 +280,7 @@ public sealed class OrganizeJobHost : IJobHost
     {
         if (!force)
         {
-            var now = Environment.TickCount64;
+            var now = System.Environment.TickCount64; // Android.OS.Environment 同名，须全限定（CS0104）
             var last = Interlocked.Read(ref _lastNotifyTicks);
             if (now - last < 500) return;
             Interlocked.Exchange(ref _lastNotifyTicks, now);
