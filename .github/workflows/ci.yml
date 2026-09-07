@@ -45,12 +45,17 @@ jobs:
         shell: pwsh
         run: |
           $manifest = Get-ChildItem src/MediaOrganizer.Android/obj -Recurse -Filter AndroidManifest.xml |
-                      Where-Object { $_.FullName -replace '\\','/' -match '/net10\.0-android/' } |
+                      Where-Object { $_.FullName -replace '\\','/' -match '/net10\.0-android(/android)?/AndroidManifest\.xml$' } |
+                      Sort-Object { if ($_.FullName -match '/android/') { 0 } else { 1 } } |
                       Select-Object -First 1
           if (-not $manifest) { throw "未找到合并后的 AndroidManifest.xml（obj/**/net10.0-android/）" }
           Write-Host "merged manifest: $($manifest.FullName)"
           $text = Get-Content $manifest.FullName -Raw
-          if ($text -notmatch 'OrganizeForegroundService') { throw "清单中缺少 OrganizeForegroundService 的 <service> 条目" }
+          # 打印全部 <service> 行，便于诊断
+          $text -split "`n" | Where-Object { $_ -match '<service\b' } | ForEach-Object { Write-Host "service: $($_.Trim())" }
+          # [Service] 显式 Name="org.mediaorganizer.android.organize"，清单里不含类名；
+          # 同时兼容未显式命名时 .NET Android 生成 crc64xxxx.OrganizeForegroundService 的形态
+          if ($text -notmatch 'OrganizeForegroundService' -and $text -notmatch 'org\.mediaorganizer\.android\.organize') { throw "清单中缺少 OrganizeForegroundService 的 <service> 条目" }
           if ($text -notmatch 'android:foregroundServiceType="dataSync"') { throw "service 未声明 foregroundServiceType=dataSync" }
           if ($text -notmatch 'FOREGROUND_SERVICE_DATA_SYNC') { throw "缺少 FOREGROUND_SERVICE_DATA_SYNC 权限" }
           if ($text -notmatch 'POST_NOTIFICATIONS') { throw "缺少 POST_NOTIFICATIONS 权限" }
