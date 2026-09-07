@@ -12,9 +12,15 @@ namespace MediaOrganizer.Android.Platforms;
 /// Android 15+ 对 dataSync 有 24 小时累计约 6 小时的时长配额，触顶回调 OnTimeout，
 /// 必须数秒内停止自身，否则系统抛 RemoteServiceException。
 /// </summary>
+/// <remarks>
+/// 本文件命名空间为 MediaOrganizer.Android.Platforms，标识符 Android 会先命中
+/// MediaOrganizer.Android 命名空间（命名空间遮蔽），故所有 Android SDK 类型必须 global:: 全限定。
+/// 另注：Mono.Android 中该「前台服务类型」是枚举 Android.Content.PM.ForegroundService
+/// （成员名 TypeDataSync / TypeCamera…），不存在 ForegroundServiceType 这个类型名。
+/// </remarks>
 [Service(Name = "org.mediaorganizer.android.organize",
     Exported = false,
-    ForegroundServiceType = Android.Content.PM.ForegroundServiceType.DataSync)]
+    ForegroundServiceType = global::Android.Content.PM.ForegroundService.TypeDataSync)]
 public sealed class OrganizeForegroundService : Service
 {
     public const string ActionCancel = "org.mediaorganizer.android.action.CANCEL_ORGANIZE";
@@ -46,7 +52,7 @@ public sealed class OrganizeForegroundService : Service
         }
 
         // 三参 StartForeground：API 29+ 必须显式声明与 manifest 一致的 foregroundServiceType
-        StartForeground(NotificationId, BuildNotification(host), Android.Content.PM.ForegroundServiceType.DataSync);
+        StartForeground(NotificationId, BuildNotification(host), global::Android.Content.PM.ForegroundService.TypeDataSync);
 
         if (!_subscribed)
         {
@@ -141,7 +147,7 @@ public sealed class OrganizeForegroundService : Service
 
     // Android 15+（API 35）dataSync 时长配额触顶：数秒内必须停止自身。
     // 任务无落盘持久化（M2 未做），此处优雅取消 + 告知原因；重跑靠 skip 策略不会重传已完成文件。
-    public override void OnTimeout(int startId, ForegroundServiceType fgsType)
+    public override void OnTimeout(int startId, global::Android.Content.PM.ForegroundService fgsType)
     {
         OrganizeJobHost.Current?.CancelBySystemTimeout();
         FinalizeAndStop("已达系统后台时长上限，备份已停止；重新执行会跳过已完成文件");

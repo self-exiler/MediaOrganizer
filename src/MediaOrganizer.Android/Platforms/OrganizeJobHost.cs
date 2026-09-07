@@ -31,7 +31,9 @@ public sealed class OrganizeJobHost : IJobHost
     private bool _batteryHintShown;
     private JobKind _kind;
     private DateTimeOffset _startedAt;
-    private WifiLock? _wifiLock;
+    // WifiLock 是 WifiManager 的嵌套类（Java: WifiManager.WifiLock），不是 Android.Net.Wifi 下的顶层类型。
+    // 另：WifiMode 位于 Android.Net（而非 Android.Net.Wifi），本文件只 using 了后者，故一律 global:: 全限定。
+    private global::Android.Net.Wifi.WifiManager.WifiLock? _wifiLock;
 
     // 通知消费的进度快照（跨线程读写；double 不能标 volatile，展示值无强一致需求，
     // Snapshot 侧已在锁内读取，写侧单字段赋值即可）
@@ -246,9 +248,10 @@ public sealed class OrganizeJobHost : IJobHost
     {
         try
         {
-            var wifi = (WifiManager?)global::Android.App.Application.Context.GetSystemService(Context.WifiService);
+            var wifi = (global::Android.Net.Wifi.WifiManager?)global::Android.App.Application.Context.GetSystemService(Context.WifiService);
             if (wifi is null) return;
-            var @lock = wifi.CreateWifiLock(WifiMode.FullHighPerf, "mediaorganizer:wifi");
+            var @lock = wifi.CreateWifiLock(global::Android.Net.WifiMode.FullHighPerf, "mediaorganizer:wifi");
+            if (@lock is null) return;
             @lock.SetReferenceCounted(false);
             @lock.Acquire();
             _wifiLock = @lock;

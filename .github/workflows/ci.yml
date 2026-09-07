@@ -1,0 +1,73 @@
+name: ci
+
+# 编译校验流水线：每次 push / PR 到 main 都验证桌面端与安卓端能否编译通过。
+# 与 release.yml 的区别：不签名、不打包安装包、不发布 Release，因此不需要任何 secrets，
+# 适合在改完平台代码后快速验证云端能否构建（本机不装 Android SDK 时尤其有用）。
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-android:
+    name: Android (net10.0-android, arm64)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Install Android workload
+        shell: pwsh
+        run: dotnet workload install android
+
+      # 只编译不签名：验证 C# 平台代码（SAF/前台服务/Mono.Android API 名称）能否通过编译。
+      # 注意 -f 只能对单个 csproj 使用，不能作用于 slnx（会把其他项目强按 android 目标 → NETSDK1005）。
+      - name: Build Android project
+        shell: pwsh
+        run: >
+          dotnet build src/MediaOrganizer.Android/MediaOrganizer.Android.csproj
+          -c Release -f net10.0-android
+
+      - name: Upload unsigned APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: MediaOrganizer-android-unsigned
+          path: src/MediaOrganizer.Android/bin/Release/net10.0-android/**/*.apk
+          if-no-files-found: error
+
+  build-desktop:
+    name: Desktop (net10.0)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Build Desktop project
+        shell: pwsh
+        run: dotnet build src/MediaOrganizer.Desktop/MediaOrganizer.Desktop.csproj -c Release
+
+  test-core:
+    name: Core unit tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Run tests
+        shell: pwsh
+        run: dotnet test test/MediaOrganizer.Core.Tests/MediaOrganizer.Core.Tests.csproj -c Release
