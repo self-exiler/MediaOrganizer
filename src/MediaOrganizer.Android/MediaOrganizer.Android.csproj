@@ -8,8 +8,11 @@
     <Nullable>enable</Nullable>
     <ApplicationId>org.mediaorganizer.android</ApplicationId>
     <ApplicationTitle>MediaOrganizer</ApplicationTitle>
-    <ApplicationVersion>1</ApplicationVersion>
-    <ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>
+    <!-- ApplicationVersion = Android versionCode（整数，必须单调递增，否则覆盖安装会被
+         INSTALL_FAILED_VERSION_DOWNGRADE 拒绝）；ApplicationDisplayVersion = versionName，
+         CI 发版时由 -p:ApplicationDisplayVersion=<tag 去掉前导 v> 覆盖。 -->
+    <ApplicationVersion>2</ApplicationVersion>
+    <ApplicationDisplayVersion>1.1.0</ApplicationDisplayVersion>
     <AndroidManifest>Properties\AndroidManifest.xml</AndroidManifest>
     <!-- .NET Android 默认处理器 AndroidMessageHandler 底层是 Java HttpURLConnection，
          不认识 WebDAV 扩展方法，PROPFIND 会被直接拒绝（"Expected one of [OPTIONS, GET, ...]
