@@ -83,14 +83,15 @@ public sealed class OrganizeForegroundService : Service
         {
             // 先撤前台态，再发非常驻的最终摘要通知（独立 ID，不与进行中通知冲突）
             StopForeground(StopForegroundFlags.Remove);
-            var summary = new NotificationCompat.Builder(this, NotificationChannels.OrganizeChannelId)
-                .SetSmallIcon(Resource.Mipmap.ic_launcher)
-                .SetContentTitle("MediaOrganizer")
-                .SetContentText(outcome)
-                .SetContentIntent(BuildContentIntent())
-                .SetAutoCancel(true)
-                .Build()!;
-            NotifyOrIgnore(SummaryNotificationId, summary);
+            // 链式调用逐个返回值在 AndroidX 绑定里都标了可空，链式 dereference 会刷 CS8602 告警；
+            // Builder 方法本身返回 this（标准 Builder 模式），故拆成语句调用语义等价。
+            var builder = new NotificationCompat.Builder(this, NotificationChannels.OrganizeChannelId)!;
+            builder.SetSmallIcon(Resource.Mipmap.ic_launcher);
+            builder.SetContentTitle("MediaOrganizer");
+            builder.SetContentText(outcome);
+            builder.SetContentIntent(BuildContentIntent());
+            builder.SetAutoCancel(true);
+            NotifyOrIgnore(SummaryNotificationId, builder.Build()!);
             StopSelf();
         });
     }
@@ -108,14 +109,14 @@ public sealed class OrganizeForegroundService : Service
     private Notification BuildNotification(OrganizeJobHost host)
     {
         var (title, detail, fraction) = host.Snapshot();
-        var builder = new NotificationCompat.Builder(this, NotificationChannels.OrganizeChannelId)
-            .SetSmallIcon(Resource.Mipmap.ic_launcher)
-            .SetContentTitle(title)
-            .SetContentText(detail)
-            .SetContentIntent(BuildContentIntent())
-            .SetOnlyAlertOnce(true)
-            .SetOngoing(true)
-            .AddAction(0, "停止", BuildCancelIntent());
+        var builder = new NotificationCompat.Builder(this, NotificationChannels.OrganizeChannelId)!;
+        builder.SetSmallIcon(Resource.Mipmap.ic_launcher);
+        builder.SetContentTitle(title);
+        builder.SetContentText(detail);
+        builder.SetContentIntent(BuildContentIntent());
+        builder.SetOnlyAlertOnce(true);
+        builder.SetOngoing(true);
+        builder.AddAction(0, "停止", BuildCancelIntent());
         if (fraction is { } f && f >= 0)
             builder.SetProgress(100, Math.Clamp((int)(f * 100), 0, 100), false);
         else
