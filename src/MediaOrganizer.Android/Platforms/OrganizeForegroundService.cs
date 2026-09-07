@@ -89,7 +89,7 @@ public sealed class OrganizeForegroundService : Service
                 .SetContentText(outcome)
                 .SetContentIntent(BuildContentIntent())
                 .SetAutoCancel(true)
-                .Build();
+                .Build()!;
             NotifyOrIgnore(SummaryNotificationId, summary);
             StopSelf();
         });
@@ -120,7 +120,7 @@ public sealed class OrganizeForegroundService : Service
             builder.SetProgress(100, Math.Clamp((int)(f * 100), 0, 100), false);
         else
             builder.SetProgress(0, 0, true); // 不定进度
-        return builder.Build();
+        return builder.Build()!;
     }
 
     private PendingIntent BuildContentIntent()

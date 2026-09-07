@@ -45,9 +45,18 @@
                 Background="{StaticResource CardBrush}" CornerRadius="12" Padding="4,8,16,8"
                 BorderBrush="{StaticResource DividerBrush}" BorderThickness="1"
                 BoxShadow="0 1 3 0 #14000000">
-            <ListBox ItemsSource="{Binding Items}" SelectionMode="None"
+            <!-- Avalonia 的 SelectionMode 枚举只有 Single/Multiple/Toggle/AlwaysSelected，
+                 没有 None（写成 "None" 会报 AVLN3000）。本列表只当虚拟化容器用，勾选语义走行内 CheckBox，
+                 故不设 SelectionMode（默认 Single），改把选中/悬停底色覆写成透明，选中态不可见。 -->
+            <ListBox ItemsSource="{Binding Items}"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      Background="Transparent">
+                <ListBox.Resources>
+                    <SolidColorBrush x:Key="ListBoxItemBackgroundPointerOver" Color="Transparent"/>
+                    <SolidColorBrush x:Key="ListBoxItemBackgroundSelected" Color="Transparent"/>
+                    <SolidColorBrush x:Key="ListBoxItemBackgroundSelectedPointerOver" Color="Transparent"/>
+                    <SolidColorBrush x:Key="ListBoxItemForegroundSelected" Color="{StaticResource TextBrush}"/>
+                </ListBox.Resources>
                 <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="vm:FailedItem">
                         <StackPanel>
