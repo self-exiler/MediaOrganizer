@@ -9,9 +9,8 @@
     <ApplicationId>org.mediaorganizer.android</ApplicationId>
     <ApplicationTitle>MediaOrganizer</ApplicationTitle>
     <!-- ApplicationVersion = Android versionCode（整数，必须单调递增，否则覆盖安装会被
-         INSTALL_FAILED_VERSION_DOWNGRADE 拒绝）。CI 发版时由 release.yml 用
-         git rev-list --count HEAD 自动生成并覆盖（-p:ApplicationVersion），此处数值
-         仅作本地构建兜底，无需手工跟随发版递增。
+         INSTALL_FAILED_VERSION_DOWNGRADE 拒绝）。CI 发版时由 release.yml 用 git 提交总数
+         自动生成并覆盖（-p:ApplicationVersion），此处数值仅作本地构建兜底，无需手工递增。
          ApplicationDisplayVersion = versionName，CI 发版时由 -p:ApplicationDisplayVersion=<tag 去掉前导 v> 覆盖。 -->
     <ApplicationVersion>3</ApplicationVersion>
     <ApplicationDisplayVersion>1.1.1</ApplicationDisplayVersion>
