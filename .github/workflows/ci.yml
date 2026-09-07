@@ -37,6 +37,25 @@ jobs:
           dotnet build src/MediaOrganizer.Android/MediaOrganizer.Android.csproj
           -c Release -f net10.0-android
 
+      # 光编译通过不能证明 [Service(ForegroundServiceType=…)] 真的落进清单：
+      # Android 14+ 若 service 未声明合法 foregroundServiceType，startForeground 会抛
+      # MissingForegroundServiceTypeException / InvalidForegroundServiceTypeException（装到真机才炸）。
+      # 这里对合并后的清单做断言，把这类「编译过、运行崩」的问题挡在 CI。
+      - name: Assert merged AndroidManifest (dataSync 前台服务已声明)
+        shell: pwsh
+        run: |
+          $manifest = Get-ChildItem src/MediaOrganizer.Android/obj -Recurse -Filter AndroidManifest.xml |
+                      Where-Object { $_.FullName -replace '\\','/' -match '/net10\.0-android/' } |
+                      Select-Object -First 1
+          if (-not $manifest) { throw "未找到合并后的 AndroidManifest.xml（obj/**/net10.0-android/）" }
+          Write-Host "merged manifest: $($manifest.FullName)"
+          $text = Get-Content $manifest.FullName -Raw
+          if ($text -notmatch 'OrganizeForegroundService') { throw "清单中缺少 OrganizeForegroundService 的 <service> 条目" }
+          if ($text -notmatch 'android:foregroundServiceType="dataSync"') { throw "service 未声明 foregroundServiceType=dataSync" }
+          if ($text -notmatch 'FOREGROUND_SERVICE_DATA_SYNC') { throw "缺少 FOREGROUND_SERVICE_DATA_SYNC 权限" }
+          if ($text -notmatch 'POST_NOTIFICATIONS') { throw "缺少 POST_NOTIFICATIONS 权限" }
+          Write-Host "OK: dataSync 前台服务与相关权限均已声明"
+
       - name: Upload unsigned APK
         uses: actions/upload-artifact@v4
         with:
