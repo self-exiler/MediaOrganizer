@@ -32,12 +32,22 @@ if (-not $OutputDir) {
 $r2r = if ($NoReadyToRun) { 'false' } else { 'true' }
 
 Write-Host "==> 发布 $Configuration / $RuntimeIdentifier (self-contained=true, R2R=$r2r)"
+
+# CI 发版时经 GITHUB_ENV 注入 APP_VERSION(tag 剥掉前导 v),让 exe/dll 的
+# FileVersion/InformationalVersion 跟上 tag;本地未设置时跳过,走 csproj 默认值。
+$versionArgs = @()
+if ($env:APP_VERSION) {
+    $versionArgs += @("-p:Version=$($env:APP_VERSION)", "-p:InformationalVersion=$($env:APP_VERSION)")
+    Write-Host "==> 程序集版本 = $($env:APP_VERSION)"
+}
+
 dotnet publish $project `
     -c $Configuration `
     -r $RuntimeIdentifier `
     --self-contained true `
     -p:PublishReadyToRun=$r2r `
     -p:PublishSingleFile=false `
+    @versionArgs `
     -o $OutputDir
 
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish 失败（exit=$LASTEXITCODE）" }

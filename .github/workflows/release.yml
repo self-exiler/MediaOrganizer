@@ -1,12 +1,12 @@
 name: release
 
-# 打 tag(v* 或以 v 开头的分支推送亦可手动触发)时:
+# 推送 v* tag 时:
 # 桌面版(自包含 + R2R + Inno Setup 安装包)与安卓版(签名 APK)一并构建,
 # 发布到对应 tag 的 GitHub Release。
+# 快速编译验证请用 ci.yml(不签名、不需要 secrets);本流水线只由 tag 触发。
 on:
   push:
     tags: ["v*"]
-  workflow_dispatch:
 
 permissions:
   contents: write
@@ -15,21 +15,25 @@ jobs:
   build-and-release:
     runs-on: windows-latest
     steps:
+      # fetch-depth: 0 拉全量历史,versionCode 用 git rev-list --count 计算
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      # 版本号:tag 推送取 tag 名并去掉前导 v(文档只保证 startsWith 这个函数名,别写小写);
-      # 手动触发没有 tag,用 0.0.0-<sha> 兜底。写入 GITHUB_ENV 供后续步骤的 env.APP_VERSION 使用。
+      # 版本号:tag 名剥掉前导 v 写入 APP_VERSION(文档只保证 startsWith 这个函数名,别写小写);
+      # versionCode(Android ApplicationVersion,必须单调递增)用提交数自动生成,
+      # 与仓库历史绑定,天然单调,发版零人肉。csproj 里的值仅作本地构建兜底。
       - name: Resolve version
         shell: pwsh
         run: |
-          if ("${{ github.event_name }}" -eq 'push') {
-            $v = "${{ github.ref_name }}".TrimStart('v', 'V')
-          } else {
-            $v = "0.0.0-${{ github.sha }}"
-          }
+          $v = "${{ github.ref_name }}".TrimStart('v', 'V')
           if ([string]::IsNullOrWhiteSpace($v)) { throw "版本号解析为空" }
+          $code = [int](git rev-list --count HEAD)
+          if ($code -lt 2) { throw "versionCode 异常: $code" }
           Write-Host "APP_VERSION = $v"
+          Write-Host "VERSION_CODE = $code"
           Add-Content $env:GITHUB_ENV "APP_VERSION=$v"
+          Add-Content $env:GITHUB_ENV "VERSION_CODE=$code"
 
       - uses: actions/setup-dotnet@v4
         with:
@@ -70,6 +74,7 @@ jobs:
           dotnet publish src/MediaOrganizer.Android/MediaOrganizer.Android.csproj
           -c Release -f net10.0-android
           -p:ApplicationDisplayVersion=${{ env.APP_VERSION }}
+          -p:ApplicationVersion=${{ env.VERSION_CODE }}
           -p:AndroidSigningKeyStore=${{ github.workspace }}\keystore\mediaorganizer-release.jks
           -p:AndroidSigningKeyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
           -p:AndroidSigningKeyPass=${{ secrets.ANDROID_KEYSTORE_PASS }}
@@ -87,7 +92,6 @@ jobs:
           Add-Content $env:GITHUB_OUTPUT "setup=$($setup.FullName)"
           Add-Content $env:GITHUB_OUTPUT "apk=$($apk.FullName)"
 
-      # ---------- 发布 ----------
       - name: Create GitHub Release
         shell: pwsh
         env:
@@ -95,14 +99,6 @@ jobs:
           SETUP: ${{ steps.artifacts.outputs.setup }}
           APK: ${{ steps.artifacts.outputs.apk }}
         run: |
-          if ("${{ github.event_name }}" -eq 'push') {
-            gh release create "${{ github.ref_name }}" "$env:SETUP" "$env:APK" `
-              --title "MediaOrganizer ${{ env.APP_VERSION }}" `
-              --generate-notes
-          } else {
-            gh release delete "ci-test" --yes --cleanup-tag 2>$null
-            gh release create "ci-test" "$env:SETUP" "$env:APK" `
-              --title "CI 测试构建 (${{ github.sha }})" `
-              --notes "workflow_dispatch 手动触发的测试发布,产物不作为正式版本。" `
-              --prerelease --target "${{ github.sha }}"
-          }
+          gh release create "${{ github.ref_name }}" "$env:SETUP" "$env:APK" `
+            --title "MediaOrganizer ${{ env.APP_VERSION }}" `
+            --generate-notes
