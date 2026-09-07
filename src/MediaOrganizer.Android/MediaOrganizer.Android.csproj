@@ -11,8 +11,8 @@
     <!-- ApplicationVersion = Android versionCode（整数，必须单调递增，否则覆盖安装会被
          INSTALL_FAILED_VERSION_DOWNGRADE 拒绝）；ApplicationDisplayVersion = versionName，
          CI 发版时由 -p:ApplicationDisplayVersion=<tag 去掉前导 v> 覆盖。 -->
-    <ApplicationVersion>2</ApplicationVersion>
-    <ApplicationDisplayVersion>1.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>3</ApplicationVersion>
+    <ApplicationDisplayVersion>1.1.1</ApplicationDisplayVersion>
     <AndroidManifest>Properties\AndroidManifest.xml</AndroidManifest>
     <!-- .NET Android 默认处理器 AndroidMessageHandler 底层是 Java HttpURLConnection，
          不认识 WebDAV 扩展方法，PROPFIND 会被直接拒绝（"Expected one of [OPTIONS, GET, ...]
@@ -61,10 +61,14 @@
        Shared 现为条件多目标（net10.0-android），Android 下其引用的 Core 用 net10.0-android 版本（不含 Magick.NET），
        Magick 原生库不再进入 Android 闭包，16KB 页面对齐（XA0141）问题随之消除。 -->
 
-  <!-- 自打包中文字体（Fonts/NotoSansSC-Regular.otf，7.94MB）已于 2026-09-06 移除：
-       改用系统字体 + Avalonia 按码点回退；「中文不可见」的真凶是当年 App.axaml 的
-       FontFamily 元素内容写法错误而非平台缺陷。回退方式：git 恢复 Fonts/ 目录与本行
-       （评估见 docs/review/2026-09-05-系统字体与并行度评估.md）。 -->
+  <!-- 内嵌中文字体（Noto Sans SC，SIL OFL）：放 Fonts/ 而非 Assets/，避免 .NET Android 把
+       Assets/** 自动标记为 AndroidAsset 与 AvaloniaResource 冲突。
+       2026-09-07：曾于 09-06 移除并改走系统字体回退，v1.1.0 真机中文不可见，已恢复。
+       不要再删——代价是 APK 增约 3.5~5MB，收益是中文可用。
+       （评估见 docs/review/2026-09-05-系统字体与并行度评估.md） -->
+  <ItemGroup>
+    <AvaloniaResource Include="Fonts\**" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\MediaOrganizer.Core\MediaOrganizer.Core.csproj" />

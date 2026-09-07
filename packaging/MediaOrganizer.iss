@@ -12,7 +12,7 @@
 #define MyAppName      "MediaOrganizer"
 ; 版本号可由 CI 用 /DMyAppVersion=1.2.3 覆盖（tag v1.2.3 → 传 1.2.3，不带前导 v）
 #ifndef MyAppVersion
-#define MyAppVersion   "1.1.0"
+#define MyAppVersion   "1.1.1"
 #endif
 #define MyAppPublisher "dioha"
 #define MyAppExeName   "MediaOrganizer.Desktop.exe"
