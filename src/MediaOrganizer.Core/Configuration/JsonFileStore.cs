@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -10,6 +11,9 @@ public static class JsonFileStore
     public static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
+        // 默认编码器会把所有非 ASCII 字符转义成 \uXXXX，中文配置全部不可读；
+        // 文件以 UTF-8 落盘，放宽转义是安全的（仅不在 HTML 上下文中使用该输出）。
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         PropertyNameCaseInsensitive = true,
         ReadCommentHandling = JsonCommentHandling.Skip,
         AllowTrailingCommas = true,
