@@ -68,14 +68,23 @@ public sealed class FileOperator
             CancellationToken = ct
         };
 
+        // perf-8：仅计划内重名的目标需要互斥闸（并行下同名目标的 Exists 检查与传输交错会漏判）；
+        // 重名几乎不出现，避免每文件一次字典 + 信号量分配。
+        var duplicatedTargets = files.GroupBy(f => f.RelativeTarget)
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .ToHashSet();
+
         try
         {
             await Parallel.ForEachAsync(files, options, async (f, token) =>
             {
                 token.ThrowIfCancellationRequested();
 
-                var gate = _targetGates.GetOrAdd(f.RelativeTarget, _ => new SemaphoreSlim(1, 1));
-                await gate.WaitAsync(token);
+                var gate = duplicatedTargets.Contains(f.RelativeTarget)
+                    ? _targetGates.GetOrAdd(f.RelativeTarget, _ => new SemaphoreSlim(1, 1))
+                    : null;
+                if (gate is not null) await gate.WaitAsync(token);
                 try
                 {
                     var sw = Stopwatch.StartNew();
@@ -117,7 +126,7 @@ public sealed class FileOperator
                 }
                 finally
                 {
-                    gate.Release();
+                    gate?.Release();
                 }
                 var done = Interlocked.Increment(ref processed);
                 progress?.Report((double)done / files.Count);

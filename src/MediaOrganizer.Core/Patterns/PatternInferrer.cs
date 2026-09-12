@@ -208,6 +208,21 @@ public static class PatternInferrer
         // 第一遍：把样本结构规约成有序 token
         //  字面量 → (IsDigitRun=false, Len=0, Lit)；可变数字段 → (true, len, "")；可变非数字段 → (false, 0, '.'×len)
         var parts = new List<(bool IsDigitRun, int Len, string Lit)>();
+
+        // 把 [p0, end) 区间内 samples[0] 的连续相同字符折叠为字面量 token（连续相同用 {n} 量化）
+        void FoldLiteralRun(int p0, int end)
+        {
+            while (p0 < end)
+            {
+                char c = samples[0][p0];
+                int r0 = p0;
+                while (r0 < end && samples[0][r0] == c) r0++;
+                int len = r0 - p0;
+                parts.Add((false, 0, len > 1 ? Regex.Escape(c.ToString()) + "{" + len + "}" : Regex.Escape(c.ToString())));
+                p0 = r0;
+            }
+        }
+
         int pos = 0;
         while (pos < minLen)
         {
@@ -226,17 +241,8 @@ public static class PatternInferrer
                 }
                 else
                 {
-                    // 全同数字块：折叠为字面量（连续相同用 {n} 量化）
-                    var p0 = pos;
-                    while (p0 < end)
-                    {
-                        char c = samples[0][p0];
-                        int r0 = p0;
-                        while (r0 < end && samples[0][r0] == c) r0++;
-                        int len = r0 - p0;
-                        parts.Add((false, 0, len > 1 ? Regex.Escape(c.ToString()) + "{" + len + "}" : Regex.Escape(c.ToString())));
-                        p0 = r0;
-                    }
+                    // 全同数字块：折叠为字面量
+                    FoldLiteralRun(pos, end);
                 }
                 pos = end;
             }
@@ -245,16 +251,7 @@ public static class PatternInferrer
                 // 非数字字面量 run
                 int r = pos;
                 while (r < minLen && AllSame(r) && !AllDigit(r)) r++;
-                var p0 = pos;
-                while (p0 < r)
-                {
-                    char c = samples[0][p0];
-                    int r0 = p0;
-                    while (r0 < r && samples[0][r0] == c) r0++;
-                    int len = r0 - p0;
-                    parts.Add((false, 0, len > 1 ? Regex.Escape(c.ToString()) + "{" + len + "}" : Regex.Escape(c.ToString())));
-                    p0 = r0;
-                }
+                FoldLiteralRun(pos, r);
                 pos = r;
             }
             else

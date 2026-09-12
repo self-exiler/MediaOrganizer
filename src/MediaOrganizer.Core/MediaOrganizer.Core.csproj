@@ -14,13 +14,13 @@
 
   <ItemGroup>
     <!-- Magick.NET 是原生库，不支持 Android：Android TFM 下排除，EXIF 读取由 Android 项目注入 IExifReader（ExifInterface） -->
-    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="14.16.0" Condition="'$(TargetFramework)' != 'net10.0-android'" />
-    <PackageReference Include="TagLibSharp" Version="2.3.0" />
+    <PackageReference Include="Magick.NET-Q16-AnyCPU" Condition="'$(TargetFramework)' != 'net10.0-android'" />
+    <PackageReference Include="TagLibSharp" />
     <!-- SMBLibrary 纯托管 SMB1/2/3 客户端，双端统一保留（ADR-0007） -->
-    <PackageReference Include="SMBLibrary" Version="1.5.7.1" />
+    <PackageReference Include="SMBLibrary" />
     <!-- DPAPI 仅 Windows 桌面用（CA1416 噪音）：Android TFM 下排除，Keystore 实现在 Android 项目 -->
-    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.0" Condition="'$(TargetFramework)' != 'net10.0-android'" />
-    <PackageReference Include="WebDAVClient" Version="2.7.0" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Condition="'$(TargetFramework)' != 'net10.0-android'" />
+    <PackageReference Include="WebDAVClient" />
   </ItemGroup>
 
 </Project>

@@ -27,7 +27,7 @@ public sealed class WebDavFileStorage : IFileStorage
     }
 
     private string Resolve(string relativePath)
-        => _basePath.TrimEnd('/') + "/" + relativePath.TrimStart('/');
+        => _basePath + "/" + relativePath.TrimStart('/'); // _basePath 构造时已 TrimEnd（perf-9）
 
     private static string ParentOf(string relativePath)
     {
@@ -93,17 +93,15 @@ public sealed class WebDavFileStorage : IFileStorage
 
     public async Task<long> CopyFromAsync(IMediaSource source, string relativeTarget, IProgress<long>? progress = null, CancellationToken ct = default)
     {
+        // perf-9：Upload 本身是异步库调用，直接 await，勿再包 Task.Run 多一次线程切换
         var parent = ParentOf(relativeTarget);
         var name = relativeTarget[(relativeTarget.LastIndexOf('/') + 1)..];
-        return await Task.Run(async () =>
-        {
-            await using var src = source.OpenRead();
-            var ok = await _client.Upload(Resolve(parent), src, name, null, ct);
-            if (!ok) throw new IOException($"WebDAV 上传失败：{relativeTarget}");
-            progress?.Report(source.Length);
-            // 库按整个流上传且成功即完整，写入自证大小 = 源长度
-            return source.Length;
-        }, ct);
+        await using var src = source.OpenRead();
+        var ok = await _client.Upload(Resolve(parent), src, name, null, ct);
+        if (!ok) throw new IOException($"WebDAV 上传失败：{relativeTarget}");
+        progress?.Report(source.Length);
+        // 库按整个流上传且成功即完整，写入自证大小 = 源长度
+        return source.Length;
     }
 
     public Task DeleteAsync(string relativePath, CancellationToken ct = default)

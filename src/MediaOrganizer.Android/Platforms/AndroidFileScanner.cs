@@ -13,17 +13,18 @@ namespace MediaOrganizer.Android.Platforms;
 /// </summary>
 public sealed class AndroidFileScanner : IFileScanner
 {
-    private readonly string[] _formats;
+    private readonly HashSet<string> _formats;
     private readonly bool _scanAllFiles;
     private readonly ContentResolver _resolver;
     private readonly FileScanner _pathScanner;
 
     public AndroidFileScanner(IEnumerable<string> supportedFormats, bool scanAllFiles, ContentResolver resolver)
     {
+        // perf-20：HashSet(OrdinalIgnoreCase) 替代数组 Contains 的逐文件 O(n) 线性查，且免规范化分配
         _formats = supportedFormats
-            .Select(f => f.TrimStart('.').ToLowerInvariant())
+            .Select(f => f.TrimStart('.'))
             .Where(f => f.Length > 0)
-            .ToArray();
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
         _scanAllFiles = scanAllFiles;
         _resolver = resolver;
         _pathScanner = new FileScanner(_formats, scanAllFiles);
@@ -67,8 +68,8 @@ public sealed class AndroidFileScanner : IFileScanner
                 continue;
             }
             var name = doc.Name ?? "";
-            var ext = System.IO.Path.GetExtension(name).TrimStart('.').ToLowerInvariant();
-            if (!_scanAllFiles && _formats.Length > 0 && !_formats.Contains(ext)) continue;
+            var ext = System.IO.Path.GetExtension(name).TrimStart('.');
+            if (!_scanAllFiles && _formats.Count > 0 && !_formats.Contains(ext)) continue;
             try
             {
                 var source = new AndroidSafMediaSource(doc, _resolver);

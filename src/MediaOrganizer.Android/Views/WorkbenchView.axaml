@@ -3,15 +3,6 @@
              xmlns:vm="using:MediaOrganizer.Shared.ViewModels"
              x:Class="MediaOrganizer.Android.Views.WorkbenchView"
              x:DataType="vm:WorkbenchViewModel">
-    <UserControl.Resources>
-        <SolidColorBrush x:Key="AccentBrush" Color="#0067C0"/>
-        <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF"/>
-        <SolidColorBrush x:Key="DividerBrush" Color="#E5E5E5"/>
-        <SolidColorBrush x:Key="MutedBrush" Color="#8A8A8A"/>
-        <SolidColorBrush x:Key="TextBrush" Color="#1B1B1B"/>
-        <SolidColorBrush x:Key="SuccessBrush" Color="#107C10"/>
-        <SolidColorBrush x:Key="ErrorBrush" Color="#C42B1C"/>
-    </UserControl.Resources>
 
     <UserControl.Styles>
         <!-- 步骤指示状态 -->
@@ -38,16 +29,6 @@
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="HorizontalAlignment" Value="Center"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
-        </Style>
-        <Style Selector="Button.primary">
-            <Setter Property="Background" Value="#0067C0"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="MinHeight" Value="48"/>
-            <Setter Property="FontSize" Value="14"/>
-        </Style>
-        <Style Selector="Button.primary:pointerover">
-            <Setter Property="Background" Value="#1975C5"/>
         </Style>
         <Style Selector="Button.danger">
             <Setter Property="Background" Value="Transparent"/>

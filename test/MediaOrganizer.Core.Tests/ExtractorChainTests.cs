@@ -82,9 +82,7 @@ public class ExtractorChainTests
         var cfg = new ExtractionConfig(); // 默认 FileSystem.Enabled = false
         var chain = ExtractorChain.FromConfig(cfg, PatternsStore.GetBuiltinPatterns());
 
-        var dir = Path.Combine(Path.GetTempPath(), "mo-chain-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(dir);
-        try
+        using var dir = new TempDir("mo-chain");
         {
             var path = Path.Combine(dir, "scan_no_date.tif");
             File.WriteAllText(path, "x");
@@ -102,10 +100,6 @@ public class ExtractorChainTests
             Assert.NotNull(result2);
             Assert.Equal("FileSystem", result2!.Source);
             Assert.Equal(2024, result2.Date.Year);
-        }
-        finally
-        {
-            if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
         }
     }
 }

@@ -3,7 +3,6 @@ using Android.Content;
 using Android.Content.PM;
 using Android.OS;
 using Android.Runtime;
-using Avalonia;
 using Avalonia.Android;
 using MediaOrganizer.Android.Platforms;
 
@@ -15,6 +14,7 @@ public static class RequestCodes
     public const int FolderPick = 0x1001;
     public const int CreateDocument = 0x1002;
     public const int PostNotifications = 0x1003;
+    public const int AllFilesAccess = 0x1004;
 }
 
 /// <summary>
@@ -33,8 +33,6 @@ public class Application(IntPtr javaReference, JniHandleOwnership transfer) : Av
         NotificationChannels.EnsureCreated(this);
     }
 
-    protected override AppBuilder CustomizeAppBuilder(AppBuilder builder)
-        => base.CustomizeAppBuilder(builder);
 }
 
 /// <summary>

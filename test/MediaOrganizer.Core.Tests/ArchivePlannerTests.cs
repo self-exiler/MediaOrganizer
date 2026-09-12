@@ -57,11 +57,4 @@ public class ArchivePlannerTests
         var plan = new ArchivePlanner(ClassificationLevel.Day, futureDateBufferDays: 1, now).Plan(Result(file), @"D:\out");
         Assert.Equal("2026/08/09/g.jpg", plan.Files[0].RelativeTarget);
     }
-
-    [Fact]
-    public void 未来缓冲为0时校验应拦截未来日期()
-    {
-        var validator = new Extraction.DateRangeValidator(30, 0, new DateTimeOffset(2026, 8, 8, 0, 0, 0, TimeSpan.Zero));
-        Assert.False(validator.IsValid(new DateTimeOffset(2026, 8, 9, 0, 0, 0, TimeSpan.Zero)));
-    }
 }

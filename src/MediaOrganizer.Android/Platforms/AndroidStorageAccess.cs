@@ -11,8 +11,6 @@ namespace MediaOrganizer.Android.Platforms;
 /// </summary>
 public static class AndroidStorageAccess
 {
-    public const int RequestCode = 0x1003;
-
     /// <summary>当前是否已拥有所有文件访问权限。（SupportedOSPlatformVersion=33：仅 Android 且 API≥30，分支恒成立，直接查运行时状态即可。）</summary>
     public static bool HasAllFilesAccess
         => global::Android.OS.Environment.IsExternalStorageManager;
@@ -30,7 +28,7 @@ public static class AndroidStorageAccess
             global::Android.Net.Uri.Parse("package:" + activity.PackageName));
         intent.AddFlags(ActivityFlags.NewTask);
 
-        await activity.StartForResultAsync(intent, RequestCode);
+        await activity.StartForResultAsync(intent, RequestCodes.AllFilesAccess);
 
         return HasAllFilesAccess;
     }

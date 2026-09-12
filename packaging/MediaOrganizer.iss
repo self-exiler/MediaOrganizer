@@ -30,7 +30,8 @@ DefaultDirName={localappdata}\Programs\{#MyAppName}
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 OutputDir=releases
-OutputBaseFilename={#MyAppName}_Setup_{#MyAppVersion}
+; 命名约定（技能规定）：程序名-操作系统-cpu架构-版本号
+OutputBaseFilename={#MyAppName}-windows-x64-{#MyAppVersion}
 SetupIconFile=..\src\MediaOrganizer.Desktop\Assets\app-icon.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 Compression=lzma2/ultra64

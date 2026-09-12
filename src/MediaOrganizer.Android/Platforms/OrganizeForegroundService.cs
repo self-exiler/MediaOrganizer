@@ -153,14 +153,11 @@ public sealed class OrganizeForegroundService : Service
     // Android 15+（API 35）dataSync 时长配额触顶：数秒内必须停止自身。
     // 任务无落盘持久化（M2 未做），此处优雅取消 + 告知原因；重跑靠 skip 策略不会重传已完成文件。
     public override void OnTimeout(int startId, global::Android.Content.PM.ForegroundService fgsType)
-    {
-        OrganizeJobHost.Current?.CancelBySystemTimeout();
-        FinalizeAndStop("已达系统后台时长上限，备份已停止；重新执行会跳过已完成文件");
-    }
+        => OnTimeout(startId);
 
     public override void OnTimeout(int startId)
     {
         OrganizeJobHost.Current?.CancelBySystemTimeout();
-        FinalizeAndStop("已达系统后台时长上限，任务已停止");
+        FinalizeAndStop("已达系统后台时长上限，任务已停止；重新执行会跳过已完成文件");
     }
 }

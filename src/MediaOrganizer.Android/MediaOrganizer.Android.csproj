@@ -48,14 +48,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="12.1.1" />
-    <PackageReference Include="Avalonia.Android" Version="12.1.1" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.1" />
-    <PackageReference Include="Xamarin.AndroidX.DocumentFile" Version="1.0.1.4" />
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Android" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="Xamarin.AndroidX.DocumentFile" />
     <!-- 前台服务进度通知的 NotificationCompat.Builder / NotificationManagerCompat（AndroidX.Core）。
          该包本就经 Avalonia.Android → AppCompat 链传递打包进 APK，显式引用不增加体积。 -->
-    <PackageReference Include="Xamarin.AndroidX.Core" Version="1.17.0.2" />
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.1" />
+    <PackageReference Include="Xamarin.AndroidX.Core" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
   </ItemGroup>
 
   <!-- 8.3：已删除原 Magick.NET ExcludeAssets="native" 补丁——

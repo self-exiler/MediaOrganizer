@@ -9,20 +9,13 @@ namespace MediaOrganizer.Core.Tests;
 
 public class FileOperatorTests : IDisposable
 {
-    private readonly string _src;
-    private readonly string _out;
-
-    public FileOperatorTests()
-    {
-        _src = Path.Combine(Path.GetTempPath(), "mo-test-src-" + Guid.NewGuid().ToString("N"));
-        _out = Path.Combine(Path.GetTempPath(), "mo-test-out-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(_src);
-    }
+    private readonly TempDir _src = new("mo-test-src");
+    private readonly TempDir _out = new("mo-test-out");
 
     public void Dispose()
     {
-        foreach (var d in new[] { _src, _out })
-            if (Directory.Exists(d)) Directory.Delete(d, recursive: true);
+        _src.Dispose();
+        _out.Dispose();
     }
 
     private ArchivePlan Plan(params (string Name, DateTimeOffset Date)[] items)
@@ -60,39 +53,34 @@ public class FileOperatorTests : IDisposable
         Assert.False(File.Exists(Path.Combine(_out, "2024", "01", "15", "a.jpg.mo-tmp")), "临时文件应已改名");
     }
 
-    /// <summary>在「临时名 → 最终名」这一步必定失败的存储，模拟 SMB 写入上限被拒等持久化失败。</summary>
-    private sealed class FailingMoveStorage : IFileStorage
+    /// <summary>在「临时名 → 最终名」这一步必定失败的存储，模拟 SMB 写入上限被拒等持久化失败。
+    /// 只覆写 MoveAsync（必失败）与 DeleteAsync（记录删除调用），其余全部委托 inner。</summary>
+    private sealed class FailingMoveStorage(IFileStorage inner) : IFileStorage
     {
-        private readonly IFileStorage _inner;
         public List<string> Deleted { get; } = [];
 
-        public FailingMoveStorage(IFileStorage inner) => _inner = inner;
+        public Task<bool> ExistsAsync(string relativePath, CancellationToken ct = default) => inner.ExistsAsync(relativePath, ct);
 
-        public Task<bool> ExistsAsync(string relativePath, CancellationToken ct = default)
-            => _inner.ExistsAsync(relativePath, ct);
+        public Task CreateDirectoryAsync(string relativePath, CancellationToken ct = default) => inner.CreateDirectoryAsync(relativePath, ct);
 
-        public Task CreateDirectoryAsync(string relativePath, CancellationToken ct = default)
-            => _inner.CreateDirectoryAsync(relativePath, ct);
-
-        public Task<long> GetLengthAsync(string relativePath, CancellationToken ct = default)
-            => _inner.GetLengthAsync(relativePath, ct);
+        public Task<long> GetLengthAsync(string relativePath, CancellationToken ct = default) => inner.GetLengthAsync(relativePath, ct);
 
         public Task<long> CopyFromAsync(IMediaSource source, string relativeTarget, IProgress<long>? progress = null, CancellationToken ct = default)
-            => _inner.CopyFromAsync(source, relativeTarget, progress, ct);
+            => inner.CopyFromAsync(source, relativeTarget, progress, ct);
 
         public Task DeleteAsync(string relativePath, CancellationToken ct = default)
         {
             Deleted.Add(relativePath);
-            return _inner.DeleteAsync(relativePath, ct);
+            return inner.DeleteAsync(relativePath, ct);
         }
 
         public Task MoveAsync(string relativeFrom, string relativeTo, CancellationToken ct = default)
             => Task.FromException(new IOException("模拟 SMB 重命名失败"));
 
         public Task SetModifiedUtcAsync(string relativePath, DateTime utc, CancellationToken ct = default)
-            => _inner.SetModifiedUtcAsync(relativePath, utc, ct);
+            => inner.SetModifiedUtcAsync(relativePath, utc, ct);
 
-        public void Dispose() => _inner.Dispose();
+        public void Dispose() => inner.Dispose();
     }
 
     [Fact]

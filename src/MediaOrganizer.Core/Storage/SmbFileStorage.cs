@@ -314,27 +314,33 @@ public sealed class SmbFileStorage : IFileStorage
         // 与 SMB 写入（每块独立过 _gate）重叠，隐藏源端读取时间——原实现读写在锁内完全串行。
         // 连接失效时 InvokeAsync 置脏，FileOperator 按整文件退避重试（FILE_OVERWRITE_IF 重开覆盖半成品）。
         var writeChunk = WriteChunkSize;
-        var buffers = new[] { new byte[writeChunk], new byte[writeChunk] };
+        // perf-2：缓冲区走 ArrayPool（原先每文件 new 2×writeChunk 进 LOH，大归档下频繁 GC）；
+        // Rent 可能返回大于 writeChunk 的数组，读侧一律限长，保证单次 WriteFile 载荷不超协商 MaxWriteSize。
+        var bufA = System.Buffers.ArrayPool<byte>.Shared.Rent(writeChunk);
+        var bufB = System.Buffers.ArrayPool<byte>.Shared.Rent(writeChunk);
+        var buffers = new[] { bufA, bufB };
         Stream? src = null;
         Task<int>? prefetch = null;
         long offset = 0, total = 0;
         try
         {
             src = source.OpenRead();
-            var currentLen = await src.ReadAsync(buffers[0].AsMemory(), ct);
+            var currentLen = await src.ReadAsync(buffers[0].AsMemory(0, writeChunk), ct);
             var cur = 0;
             while (currentLen > 0)
             {
                 ct.ThrowIfCancellationRequested();
                 var next = cur ^ 1;
-                prefetch = Task.Run(() => src.ReadAsync(buffers[next].AsMemory(), ct).AsTask(), ct);
+                prefetch = Task.Run(() => src.ReadAsync(buffers[next].AsMemory(0, writeChunk), ct).AsTask(), ct);
                 var buffer = buffers[cur];
                 var len = currentLen;
                 int written = 0;
                 await InvokeAsync<object?>(store =>
                 {
-                    // 单次 WriteFile 载荷不得超过协商 MaxWriteSize（SMBLibrary 不自动分片，超限必被拒）
-                    var writeStatus = store.WriteFile(out written, handle!, offset, buffer[..len]);
+                    // 单次 WriteFile 载荷不得超过协商 MaxWriteSize（SMBLibrary 不自动分片，超限必被拒）；
+                    // 整块直接传 buffer（除末块恒成立），仅末块切片拷贝 ≤writeChunk 的新数组（perf-2）
+                    var payload = len == writeChunk ? buffer : buffer[..len];
+                    var writeStatus = store.WriteFile(out written, handle!, offset, payload);
                     if (writeStatus != NTStatus.STATUS_SUCCESS)
                         throw SmbError("写入", writeStatus, $"{path}（偏移 {offset}，长度 {len}，单次写入上限 {writeChunk}）");
                     if (written <= 0)
@@ -361,6 +367,9 @@ public sealed class SmbFileStorage : IFileStorage
             }
             try { src?.Dispose(); }
             catch { /* 尽力释放 */ }
+
+            System.Buffers.ArrayPool<byte>.Shared.Return(bufA);
+            System.Buffers.ArrayPool<byte>.Shared.Return(bufB);
 
             // 关闭句柄（持锁）；连接已被置脏时句柄随连接丢弃，无需 CloseFile
             if (_store is not null && handle is not null)

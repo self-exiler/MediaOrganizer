@@ -1,12 +1,18 @@
 name: release
 
-# 推送 v* tag 时:
-# 桌面版(自包含 + R2R + Inno Setup 安装包)与安卓版(签名 APK)一并构建,
-# 发布到对应 tag 的 GitHub Release。
-# 快速编译验证请用 ci.yml(不签名、不需要 secrets);本流水线只由 tag 触发。
+# 既定发布管线（技能约定：本地构建脚本与云端共用同一入口，发布完全由 v* 标签驱动）：
+# ① 推送 v* 标签 → 云端编译 → 构建成功才创建 GitHub Release 并附产物；
+# ② 手动 workflow_dispatch（填版本号）→ 仅编译 + 上传 Actions 产物，不创建 Release（验证管线/临时出包）。
+# 快速编译验证（不签名、不需要 secrets）请用 ci.yml。
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "版本号（如 1.2.0，不带 v 前缀）"
+        required: true
+        default: "1.2.0"
 
 permissions:
   contents: write
@@ -20,13 +26,16 @@ jobs:
         with:
           fetch-depth: 0
 
-      # 版本号:tag 名剥掉前导 v 写入 APP_VERSION(文档只保证 startsWith 这个函数名,别写小写);
-      # versionCode(Android ApplicationVersion,必须单调递增)用提交数自动生成,
-      # 与仓库历史绑定,天然单调,发版零人肉。csproj 里的值仅作本地构建兜底。
+      # 版本号：tag 触发 → tag 名剥掉前导 v（startsWith 是文档保证的函数名，别写小写）；
+      # 手动触发 → inputs.version。versionCode(Android ApplicationVersion,必须单调递增)
+      # 用提交数自动生成,与仓库历史绑定,天然单调,发版零人肉。csproj 里的值仅作本地构建兜底。
       - name: Resolve version
         shell: pwsh
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
-          $v = "${{ github.ref_name }}".TrimStart('v', 'V')
+          $v = $env:INPUT_VERSION
+          if ([string]::IsNullOrWhiteSpace($v)) { $v = "${{ github.ref_name }}".TrimStart('v', 'V') }
           if ([string]::IsNullOrWhiteSpace($v)) { throw "版本号解析为空" }
           $code = [int](git rev-list --count HEAD)
           if ($code -lt 2) { throw "versionCode 异常: $code" }
@@ -92,13 +101,29 @@ jobs:
           Add-Content $env:GITHUB_OUTPUT "setup=$($setup.FullName)"
           Add-Content $env:GITHUB_OUTPUT "apk=$($apk.FullName)"
 
+      # 每次运行都上传 Actions 产物：验证管线取包、失败排障（glob 保持宽松，产物改名不动工作流）
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          # 命名约定：程序名-操作系统-cpu架构-版本号
+          name: MediaOrganizer-windows-x64-${{ env.APP_VERSION }}
+          path: packaging/releases/*.exe
+          if-no-files-found: error
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MediaOrganizer-android-arm64-${{ env.APP_VERSION }}
+          path: src/MediaOrganizer.Android/**/*-Signed.apk
+          if-no-files-found: error
+
+      # 仅 tag 触发创建 Release，且排在构建、产物上传之后——构建失败就不会出现不完整的 Release
       - name: Create GitHub Release
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SETUP: ${{ steps.artifacts.outputs.setup }}
-          APK: ${{ steps.artifacts.outputs.apk }}
-        run: |
-          gh release create "${{ github.ref_name }}" "$env:SETUP" "$env:APK" `
-            --title "MediaOrganizer ${{ env.APP_VERSION }}" `
-            --generate-notes
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            packaging/releases/*.exe
+            src/MediaOrganizer.Android/**/*-Signed.apk
+          generate_release_notes: true
+          fail_on_unmatched_files: true

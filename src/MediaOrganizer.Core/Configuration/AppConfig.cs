@@ -32,10 +32,6 @@ public sealed class ExtractorSetting
 /// <summary>应用配置（config.json）。结构见 SRS §5.1。</summary>
 public sealed class AppConfig
 {
-    // 占位：版本号仅作未来迁移判断依据，当前无任何版本迁移逻辑（Version 不校验、不升级）。
-    public const int CurrentVersion = 1;
-
-    public int Version { get; set; } = CurrentVersion;
     public GeneralConfig General { get; set; } = new();
     public PathsConfig Paths { get; set; } = new();
     public ScanConfig Scan { get; set; } = new();

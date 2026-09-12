@@ -93,6 +93,20 @@ public partial class SettingsViewModel : ViewModelBase
     public string[] ThemeOptions { get; } = ["跟随系统", "浅色", "深色"];
     public string[] NetworkTypeOptions { get; } = ["SMB（\\\\服务器\\共享名）", "WebDAV（https://…）"];
 
+    /// <summary>数值下拉选项（Android 设置页直绑 SelectedValue；桌面用 NumericUpDown 不受影响）。</summary>
+    public sealed record IntOption(int Value, string Label)
+    {
+        public override string ToString() => Label;
+    }
+
+    public static IReadOnlyList<IntOption> MaxYearsOptions { get; } = [new(20, "20 年"), new(30, "30 年"), new(50, "50 年")];
+    public static IReadOnlyList<IntOption> FutureBufferOptions { get; } =
+        [new(0, "0 天（未来日期归入 FutureDate/）"), new(1, "1 天"), new(7, "7 天")];
+    public static IReadOnlyList<IntOption> ScanParallelOptions { get; } =
+        [new(0, "自动（CPU 核心数）"), new(1, "1（串行）"), new(2, "2"), new(4, "4"), new(8, "8")];
+    public static IReadOnlyList<IntOption> ExecParallelOptions { get; } =
+        [new(0, "自动（本地 2 / 网络 4）"), new(1, "1"), new(2, "2"), new(4, "4")];
+
     // ---- 网络位置内联编辑表单状态 ----
     private NetworkProfile? _editingProfile; // null = 新建
 
@@ -246,7 +260,6 @@ public partial class SettingsViewModel : ViewModelBase
         // 直接用 new() 覆盖即可，避免逐字段手写维护两份默认值。
         // 注意：网络位置不随初始化清除，避免误删用户配置。
         var defaults = new AppConfig();
-        config.Version = defaults.Version;
         config.General = defaults.General;
         config.Paths = defaults.Paths;
         config.Scan = defaults.Scan;
@@ -463,7 +476,6 @@ public partial class SettingsViewModel : ViewModelBase
     private void DeletePattern(PatternSettingVM vm)
     {
         _patterns.RemoveAll(p => p.Name == vm.Name);
-        Patterns.Remove(vm);
         RefreshPatterns();
         SaveHint = $"已删除「{vm.Name}」并保存";
         _state.SavePatterns();
@@ -489,6 +501,8 @@ public partial class SettingsViewModel : ViewModelBase
     private void OpenMagicTools() => NavigateToMagic?.Invoke();
 
     /// <summary>提取器开关/权重即时生效：写回共享配置并通知工作台（无需点保存配置）。</summary>
+    private CancellationTokenSource? _extractorSaveCts;
+
     private void OnExtractorChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (sender is not ExtractorSettingVM vm) return;
@@ -498,8 +512,26 @@ public partial class SettingsViewModel : ViewModelBase
         setting.Enabled = vm.Enabled;
         setting.Weight = vm.Weight;
         SaveHint = $"「{vm.Name}」{Describe(e.PropertyName)}已即时生效并保存";
-        _state.SaveConfig(notifyChanged: false);
-        _state.NotifyChanged(); // 触发工作台链重建提示
+
+        // perf-11（09-03 P1-5 残余）：滑块已 SnapToTick 0.1，拖满量程仍触发 ~20 次本回调；
+        // 300ms 防抖合并落盘（临时文件+改名）与工作台链重建（NotifyChanged），内存配置即时生效。
+        // 代价：停止拖动 300ms 内退出应用，最后一次改动可能未落盘。
+        _extractorSaveCts?.Cancel();
+        _extractorSaveCts = new CancellationTokenSource();
+        var token = _extractorSaveCts.Token;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(300, token);
+            }
+            catch (OperationCanceledException) { return; }
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                _state.SaveConfig(notifyChanged: false);
+                _state.NotifyChanged(); // 触发工作台链重建提示
+            });
+        });
     }
 
     private static string Describe(string? property)
@@ -584,17 +616,9 @@ public partial class SettingsViewModel : ViewModelBase
         _state.SaveConfig(notifyChanged: false);
     }
 
-    private static string ThemeNameFromIndex(int index) => index switch
-    {
-        1 => "Light",
-        2 => "Dark",
-        _ => "Default"
-    };
+    private static readonly string[] ThemeNames = ["Default", "Light", "Dark"];
 
-    private static int ThemeIndexFromName(string name) => name switch
-    {
-        "Dark" => 2,
-        "Light" => 1,
-        _ => 0
-    };
+    private static string ThemeNameFromIndex(int index) => ThemeNames[Math.Clamp(index, 0, ThemeNames.Length - 1)];
+
+    private static int ThemeIndexFromName(string name) => Math.Max(0, Array.IndexOf(ThemeNames, name));
 }

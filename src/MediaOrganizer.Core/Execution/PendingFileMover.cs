@@ -44,8 +44,6 @@ public sealed class PendingFileMover
                 var expected = file.Source.Length;
                 var actual = await target.GetLengthAsync(relative, ct);
                 if (actual < 0)
-                    actual = await target.GetLengthAsync(relative, ct);
-                if (actual < 0)
                     throw new IOException("无法获取目标文件长度，大小校验不可用");
                 if (actual != expected)
                     throw new IOException($"大小校验失败：期望 {expected}，实际 {actual}");

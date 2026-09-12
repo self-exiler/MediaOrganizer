@@ -16,6 +16,10 @@ public sealed class AndroidSafStorage : IFileStorage
 
     private readonly ContentResolver _resolver;
     private readonly DocumentFile _root;
+    // perf-19：按目录相对路径缓存已解析 DocumentFile。同批归档文件共享目录，
+    // 原实现每文件逐段 FindFile = 每段一次 SAF provider IPC（内部枚举子项）。
+    // 实例生命周期 = 一次执行，会话内目录结构只增不减，缓存恒新鲜。
+    private readonly Dictionary<string, DocumentFile> _dirCache = new(StringComparer.Ordinal);
 
     public AndroidSafStorage(string treeUri, ContentResolver? resolver = null)
     {
@@ -29,28 +33,45 @@ public sealed class AndroidSafStorage : IFileStorage
             throw new IOException($"输出目录不可写：{treeUri}");
     }
 
-    /// <summary>把相对路径逐级解析为树内 DocumentFile；createDirs=true 时父目录不存在则逐级创建。</summary>
-    private DocumentFile? Resolve(string relativePath, bool createDirs)
+    /// <summary>解析目录部分（"" = 根）；createDirs=true 时逐级创建并写入缓存，失败（不存在）不缓存。</summary>
+    private DocumentFile? ResolveDir(string dirRelative, bool createDirs)
     {
+        if (dirRelative.Length == 0) return _root;
+        if (_dirCache.TryGetValue(dirRelative, out var cached)) return cached;
+
         var current = _root;
-        var segments = relativePath.Replace('\\', '/').Split('/', StringSplitOptions.RemoveEmptyEntries);
-        for (var i = 0; i < segments.Length; i++)
+        foreach (var seg in dirRelative.Split('/'))
         {
-            var existing = current.FindFile(segments[i]);
+            var existing = current.FindFile(seg);
             if (existing is not null)
             {
                 current = existing;
                 continue;
             }
             if (!createDirs) return null;
-            var isLast = i == segments.Length - 1;
-            current = isLast
-                ? current.CreateFile("application/octet-stream", segments[i])
-                : current.CreateDirectory(segments[i]);
-            if (current is null)
-                throw new IOException($"SAF 创建失败：{string.Join("/", segments[..(i + 1)])}");
+            current = current.CreateDirectory(seg)
+                      ?? throw new IOException($"SAF 创建目录失败：{dirRelative}");
         }
+        _dirCache[dirRelative] = current;
         return current;
+    }
+
+    /// <summary>把相对路径解析为树内 DocumentFile；createDirs=true 时父目录与文件本身不存在则创建。</summary>
+    private DocumentFile? Resolve(string relativePath, bool createDirs)
+    {
+        var relative = relativePath.Replace('\\', '/');
+        var idx = relative.LastIndexOf('/');
+        var dirPart = idx < 0 ? "" : relative[..idx];
+        var leaf = relative[(idx + 1)..];
+
+        var dir = ResolveDir(dirPart, createDirs);
+        if (dir is null) return null;
+
+        var doc = dir.FindFile(leaf);
+        if (doc is null && createDirs)
+            doc = dir.CreateFile("application/octet-stream", leaf)
+                ?? throw new IOException($"SAF 创建失败：{relativePath}");
+        return doc;
     }
 
     public Task<bool> ExistsAsync(string relativePath, CancellationToken ct = default)

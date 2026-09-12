@@ -31,22 +31,26 @@ public static class PatternEngine
         catch { return null; }
     }
 
-    /// <summary>快速预扫描：文件名中是否可能存在日期（年份或 ≥10 位连续数字时间戳），避免对每个文件跑全部正则。</summary>
+    /// <summary>快速预扫描：文件名中是否可能存在日期（年份或 ≥10 位连续数字时间戳），避免对每个文件跑全部正则。
+    /// 调用方应优先用 bool 重载（perf-1：预判断在提取链构造期算一次，勿每文件 LINQ Any）。</summary>
     public static bool ContainsLikelyDate(string fileName, IReadOnlyList<PatternDefinition> patterns)
+        => ContainsLikelyDate(fileName, patterns.Any(p => p.Enabled && p.TimestampLength is not null));
+
+    public static bool ContainsLikelyDate(string fileName, bool hasTimestampPattern)
     {
         // 存在时间戳模式时：文件名需含 ≥10 位连续数字才算疑似
-        if (patterns.Any(p => p.Enabled && p.TimestampLength is not null)
-            && TimestampRegex.IsMatch(fileName))
+        if (hasTimestampPattern && TimestampRegex.IsMatch(fileName))
             return true;
         // 4 位年份（1970-2100），允许嵌入更长的数字串（如紧凑日期 20240115）
-        foreach (Match m in YearRegex.Matches(fileName))
+        // perf-7：EnumerateMatches 零分配（原先 Matches 分配 MatchCollection + 每个 Match 对象）
+        foreach (var m in YearRegex.EnumerateMatches(fileName))
         {
-            if (int.TryParse(m.Value, out var y) && y >= 1970 && y <= 2100) return true;
+            if (int.TryParse(fileName.Substring(m.Index, m.Length), out var y) && y >= 1970 && y <= 2100) return true;
         }
         return false;
     }
 
-    /// <summary>按全部启用的模式依次尝试（按权重降序），返回第一个解析成功且构造合法的日期。</summary>
+    /// <summary>按全部启用的模式依次尝试（按权重降序）。热路径请用提取链构造期预排序 + 单模式重载（perf-1）。</summary>
     public static DateTimeOffset? TryExtract(string fileName, IReadOnlyList<PatternDefinition> patterns)
     {
         foreach (var pattern in patterns.Where(p => p.Enabled).OrderByDescending(p => p.Weight))
@@ -56,6 +60,7 @@ public static class PatternEngine
         return null;
     }
 
+    /// <summary>按单个模式尝试提取（perf-1：多模式的排序过滤由调用方在构造期完成，勿在每文件 LINQ）。</summary>
     public static DateTimeOffset? TryExtract(string fileName, PatternDefinition pattern, bool cache = true)
     {
         if (!pattern.Enabled || string.IsNullOrEmpty(pattern.Pattern)) return null;

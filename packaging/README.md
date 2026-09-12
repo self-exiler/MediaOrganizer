@@ -22,7 +22,7 @@ ISCC.exe packaging\MediaOrganizer.iss
 
 | 文件                               | 说明                                                                      |
 | ---------------------------------- | ------------------------------------------------------------------------- |
-| `MediaOrganizer_Setup_1.0.0.exe` | 单文件安装包，LZMA2 压缩（实测约 47MB），中文向导，无运行时依赖，离线可装 |
+| `MediaOrganizer-windows-x64-1.0.0.exe` | 单文件安装包，LZMA2 压缩（实测约 47MB），中文向导，无运行时依赖，离线可装 |
 
 发新版时改 `MediaOrganizer.iss` 里的 `#define MyAppVersion`。
 

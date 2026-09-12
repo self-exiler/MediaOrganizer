@@ -7,18 +7,9 @@ namespace MediaOrganizer.Core.Tests;
 
 public class LocalMediaSourceTests : IDisposable
 {
-    private readonly string _dir;
+    private readonly TempDir _dir = new("mo-src");
 
-    public LocalMediaSourceTests()
-    {
-        _dir = Path.Combine(Path.GetTempPath(), "mo-src-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(_dir);
-    }
-
-    public void Dispose()
-    {
-        if (Directory.Exists(_dir)) Directory.Delete(_dir, recursive: true);
-    }
+    public void Dispose() => _dir.Dispose();
 
     [Fact]
     public void 属性与读流()
@@ -112,20 +103,13 @@ public class TagLibStreamFileAbstractionTests
 
 public class PendingFileMoverTests : IDisposable
 {
-    private readonly string _src;
-    private readonly string _pending;
-
-    public PendingFileMoverTests()
-    {
-        _src = Path.Combine(Path.GetTempPath(), "mo-pend-src-" + Guid.NewGuid().ToString("N"));
-        _pending = Path.Combine(Path.GetTempPath(), "mo-pend-out-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(_src);
-    }
+    private readonly TempDir _src = new("mo-pend-src");
+    private readonly TempDir _pending = new("mo-pend-out");
 
     public void Dispose()
     {
-        foreach (var d in new[] { _src, _pending })
-            if (Directory.Exists(d)) Directory.Delete(d, recursive: true);
+        _src.Dispose();
+        _pending.Dispose();
     }
 
     private MediaFile MakeFile(string name, string content = "x")

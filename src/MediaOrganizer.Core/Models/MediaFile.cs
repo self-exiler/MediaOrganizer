@@ -14,7 +14,11 @@ public sealed record MediaFile(string Path, long Size, string Extension)
     [JsonIgnore]
     public IMediaSource? Source { get; init; }
 
-    public string FileName => Source?.DisplayName ?? System.IO.Path.GetFileName(Path);
+    private string? _fileName;
+
+    /// <summary>perf-6：Source 为 null 时缓存（提取/规划/报告多处访问，原每次 Path.GetFileName 分配）；
+    /// Source 非 null 时直取 DisplayName——Source 一旦赋值便不变，缓存永不失真。</summary>
+    public string FileName => Source?.DisplayName ?? (_fileName ??= System.IO.Path.GetFileName(Path));
 }
 
 /// <summary>成功提取到日期的文件。</summary>

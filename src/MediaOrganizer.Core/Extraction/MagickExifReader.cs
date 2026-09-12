@@ -24,19 +24,12 @@ public sealed class MagickExifReader : IExifReader
             var profile = image.GetExifProfile();
             if (profile is null) return null;
 
+            // 先读 EXIF profile 值，缺失时兜底字符串属性（部分文件 EXIF 值以属性存储），一趟完成
             foreach (var tag in DateTags)
             {
-                var value = profile.GetValue(tag);
-                if (value?.Value is string s && ExifDateParser.TryParse(s, out var dt))
+                var s = profile.GetValue(tag)?.Value ?? image.GetAttribute($"exif:{tag}");
+                if (s is not null && ExifDateParser.TryParse(s, out var dt))
                     return new DateTimeOffset(dt, TimeZoneInfo.Local.GetUtcOffset(dt));
-            }
-
-            // 兼容性兜底：部分文件 EXIF 值以字符串属性存储
-            foreach (var tag in DateTags)
-            {
-                var attr = image.GetAttribute($"exif:{tag}");
-                if (attr is not null && ExifDateParser.TryParse(attr, out var dt2))
-                    return new DateTimeOffset(dt2, TimeZoneInfo.Local.GetUtcOffset(dt2));
             }
         }
         catch (Exception ex)

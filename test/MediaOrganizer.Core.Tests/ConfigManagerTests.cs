@@ -17,7 +17,6 @@ public class ConfigStoreTests
         {
             JsonFileStore.Save(path, cfg);
             var loaded = JsonFileStore.Load<AppConfig>(path) ?? new AppConfig();
-            Assert.Equal(1, loaded.Version);
             Assert.Equal(@"D:\photos", loaded.Paths.SourceDir);
             Assert.Equal(25, loaded.Extraction.MaxYearsPast);
             Assert.Equal(3, loaded.Extraction.FutureDateBufferDays);

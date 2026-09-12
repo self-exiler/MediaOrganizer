@@ -40,7 +40,12 @@ public static class JsonFileStore
             // 每次保存用唯一临时名，避免并发写同一 .tmp 互相覆盖；
             // 最后的 File.Move 原子替换保证目标要么是旧值要么是新值，绝不出现半截 JSON。
             var temp = full + ".tmp-" + Guid.NewGuid().ToString("N");
-            File.WriteAllText(temp, JsonSerializer.Serialize(payload, JsonOptions));
+            // perf-3：直写流（原先先序列化成整串再 WriteAllText，10 万级文件的 analysis-result.json
+            // 会产生 MB 级大字符串 + 再编码一次）
+            using (var stream = File.Create(temp))
+            {
+                JsonSerializer.Serialize(stream, payload, JsonOptions);
+            }
             try
             {
                 File.Move(temp, full, overwrite: true);

@@ -80,10 +80,12 @@ public partial class MagicToolsViewModel : ViewModelBase
         if (!string.IsNullOrEmpty(SelectedSample)) TestRegex();
     }
 
-    /// <summary>从源目录加载前 N 个文件名字样（FR-7.1）。</summary>
+    /// <summary>从源目录加载前 100 个文件名字样（FR-7.1）。
+    /// 必须无参：带默认值的 int 参数经命令绑定传入 null 会让 RelayCommand.CanExecute 恒 false（按钮永久禁用，F-1）。</summary>
     [RelayCommand]
-    private void LoadFromSourceDir(int max = 100)
+    private void LoadFromSourceDir()
     {
+        const int Max = 100;
         var dir = _state.Config.Paths.SourceDir;
         if (string.IsNullOrWhiteSpace(dir) || !Directory.Exists(dir))
         {
@@ -91,7 +93,7 @@ public partial class MagicToolsViewModel : ViewModelBase
             return;
         }
         var names = Directory.EnumerateFiles(dir)
-            .Take(max)
+            .Take(Max)
             .Select(Path.GetFileName)
             .Where(n => n is not null)
             .Select(n => n!)
@@ -116,9 +118,10 @@ public partial class MagicToolsViewModel : ViewModelBase
         SaveHint = $"已从分析结果载入 {names.Length} 个文件名样本";
     }
 
-    /// <summary>从应用数据目录的 analysis-result.json 载入失败文件（原型「从失败文件载入」）。</summary>
+    /// <summary>从应用数据目录的 analysis-result.json 载入失败文件（原型「从失败文件载入」）。
+    /// JSON 解析移入后台线程（perf-15）：大报告在 UI 线程同步解析会秒级卡顿。</summary>
     [RelayCommand]
-    private void LoadFromFailedFiles()
+    private async Task LoadFromFailedFilesAsync()
     {
         var path = Path.Combine(_dataDir, "analysis-result.json");
         if (!File.Exists(path))
@@ -127,7 +130,7 @@ public partial class MagicToolsViewModel : ViewModelBase
             return;
         }
 
-        var result = AnalysisResultStore.Load(path);
+        var result = await Task.Run(() => AnalysisResultStore.Load(path));
         if (result is null)
         {
             SaveHint = "analysis-result.json 解析失败";
@@ -196,8 +199,8 @@ public partial class MagicToolsViewModel : ViewModelBase
         bool IsMediaFile(string? name) => name is not null && mediaExts.Contains(Path.GetExtension(name));
 
         // 1. analysis-result.json 结构：优先用 AnalysisResultStore 解析，避免先 ReadAllText 又由其读一次同一文件（7.2）。
-        //    Load 读一次即可命中 analysis-result 结构。
-        var result = AnalysisResultStore.Load(path);
+        //    Load 读一次即可命中 analysis-result 结构；解析在后台线程（perf-15）。
+        var result = await Task.Run(() => AnalysisResultStore.Load(path));
         if (result is not null)
         {
             var names = result.Parsed.Select(p => p.File.FileName)
@@ -400,7 +403,24 @@ public partial class MagicToolsViewModel : ViewModelBase
 
     // ---- 实时测试（FR-7.5）----
 
-    partial void OnRegexTextChanged(string value) => TestRegex();
+    private CancellationTokenSource? _testDebounceCts;
+
+    partial void OnRegexTextChanged(string value)
+    {
+        // 150ms 防抖（perf-14）：逐键入时避免 UI 线程反复跑 100 样本 × 正则推理
+        _testDebounceCts?.Cancel();
+        _testDebounceCts = new CancellationTokenSource();
+        var token = _testDebounceCts.Token;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(150, token);
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(TestRegex);
+            }
+            catch (OperationCanceledException) { }
+        });
+    }
 
     [RelayCommand]
     private void TestRegex()

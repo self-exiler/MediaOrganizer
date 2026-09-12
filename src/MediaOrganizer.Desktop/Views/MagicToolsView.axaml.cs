@@ -8,6 +8,10 @@ public partial class MagicToolsView : UserControl
     // 宽/窄屏切换阈值：内容区小于此宽度时样本列表与编辑区上下堆叠
     private const double NarrowThreshold = 900;
 
+    // 当前布局模式（perf-18）：Bounds 每像素变化不重建定义，仅跨阈值切换。
+    // 初值 false 无意义——attach 时会按实际宽度无条件应用一次（XAML 的 MainGrid 无默认行列定义，不能跳过首次应用）。
+    private bool _isNarrow;
+
     public MagicToolsView()
     {
         InitializeComponent();
@@ -16,22 +20,30 @@ public partial class MagicToolsView : UserControl
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
-        ApplyLayout(Bounds.Width);
+        _isNarrow = Bounds.Width < NarrowThreshold;
+        ApplyLayout(_isNarrow);
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
         if (change.Property == BoundsProperty)
-            ApplyLayout(Bounds.Width);
+        {
+            var narrow = Bounds.Width < NarrowThreshold;
+            if (narrow != _isNarrow)
+            {
+                _isNarrow = narrow;
+                ApplyLayout(narrow);
+            }
+        }
     }
 
-    private void ApplyLayout(double width)
+    private void ApplyLayout(bool narrow)
     {
         if (MainGrid is null || SamplePanel is null || ContentPanel is null || Splitter is null)
             return;
 
-        if (width < NarrowThreshold)
+        if (narrow)
         {
             // 窄屏：样本在上，编辑测试在下，占满宽度
             MainGrid.ColumnDefinitions.Clear();

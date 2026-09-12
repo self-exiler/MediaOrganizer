@@ -10,18 +10,9 @@ namespace MediaOrganizer.Core.Tests;
 /// </summary>
 public class JsonFileStoreTests : IDisposable
 {
-    private readonly string _dir;
+    private readonly TempDir _dir = new("mo-jsonfs");
 
-    public JsonFileStoreTests()
-    {
-        _dir = Path.Combine(Path.GetTempPath(), "mo-jsonfs-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(_dir);
-    }
-
-    public void Dispose()
-    {
-        if (Directory.Exists(_dir)) Directory.Delete(_dir, recursive: true);
-    }
+    public void Dispose() => _dir.Dispose();
 
     private string P(string name) => Path.Combine(_dir, name);
 

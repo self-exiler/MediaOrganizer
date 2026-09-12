@@ -6,20 +6,15 @@ namespace MediaOrganizer.Core.Tests;
 
 public class AnalyzerTests : IDisposable
 {
-    private readonly string _dir;
+    private readonly TempDir _dir = new("mo-analyze");
 
     public AnalyzerTests()
     {
-        _dir = Path.Combine(Path.GetTempPath(), "mo-analyze-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(_dir);
         foreach (var name in new[] { "IMG_20240115_123456.jpg", "mm_export1718012345678.jpg", "scan001.tif" })
             File.WriteAllText(Path.Combine(_dir, name), "x");
     }
 
-    public void Dispose()
-    {
-        if (Directory.Exists(_dir)) Directory.Delete(_dir, recursive: true);
-    }
+    public void Dispose() => _dir.Dispose();
 
     private static AppConfig Config() => new()
     {

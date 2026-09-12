@@ -18,25 +18,24 @@ public static class AnalysisReportGenerator
         sb.AppendLine($"总计: {result.Total}  成功: {result.Parsed.Count} ({result.SuccessRate:P1})  失败: {result.Unparsed.Count}");
         sb.AppendLine();
 
+        string Bar(int count) => new('█', Math.Clamp(count * 20 / Math.Max(1, result.Parsed.Count), 1, 20));
+
         sb.AppendLine("按来源:");
         foreach (var group in result.Parsed.GroupBy(p => p.Source).OrderByDescending(g => g.Count()))
-            sb.AppendLine($"  {group.Key,-12} {group.Count(),8}  ({(double)group.Count() / result.Total:P1})");
+        {
+            var count = group.Count();
+            sb.AppendLine($"  {group.Key,-12} {count,8}  ({(double)count / result.Total:P1})");
+        }
         sb.AppendLine();
 
         sb.AppendLine("按年份:");
         foreach (var group in result.Parsed.GroupBy(p => p.Date.Year).OrderByDescending(g => g.Key))
-        {
-            var bar = new string('█', Math.Clamp(group.Count() * 20 / Math.Max(1, result.Parsed.Count), 1, 20));
-            sb.AppendLine($"  {group.Key}  {bar} {group.Count(),6}");
-        }
+            sb.AppendLine($"  {group.Key}  {Bar(group.Count())} {group.Count(),6}");
         sb.AppendLine();
 
         sb.AppendLine("按月分布:");
         foreach (var group in result.Parsed.GroupBy(p => (p.Date.Year, p.Date.Month)).OrderByDescending(g => g.Key))
-        {
-            var bar = new string('█', Math.Clamp(group.Count() * 20 / Math.Max(1, result.Parsed.Count), 1, 20));
-            sb.AppendLine($"  {group.Key.Year:0000}-{group.Key.Month:00}  {bar} {group.Count(),6}");
-        }
+            sb.AppendLine($"  {group.Key.Year:0000}-{group.Key.Month:00}  {Bar(group.Count())} {group.Count(),6}");
         sb.AppendLine();
 
         sb.AppendLine($"失败文件（{result.Unparsed.Count}）:");

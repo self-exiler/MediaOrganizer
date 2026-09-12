@@ -18,20 +18,20 @@
         </DockPanel>
 
         <Border Classes="card" Padding="6">
-            <ScrollViewer>
-                <ItemsControl ItemsSource="{Binding Entries}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="logging:LogEntry">
-                            <Grid ColumnDefinitions="160,60,1*" Margin="8,4">
-                                <TextBlock Grid.Column="0" Text="{Binding Timestamp, StringFormat={}{0:HH:mm:ss.fff}}" Classes="muted" FontSize="12"/>
-                                <TextBlock Grid.Column="1" Text="{Binding Level}" FontSize="12" FontWeight="SemiBold"
-                                           Foreground="{Binding Level, Converter={x:Static converters:LogLevelBrushConverter.Instance}}"/>
-                                <TextBlock Grid.Column="2" Text="{Binding Message}" FontSize="12" TextWrapping="Wrap"/>
-                            </Grid>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
+            <!-- ListBox 自带 VirtualizingStackPanel：1000 条日志只实例化可见项（perf-12，勿改回 ItemsControl+ScrollViewer） -->
+            <ListBox ItemsSource="{Binding Entries}" BorderThickness="0" Background="Transparent"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="logging:LogEntry">
+                        <Grid ColumnDefinitions="160,60,1*" Margin="8,4">
+                            <TextBlock Grid.Column="0" Text="{Binding Timestamp, StringFormat={}{0:HH:mm:ss.fff}}" Classes="muted" FontSize="12"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Level}" FontSize="12" FontWeight="SemiBold"
+                                       Foreground="{Binding Level, Converter={x:Static converters:LogLevelBrushConverter.Instance}}"/>
+                            <TextBlock Grid.Column="2" Text="{Binding Message}" FontSize="12" TextWrapping="Wrap"/>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
         </Border>
     </DockPanel>
 </UserControl>

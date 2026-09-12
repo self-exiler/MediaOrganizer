@@ -27,11 +27,11 @@
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="svm:ExtractorSettingVM">
                                             <Grid ColumnDefinitions="Auto,100,1*,80" ColumnSpacing="12" Margin="0,4">
-                                                <CheckBox Grid.Column="0" IsChecked="{Binding Enabled, Mode=TwoWay}" VerticalAlignment="Center"/>
+                                                <CheckBox Grid.Column="0" IsChecked="{Binding Enabled}" VerticalAlignment="Center"/>
                                                 <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" FontWeight="SemiBold"/>
                                                 <Slider Grid.Column="2" Minimum="0" Maximum="2" TickFrequency="0.1"
                                                         IsSnapToTickEnabled="True"
-                                                        Value="{Binding Weight, Mode=TwoWay}" VerticalAlignment="Center"/>
+                                                        Value="{Binding Weight}" VerticalAlignment="Center"/>
                                                 <TextBlock Grid.Column="3" Text="{Binding Weight, StringFormat={}{0:0.0}}"
                                                            VerticalAlignment="Center" Classes="muted"/>
                                             </Grid>
@@ -89,7 +89,7 @@
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="svm:PatternSettingVM">
                                             <Grid ColumnDefinitions="Auto,120,1*,70,60,60,60,56" ColumnSpacing="8" Margin="0,4">
-                                                <CheckBox Grid.Column="0" IsChecked="{Binding Enabled, Mode=TwoWay}" VerticalAlignment="Center"/>
+                                                <CheckBox Grid.Column="0" IsChecked="{Binding Enabled}" VerticalAlignment="Center"/>
                                                 <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
                                                 <TextBlock Grid.Column="2" Text="{Binding Regex}" VerticalAlignment="Center"
                                                            FontFamily="Cascadia Code, Consolas, monospace" FontSize="11.5"

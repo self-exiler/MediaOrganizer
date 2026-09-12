@@ -3,11 +3,6 @@
              xmlns:vm="using:MediaOrganizer.Shared.ViewModels"
              x:Class="MediaOrganizer.Android.Views.ReportView"
              x:DataType="vm:ReportViewModel">
-    <UserControl.Resources>
-        <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF"/>
-        <SolidColorBrush x:Key="DividerBrush" Color="#E5E5E5"/>
-        <SolidColorBrush x:Key="MutedBrush" Color="#8A8A8A"/>
-    </UserControl.Resources>
 
     <Grid RowDefinitions="*,Auto">
         <ScrollViewer Grid.Row="0">
@@ -39,16 +34,4 @@
             </Grid>
         </Border>
     </Grid>
-
-    <UserControl.Styles>
-        <Style Selector="Button.primary">
-            <Setter Property="Background" Value="#0067C0"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="MinHeight" Value="48"/>
-        </Style>
-        <Style Selector="Button.primary:pointerover">
-            <Setter Property="Background" Value="#1975C5"/>
-        </Style>
-    </UserControl.Styles>
 </UserControl>

@@ -29,13 +29,8 @@ public partial class App : Avalonia.Application
         AvaloniaXamlLoader.Load(this);
     }
 
-    public override void OnFrameworkInitializationCompleted()
-    {
-        // 此回调在 Application.OnCreate 阶段（AvaloniaAndroidApplication.SetupWithLifetime）同步触发，
-        // 此时 MainActivity 尚未创建——这里不访问 Activity；依赖 Activity 的初始化全部在
-        // MainActivity.OnCreate → InitializeApp() 中完成。
-        base.OnFrameworkInitializationCompleted();
-    }
+    // OnFrameworkInitializationCompleted 不重写：回调在 Application.OnCreate 阶段同步触发，
+    // 此时 MainActivity 尚未创建——依赖 Activity 的初始化全部在 MainActivity.OnCreate → InitializeApp() 中完成。
 
     /// <summary>
     /// 在 MainActivity.OnCreate 中调用（Instance 已就绪）：构建 VM 图、注入平台服务、挂载主视图。

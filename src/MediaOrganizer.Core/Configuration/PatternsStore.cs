@@ -23,7 +23,6 @@ public sealed class PatternDefinition
 /// <summary>patterns.json 顶层结构。</summary>
 public sealed class PatternsFile
 {
-    public int Version { get; set; } = 1;
     public List<PatternDefinition> Patterns { get; set; } = [];
 }
 

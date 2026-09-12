@@ -8,7 +8,6 @@ using MediaOrganizer.Core.Logging;
 using MediaOrganizer.Core.Models;
 using MediaOrganizer.Core.Patterns;
 using MediaOrganizer.Shared.Services;
-using System.Collections.ObjectModel;
 
 namespace MediaOrganizer.Shared.ViewModels;
 
@@ -48,7 +47,8 @@ public partial class FailedFilesViewModel : ViewModelBase
 
     public event Action<IEnumerable<string>>? NavigateToMagic;
 
-    public ObservableCollection<FailedItem> Items { get; } = [];
+    /// <summary>失败文件列表。用 AvaloniaList 以获得 AddRange 单次 CollectionChanged（perf-16：逐项 Add 上千条时每条都触发布局）。</summary>
+    public Avalonia.Collections.AvaloniaList<FailedItem> Items { get; } = [];
 
     [ObservableProperty]
     private FailedItem? _selected;
@@ -92,11 +92,13 @@ public partial class FailedFilesViewModel : ViewModelBase
         ReplacePreview(null);
         if (result is null) return;
         // FR-A6.1：按结构指纹聚类排序（指纹一致的相邻）。排序与 FailedItem 各算一次，显式预计算复用（7.2）
-        foreach (var u in result.Unparsed
-                     .Select(u => (Item: u, Fp: StructureFingerprint.Compute(u.File.FileName)))
-                     .OrderBy(x => x.Fp)
-                     .ThenBy(x => x.Item.File.FileName))
-            Items.Add(new FailedItem(u.Item, u.Fp));
+        var items = result.Unparsed
+            .Select(u => (Item: u, Fp: StructureFingerprint.Compute(u.File.FileName)))
+            .OrderBy(x => x.Fp)
+            .ThenBy(x => x.Item.File.FileName)
+            .Select(x => new FailedItem(x.Item, x.Fp))
+            .ToArray();
+        Items.AddRange(items); // 单次 CollectionChanged（perf-16）
         _logger.Info($"失败文件列表已刷新：{Items.Count} 个（按指纹聚类排序）");
     }
 
@@ -104,9 +106,15 @@ public partial class FailedFilesViewModel : ViewModelBase
     {
         ReplacePreview(null);
         PreviewInfo = value is null ? "选择文件查看预览" : value.Path;
+        // perf-13：快速切换选中时取消上一个未开始的解码任务，避免堆积 Magick 解码
+        _previewCts?.Cancel();
         if (value is null) return;
-        _ = LoadPreviewAsync(value);
+        var cts = new CancellationTokenSource();
+        _previewCts = cts;
+        _ = LoadPreviewAsync(value, cts.Token);
     }
+
+    private CancellationTokenSource? _previewCts;
 
     /// <summary>替换预览位图并释放旧实例（评审 2.14：Bitmap 是 IDisposable，不释放则原生位图持续增长）。</summary>
     private void ReplacePreview(Bitmap? next)
@@ -116,12 +124,20 @@ public partial class FailedFilesViewModel : ViewModelBase
         old?.Dispose();
     }
 
-    private async Task LoadPreviewAsync(FailedItem item)
+    private async Task LoadPreviewAsync(FailedItem item, CancellationToken ct)
     {
         Bitmap? bmp = null;
         try
         {
-            bmp = await Task.Run(() => _imageLoader.LoadThumbnail(item.Path, _config.General.PreviewSize));
+            bmp = await Task.Run(() =>
+            {
+                ct.ThrowIfCancellationRequested();
+                return _imageLoader.LoadThumbnail(item.Path, _config.General.PreviewSize);
+            }, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
         }
         catch (Exception ex)
         {
