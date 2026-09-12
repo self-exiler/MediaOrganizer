@@ -98,8 +98,15 @@ jobs:
                    Sort-Object LastWriteTime -Descending | Select-Object -First 1
           if (-not $setup) { throw "未找到桌面安装包" }
           if (-not $apk)   { throw "未找到签名 APK" }
+
+          # APK 按命名约定重命名（程序名-操作系统-cpu架构-版本号，与 .iss 的 OutputBaseFilename 同规则）。
+          # .NET Android 默认输出 org.mediaorganizer.android-Signed.apk（单 RID android-arm64）。
+          $apkNamed = "packaging/releases/MediaOrganizer-android-arm64-$env:APP_VERSION.apk"
+          Copy-Item $apk.FullName $apkNamed -Force
+          Write-Host "APK 重命名: $($apk.Name) -> $(Split-Path -Leaf $apkNamed)"
+
           Add-Content $env:GITHUB_OUTPUT "setup=$($setup.FullName)"
-          Add-Content $env:GITHUB_OUTPUT "apk=$($apk.FullName)"
+          Add-Content $env:GITHUB_OUTPUT "apk=$apkNamed"
 
       # 每次运行都上传 Actions 产物：验证管线取包、失败排障（glob 保持宽松，产物改名不动工作流）
       - name: Upload installer artifact
@@ -114,7 +121,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: MediaOrganizer-android-arm64-${{ env.APP_VERSION }}
-          path: src/MediaOrganizer.Android/**/*-Signed.apk
+          path: packaging/releases/MediaOrganizer-android-arm64-*.apk
           if-no-files-found: error
 
       # 仅 tag 触发创建 Release，且排在构建、产物上传之后——构建失败就不会出现不完整的 Release
@@ -124,6 +131,6 @@ jobs:
         with:
           files: |
             packaging/releases/*.exe
-            src/MediaOrganizer.Android/**/*-Signed.apk
+            packaging/releases/MediaOrganizer-android-arm64-*.apk
           generate_release_notes: true
           fail_on_unmatched_files: true
