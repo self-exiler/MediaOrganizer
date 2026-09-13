@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Reflection;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MediaOrganizer.Android.Platforms;
@@ -61,6 +62,45 @@ public partial class MainViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _drawerOpen;
+
+    /// <summary>抽屉底部版本行（如 "v1.2.0-android · 开源 MIT"）。versionName 由 release.yml 以
+    /// -p:ApplicationDisplayVersion=&lt;tag&gt; 写进 APK 清单，运行时经 PackageManager 读取，
+    /// 与系统安装页/应用信息显示的版本天然一致——不要改回写死字符串，否则 tag 升级后 UI 不同步。</summary>
+    public string VersionText { get; } = BuildVersionText();
+
+    private static string BuildVersionText()
+    {
+        string? version = null;
+        try
+        {
+            var context = global::Android.App.Application.Context;
+            version = context.PackageManager?
+                .GetPackageInfo(context.PackageName!, 0)?
+                .VersionName;
+        }
+        catch
+        {
+            // 设计器预览/测试宿主无 Android 运行时：退回程序集元数据（= 构建时 ApplicationDisplayVersion）
+        }
+
+        if (string.IsNullOrEmpty(version))
+        {
+            version = Assembly.GetExecutingAssembly()
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+                .InformationalVersion;
+        }
+
+        if (version is not null)
+        {
+            var plus = version.IndexOf('+'); // InformationalVersion 可能带 SemVer 元数据后缀
+            if (plus >= 0)
+            {
+                version = version[..plus];
+            }
+        }
+
+        return $"v{version ?? "?"}-android · 开源 MIT";
+    }
 
     [ObservableProperty]
     private int _selectedPage; // 0 工作台 / 1 失败 / 2 报告 / 3 设置

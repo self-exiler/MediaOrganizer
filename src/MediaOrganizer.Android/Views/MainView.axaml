@@ -94,8 +94,10 @@
                                    Foreground="{StaticResource TextBrush}" VerticalAlignment="Center"/>
                     </StackPanel>
                     <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,1,0,0" Padding="20,10">
-                        <TextBlock Text="v1.0-android · 开源 MIT&#x0a;APK 侧载分发（GitHub Release）"
-                                   FontSize="11" Foreground="{StaticResource MutedBrush}"/>
+                        <StackPanel>
+                            <TextBlock Text="{Binding VersionText}" FontSize="11" Foreground="{StaticResource MutedBrush}"/>
+                            <TextBlock Text="APK 侧载分发（GitHub Release）" FontSize="11" Foreground="{StaticResource MutedBrush}"/>
+                        </StackPanel>
                     </Border>
 
                     <ListBox Background="Transparent" BorderThickness="0" Padding="0,4"
