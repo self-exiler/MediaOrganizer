@@ -53,7 +53,7 @@ jobs:
         run: dotnet workload install android
 
       # ---------- 桌面版 ----------
-      - name: Publish desktop (self-contained + ReadyToRun)
+      - name: Publish desktop (Native AOT)
         shell: pwsh
         run: ./packaging/publish.ps1 -OutputDir packaging/publish/win-x64
 
