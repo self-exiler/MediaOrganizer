@@ -126,6 +126,7 @@ ISCC.exe packaging\MediaOrganizer.iss
 | 指标 | R2R 自包含（2026-09-05） | Native AOT（2026-10-02） |
 | --- | --- | --- |
 | 发布目录 | 149.5 MB / 231 个文件 | 67.4 MB / 5 个文件（exe + 4 个原生 dll） |
+| 安装包（LZMA2/ultra64） | 约 47 MB | **20.8 MB**（v1.3.0 实测） |
 | 窗口可见（冷启动） | 1254 ms | 561 ms |
 | 项目代码 IL 警告 | 不适用 | 0 条 IL2026 / IL3050 |
 
