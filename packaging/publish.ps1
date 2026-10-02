@@ -1,20 +1,22 @@
 ﻿# MediaOrganizer 桌面版发布脚本
-# 产出：自包含（内嵌 .NET Runtime）+ ReadyToRun 预编译的发布目录
+# 产出：Native AOT 发布目录（原生单 exe + 原生库），目标机无需安装 .NET Runtime
 #
 # 用法：
-#   .\publish.ps1                          # Release / win-x64 / 自包含 + R2R
-#   .\publish.ps1 -NoReadyToRun            # 关掉 R2R，省约 17MB（启动略慢）
+#   .\publish.ps1                              # Release / win-x64 / Native AOT
 #   .\publish.ps1 -RuntimeIdentifier win-arm64
+#   .\publish.ps1 -OutputDir packaging/publish/win-x64   # CI 与安装包脚本约定此目录
 #
-# 说明：自包含后目标机无需安装 .NET Runtime，PublishTrimmed 理论上可用，
-#       但 Avalonia 大量反射绑定，裁剪极易运行时崩溃，故不启用（ADR-0009 决策 1 的
-#       "裁剪互斥"结论已因改为自包含失效，风险结论仍然成立）。
+# 成立前提：闭包内不得有反射式序列化与动态视图解析——已由 AppJson（System.Text.Json
+#           源生成）与桌面 ViewLocator（静态登记表）满足，并以 <IsAotCompatible> 让
+#           普通构建常驻 IL2026/IL3050 分析器防回归。
+# 残留风险：TagLibSharp / SMBLibrary 是无标注的 netstandard2.0 库，AOT 下仍报 IL2104
+#           （分析器看不见其内部，其中 TagLibSharp 用 Assembly.GetTypes() 建 mimetype
+#           表，最可能在裁剪后静默失效）。发版前应跑一轮真实照片库的功能回归。
 
 [CmdletBinding()]
 param(
     [string]$Configuration = 'Release',
     [string]$RuntimeIdentifier = 'win-x64',
-    [switch]$NoReadyToRun,
     [string]$OutputDir
 )
 
@@ -28,10 +30,7 @@ if (-not $OutputDir) {
     $OutputDir = Join-Path $PSScriptRoot "publish/$RuntimeIdentifier"
 }
 
-# R2R 预编译：体积 +约 17MB，换来明显更快的冷启动。关掉则传 -NoReadyToRun。
-$r2r = if ($NoReadyToRun) { 'false' } else { 'true' }
-
-Write-Host "==> 发布 $Configuration / $RuntimeIdentifier (self-contained=true, R2R=$r2r)"
+Write-Host "==> 发布 $Configuration / $RuntimeIdentifier (Native AOT)"
 
 # CI 发版时经 GITHUB_ENV 注入 APP_VERSION(tag 剥掉前导 v),让 exe/dll 的
 # FileVersion/InformationalVersion 跟上 tag;本地未设置时跳过,走 csproj 默认值。
@@ -45,21 +44,34 @@ dotnet publish $project `
     -c $Configuration `
     -r $RuntimeIdentifier `
     --self-contained true `
-    -p:PublishReadyToRun=$r2r `
+    -p:PublishAot=true `
     -p:PublishSingleFile=false `
     @versionArgs `
     -o $OutputDir
 
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish 失败（exit=$LASTEXITCODE）" }
 
-# 原生调试符号（libSkiaSharp.pdb / libHarfBuzzSharp.pdb，合计约 102MB）由
-# Desktop.csproj 的 PrunePublishOutput 目标在 Publish 后删除，这里做一次兜底校验。
+# AOT 的原生 pdb（实测 108MB）由 ILCompiler 在 Publish 目标之后产出，csproj 的
+# PrunePublishOutput 删不到它。不放进安装包但需保留供崩溃符号解析，故移出而非删除。
+$symbolDir = Join-Path $PSScriptRoot "symbols/$RuntimeIdentifier"
+New-Item -ItemType Directory -Force -Path $symbolDir | Out-Null
+foreach ($pdb in Get-ChildItem -Path $OutputDir -Filter '*.pdb' -File) {
+    Move-Item -Force $pdb.FullName (Join-Path $symbolDir $pdb.Name)
+    Write-Host "==> 符号已移出：$($pdb.Name) → $symbolDir"
+}
+
+# 原生调试符号（libSkiaSharp.pdb / libHarfBuzzSharp.pdb 等）由 Desktop.csproj 的
+# PrunePublishOutput 目标在 Publish 后删除，这里做一次兜底校验。
 $leftover = Get-ChildItem -Path $OutputDir -Filter '*.pdb' -Recurse -File
 if ($leftover) { throw "发布目录仍有 $($leftover.Count) 个 .pdb 未清理" }
 
-# 自包含应内嵌运行时，不该再依赖 runtimes\ 下的外部布局
-if (-not (Test-Path (Join-Path $OutputDir 'coreclr.dll'))) {
-    throw "发布目录未找到 coreclr.dll，疑似未按自包含发布"
+# Native AOT 无 coreclr.dll：托管代码全部编进单个 exe，产物里不该再有本项目程序集。
+# 若还能看到 MediaOrganizer.Core.dll，说明 AOT 没生效（发出的会是混合布局）。
+if (-not (Test-Path (Join-Path $OutputDir 'MediaOrganizer.Desktop.exe'))) {
+    throw "发布目录未找到 MediaOrganizer.Desktop.exe，疑似未按 Native AOT 发布"
+}
+if (Test-Path (Join-Path $OutputDir 'MediaOrganizer.Core.dll')) {
+    throw "发布目录仍存在 MediaOrganizer.Core.dll，AOT 编译未生效"
 }
 
 $size = (Get-ChildItem -Path $OutputDir -Recurse -File | Measure-Object Length -Sum).Sum

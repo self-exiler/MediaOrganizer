@@ -35,12 +35,12 @@ public static class PatternsStore
     public static List<PatternDefinition> Load(string path, Action<string>? onError = null)
     {
         if (!File.Exists(path)) return GetBuiltinPatterns();
-        var file = JsonFileStore.Load<PatternsFile>(path, onError);
+        var file = JsonFileStore.Load(path, AppJson.PatternsFile, onError);
         return file is null ? GetBuiltinPatterns() : file.Patterns;
     }
 
     public static void Save(string path, IReadOnlyList<PatternDefinition> patterns)
-        => JsonFileStore.Save(path, new PatternsFile { Patterns = patterns.ToList() });
+        => JsonFileStore.Save(path, new PatternsFile { Patterns = patterns.ToList() }, AppJson.PatternsFile);
 
     /// <summary>内置模式：覆盖微信/小红书/OPPO/通用日期/紧凑日期/时间戳等常见场景。</summary>
     public static List<PatternDefinition> GetBuiltinPatterns() =>

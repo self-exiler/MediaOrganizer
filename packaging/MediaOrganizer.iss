@@ -4,15 +4,15 @@
 ; 编译：ISCC.exe packaging\MediaOrganizer.iss
 ; 先跑：packaging\publish.ps1
 ;
-; 设计要点：发布为自包含（publish.ps1 内嵌 .NET Runtime + ReadyToRun），
-;           安装器不做任何运行时检测/下载，离线可装。
+; 设计要点：发布为 Native AOT（publish.ps1 产出单原生 exe + 原生库，不内嵌 CLR），
+;           目标机无需安装任何 .NET 组件，安装器不做运行时检测/下载，离线可装。
 ;           默认安装到当前用户目录（{localappdata}\Programs），以 lowest 权限安装，
 ;           全程无需管理员提权。
 
 #define MyAppName      "MediaOrganizer"
 ; 版本号可由 CI 用 /DMyAppVersion=1.2.3 覆盖（tag v1.2.3 → 传 1.2.3，不带前导 v）
 #ifndef MyAppVersion
-#define MyAppVersion   "1.1.1"
+#define MyAppVersion   "1.3.0"
 #endif
 #define MyAppPublisher "dioha"
 #define MyAppExeName   "MediaOrganizer.Desktop.exe"

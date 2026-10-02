@@ -38,7 +38,7 @@ public sealed class AppState
     public static AppState Load(string configPath, string patternsPath)
     {
         string? configError = null;
-        var config = JsonFileStore.Load<AppConfig>(configPath, e => configError = e);
+        var config = JsonFileStore.Load(configPath, AppJson.AppConfig, e => configError = e);
 
         string? quarantined = null;
         if (config is null && configError is not null && File.Exists(configPath))
@@ -74,7 +74,7 @@ public sealed class AppState
     /// </summary>
     public void SaveConfig(bool notifyChanged = true)
     {
-        JsonFileStore.Save(_configPath, Config);
+        JsonFileStore.Save(_configPath, Config, AppJson.AppConfig);
         if (notifyChanged) Changed?.Invoke();
     }
 

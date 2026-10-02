@@ -15,8 +15,8 @@ public class ConfigStoreTests
         var path = Path.Combine(Path.GetTempPath(), "mo-config-" + Guid.NewGuid().ToString("N") + ".json");
         try
         {
-            JsonFileStore.Save(path, cfg);
-            var loaded = JsonFileStore.Load<AppConfig>(path) ?? new AppConfig();
+            JsonFileStore.Save(path, cfg, AppJson.AppConfig);
+            var loaded = JsonFileStore.Load(path, AppJson.AppConfig) ?? new AppConfig();
             Assert.Equal(@"D:\photos", loaded.Paths.SourceDir);
             Assert.Equal(25, loaded.Extraction.MaxYearsPast);
             Assert.Equal(3, loaded.Extraction.FutureDateBufferDays);
@@ -40,7 +40,7 @@ public class ConfigStoreTests
         try
         {
             // JsonFileStore.Load 在解析失败时返回 null，调用方兜底为 new AppConfig()
-            var loaded = JsonFileStore.Load<AppConfig>(path) ?? new AppConfig();
+            var loaded = JsonFileStore.Load(path, AppJson.AppConfig) ?? new AppConfig();
             Assert.Equal(30, loaded.Extraction.MaxYearsPast);
         }
         finally

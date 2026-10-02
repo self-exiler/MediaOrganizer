@@ -1,25 +1,13 @@
 using System.Collections.Concurrent;
-using System.Text.Encodings.Web;
 using System.Text.Json;
-using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 
 namespace MediaOrganizer.Core.Configuration;
 
-/// <summary>JSON 文件读写帮助（建目录 + 序列化 + **原子**落盘），供配置/模式/分析结果共用。</summary>
+/// <summary>JSON 文件读写帮助（建目录 + 序列化 + **原子**落盘），供配置/模式/分析结果共用。
+/// 序列化一律走 <see cref="JsonTypeInfo{T}"/>（源生成，入口见 AppJson），不使用反射式重载。</summary>
 public static class JsonFileStore
 {
-    public static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        // 默认编码器会把所有非 ASCII 字符转义成 \uXXXX，中文配置全部不可读；
-        // 文件以 UTF-8 落盘，放宽转义是安全的（仅不在 HTML 上下文中使用该输出）。
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-        PropertyNameCaseInsensitive = true,
-        ReadCommentHandling = JsonCommentHandling.Skip,
-        AllowTrailingCommas = true,
-        Converters = { new JsonStringEnumConverter() }
-    };
-
     // 同一目标文件的保存必须串行：Windows 上并发 File.Move(overwrite:true) 替换同一目标会抛 UnauthorizedAccessException。
     // 路径集合是固定的少数几个（config/patterns/analysis-result），锁表不会无界增长。
     private static readonly ConcurrentDictionary<string, object> SaveLocks = new(StringComparer.OrdinalIgnoreCase);
@@ -29,7 +17,7 @@ public static class JsonFileStore
     /// 直接 File.WriteAllText 时，崩溃/断电/磁盘满会把文件截成半截 JSON——
     /// config.json 含网络位置与凭据，写坏即用户配置全丢。
     /// </summary>
-    public static void Save<T>(string path, T payload)
+    public static void Save<T>(string path, T payload, JsonTypeInfo<T> typeInfo)
     {
         var full = Path.GetFullPath(path);
         var dir = Path.GetDirectoryName(full);
@@ -44,7 +32,7 @@ public static class JsonFileStore
             // 会产生 MB 级大字符串 + 再编码一次）
             using (var stream = File.Create(temp))
             {
-                JsonSerializer.Serialize(stream, payload, JsonOptions);
+                JsonSerializer.Serialize(stream, payload, typeInfo);
             }
             try
             {
@@ -59,12 +47,12 @@ public static class JsonFileStore
     }
 
     /// <summary>读取；文件不存在返回 null。解析失败时经 <paramref name="onError"/> 上报错误后返回 null。</summary>
-    public static T? Load<T>(string path, Action<string>? onError = null) where T : class
+    public static T? Load<T>(string path, JsonTypeInfo<T> typeInfo, Action<string>? onError = null) where T : class
     {
         try
         {
             if (!File.Exists(path)) return null;
-            return JsonSerializer.Deserialize<T>(File.ReadAllText(path), JsonOptions);
+            return JsonSerializer.Deserialize(File.ReadAllText(path), typeInfo);
         }
         catch (Exception ex)
         {

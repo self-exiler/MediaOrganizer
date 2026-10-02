@@ -9,7 +9,7 @@ namespace MediaOrganizer.Core.Analysis;
 /// 故注释不再声称"支持跨会话恢复执行"。</summary>
 public static class AnalysisResultStore
 {
-    private sealed class ResultFile
+    internal sealed class ResultFile
     {
         public int Version { get; set; } = 1;
         public string SourceDir { get; set; } = "";
@@ -18,7 +18,7 @@ public static class AnalysisResultStore
         public List<UnparsedEntry> Unparsed { get; set; } = [];
     }
 
-    private sealed class ParsedEntry
+    internal sealed class ParsedEntry
     {
         public string Path { get; set; } = "";
         public DateTimeOffset Date { get; set; }
@@ -26,7 +26,7 @@ public static class AnalysisResultStore
         public long Size { get; set; }
     }
 
-    private sealed class UnparsedEntry
+    internal sealed class UnparsedEntry
     {
         public string Path { get; set; } = "";
         public string Reason { get; set; } = "";
@@ -51,13 +51,13 @@ public static class AnalysisResultStore
                 Reason = u.Reason
             }).ToList()
         };
-        JsonFileStore.Save(path, payload);
+        JsonFileStore.Save(path, payload, AppJson.ResultFile);
     }
 
     /// <summary>从落盘 JSON 恢复分析结果；文件缺失/损坏返回 null。</summary>
     public static AnalysisResult? Load(string path)
     {
-        var file = JsonFileStore.Load<ResultFile>(path);
+        var file = JsonFileStore.Load(path, AppJson.ResultFile);
         if (file is null) return null;
 
         var parsed = file.Parsed

@@ -1,7 +1,18 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using MediaOrganizer.Core.Configuration;
 
 namespace MediaOrganizer.Core.Tests;
+
+/// <summary>源生成上下文：JsonFileStore 只接受 JsonTypeInfo，测试载荷类型在此自行登记
+/// （Core 的 MediaOrganizerJsonContext 是 internal，测试程序集取不到）。</summary>
+[JsonSourceGenerationOptions(
+    WriteIndented = true,
+    PropertyNameCaseInsensitive = true,
+    ReadCommentHandling = JsonCommentHandling.Skip,
+    AllowTrailingCommas = true)]
+[JsonSerializable(typeof(JsonFileStoreTests.JsonFileStoreTestsPayload))]
+internal sealed partial class TestJsonContext : JsonSerializerContext;
 
 /// <summary>
 /// 防回归：JsonFileStore 曾用裸 File.WriteAllText（注释却声称"原子"），
@@ -19,8 +30,8 @@ public class JsonFileStoreTests : IDisposable
     [Fact]
     public void 保存后可回读()
     {
-        JsonFileStore.Save(P("a.json"), new JsonFileStoreTestsPayload { Name = "x", Value = 42 });
-        var back = JsonFileStore.Load<JsonFileStoreTestsPayload>(P("a.json"));
+        JsonFileStore.Save(P("a.json"), new JsonFileStoreTestsPayload { Name = "x", Value = 42 }, TestJsonContext.Default.JsonFileStoreTestsPayload);
+        var back = JsonFileStore.Load(P("a.json"), TestJsonContext.Default.JsonFileStoreTestsPayload);
 
         Assert.NotNull(back);
         Assert.Equal("x", back!.Name);
@@ -30,7 +41,7 @@ public class JsonFileStoreTests : IDisposable
     [Fact]
     public void 保存后不残留tmp文件()
     {
-        JsonFileStore.Save(P("b.json"), new JsonFileStoreTestsPayload { Name = "y" });
+        JsonFileStore.Save(P("b.json"), new JsonFileStoreTestsPayload { Name = "y" }, TestJsonContext.Default.JsonFileStoreTestsPayload);
 
         var leftovers = Directory.GetFiles(_dir, "*.tmp");
         Assert.Empty(leftovers);
@@ -40,7 +51,7 @@ public class JsonFileStoreTests : IDisposable
     public void 文件不存在返回null且不报错()
     {
         var errors = new List<string>();
-        var result = JsonFileStore.Load<JsonFileStoreTestsPayload>(P("missing.json"), errors.Add);
+        var result = JsonFileStore.Load(P("missing.json"), TestJsonContext.Default.JsonFileStoreTestsPayload, errors.Add);
 
         Assert.Null(result);
         Assert.Empty(errors);
@@ -52,7 +63,7 @@ public class JsonFileStoreTests : IDisposable
         File.WriteAllText(P("bad.json"), "{ 这不是合法 JSON");
 
         var errors = new List<string>();
-        var result = JsonFileStore.Load<JsonFileStoreTestsPayload>(P("bad.json"), errors.Add);
+        var result = JsonFileStore.Load(P("bad.json"), TestJsonContext.Default.JsonFileStoreTestsPayload, errors.Add);
 
         Assert.Null(result);
         Assert.Single(errors);
@@ -86,20 +97,42 @@ public class JsonFileStoreTests : IDisposable
         var path = P("concurrent.json");
         var tasks = Enumerable.Range(0, 50)
             .Select(i => Task.Run(() =>
-                JsonFileStore.Save(path, new JsonFileStoreTestsPayload { Name = $"n{i}", Value = i })))
+                JsonFileStore.Save(path, new JsonFileStoreTestsPayload { Name = $"n{i}", Value = i }, TestJsonContext.Default.JsonFileStoreTestsPayload)))
             .ToArray();
 
         await Task.WhenAll(tasks);
 
         // 若落盘非原子，这里会读到半截 JSON 而抛异常
         var text = File.ReadAllText(path);
-        var parsed = JsonSerializer.Deserialize<JsonFileStoreTestsPayload>(text, JsonFileStore.JsonOptions);
+        var parsed = JsonSerializer.Deserialize(text, TestJsonContext.Default.JsonFileStoreTestsPayload);
 
         Assert.NotNull(parsed);
         Assert.StartsWith("n", parsed!.Name);
     }
 
-    private sealed class JsonFileStoreTestsPayload
+    /// <summary>防回归：AppJson 在源生成上下文之上派生 options 覆盖编码器。
+    /// 若退回上下文默认 options，中文会被转义成 \uXXXX（配置不可读）、枚举退回数字。</summary>
+    [Fact]
+    public void 落盘保留中文与枚举字面量()
+    {
+        var path = P("cn.json");
+        var cfg = new AppConfig
+        {
+            Paths = new PathsConfig { SourceDir = @"D:\照片" },
+            Execute = new ExecuteConfig { Operation = FileOperation.Move, ClassificationLevel = ClassificationLevel.Month }
+        };
+
+        JsonFileStore.Save(path, cfg, AppJson.AppConfig);
+        var text = File.ReadAllText(path);
+
+        // JSON 里反斜杠本身转义为 \\，故只断言中文以字面量落盘
+        Assert.Contains("照片", text);
+        Assert.DoesNotContain("\\u", text);
+        Assert.Contains("\"Move\"", text);
+        Assert.Contains("\"Month\"", text);
+    }
+
+    internal sealed class JsonFileStoreTestsPayload
     {
         public string Name { get; set; } = "";
         public int Value { get; set; }

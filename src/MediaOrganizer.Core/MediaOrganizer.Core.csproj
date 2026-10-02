@@ -10,6 +10,9 @@
     <RootNamespace>MediaOrganizer.Core</RootNamespace>
     <AssemblyName>MediaOrganizer.Core</AssemblyName>
     <Description>MediaOrganizer 核心逻辑库（跨平台，零 UI 依赖）</Description>
+    <!-- 常驻裁剪/AOT 分析器：反射式写法（如 JsonSerializer 反射重载）在普通构建即报 IL2026/IL3050，
+         不必等到 AOT 发布才暴露。桌面版以 Native AOT 发布，依赖此项维持闭包干净。 -->
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
   <ItemGroup>

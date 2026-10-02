@@ -7,7 +7,7 @@ public sealed class NetworkProfile
 {
     public string Name { get; set; } = "";
 
-    [JsonConverter(typeof(JsonStringEnumConverter))]
+    [JsonConverter(typeof(JsonStringEnumConverter<NetworkType>))]
     public NetworkType Type { get; set; } = NetworkType.Smb;
 
     /// <summary>SMB：UNC 路径 \\server\share；WebDAV：完整地址 https://dav.example.com/photos。</summary>
@@ -90,13 +90,13 @@ public sealed class ExtractionConfig
 
 public sealed class ExecuteConfig
 {
-    [JsonConverter(typeof(JsonStringEnumConverter))]
+    [JsonConverter(typeof(JsonStringEnumConverter<FileOperation>))]
     public FileOperation Operation { get; set; } = FileOperation.Copy;
 
-    [JsonConverter(typeof(JsonStringEnumConverter))]
+    [JsonConverter(typeof(JsonStringEnumConverter<ExistAction>))]
     public ExistAction ExistAction { get; set; } = ExistAction.Skip;
 
-    [JsonConverter(typeof(JsonStringEnumConverter))]
+    [JsonConverter(typeof(JsonStringEnumConverter<ClassificationLevel>))]
     public ClassificationLevel ClassificationLevel { get; set; } = ClassificationLevel.Day;
 
     public bool FixMtime { get; set; }
