@@ -21,6 +21,14 @@
          HTTP 方法，且直连套接字不受 Java 层 HttpURLConnection 限制。 -->
     <AndroidHttpClientHandlerType>System.Net.Http.SocketsHttpHandler, System.Net.Http</AndroidHttpClientHandlerType>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
+    <!-- r8 压缩 Java 侧 dex：2026-10-04 实测 classes.dex 7,792,992 → 2,791,248（压缩后 2,680,238 →
+         1,131,986），APK 25,157,454 → 23,609,223（−1.55MB）。它只动 Java/dex，不需要 IL 裁剪
+         （AndroidLinkMode 仍为 None，无 IL2xxx 告警）；叠加 PublishTrimmed 只再多 0.3MB 噪声。
+         副作用：AndroidDexTool 自动转 d8、desugaring 打开，并生成 $(OutputPath)mapping.txt——
+         崩溃栈里的混淆名要靠它还原，release.yml 已将其作为 Actions 产物归档（不进公开 Release）。
+         真机回归（荣耀 PGT-AN10 / arm64）：冷启动 1382/1260/1247ms（无 r8 基线 1242ms，无可测差异）、
+         SAF 选目录全流程（含重新授权）、中文渲染、只读分析 37 文件通过、logcat 零异常。 -->
+    <AndroidLinkTool>r8</AndroidLinkTool>
     <!-- IL 裁剪：2026-10-04 真机实测后**不开**。工作负载虽报 XA1030（AOT 但不裁剪），但收益太小：
          PublishTrimmed=true 时 AndroidLinkMode 自动取 SdkOnly / TrimMode=partial，libassembly-store.so
          原始大小一字不变（13,958,520B），APK 25.16MB → 24.86MB（−0.3MB）；再显式 -p:AndroidLinkMode=Full

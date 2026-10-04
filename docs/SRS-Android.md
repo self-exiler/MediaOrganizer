@@ -234,7 +234,7 @@ MediaOrganizer Android 版访问用户指定的源目录（全局存储权限直
 |------|------|------|
 | NFR-A1 | 性能 | 千张规模：分析吞吐 ≥ 50 文件/秒（手机存储，含 EXIF 读取）；UI 全程无阻塞 |
 | NFR-A2 | 性能 | 内存峰值 ≤ 300MB（不缓存原图/缩略图） |
-| NFR-A3 | 性能 | APK 包体 ≤ **60MB**（.NET 运行时 + Core + Avalonia + SMBLibrary）。<br>**2026-10-04 实测 25.2MB**（arm64 单 ABI、内嵌中文字体约 5.8MB）。<br>历史值：v1.1~v1.3 实测 50.0MB 中约 15MB 是**误打包**——Core/Shared 的 android 工作负载检测条件恒为 false，Magick.NET 一直随 Android 闭包上机；该条件已修正，Magick 不再进 APK。<br>原目标 40MB 已作废（ADR-0008 决策 5）；60MB 仍为硬上限，超限须先评估 NativeAOT / 裁剪，不得再次无条件放宽 |
+| NFR-A3 | 性能 | APK 包体 ≤ **60MB**（.NET 运行时 + Core + Avalonia + SMBLibrary）。<br>**2026-10-04 实测 23.6MB**（arm64 单 ABI、内嵌中文字体约 5.8MB）。<br>优化阶梯：50.0MB（v1.1~v1.3）→ 32.8MB（修正 android 闭包，Magick.NET 约 15MB 属**误打包**——工作负载检测条件恒为 false）→ 25.2MB（profiled AOT，AOT 段 9.6MB → 2.0MB）→ 23.6MB（`AndroidLinkTool=r8` 压缩 dex，−1.55MB）。IL 裁剪已实测否决：`PublishTrimmed` 仅 −0.3MB，`AndroidLinkMode=Full` 累计 −1.9% 且暴露 ViewLocator 的 `Assembly.GetType(String)` 被裁风险。<br>原目标 40MB 已作废（ADR-0008 决策 5）；60MB 仍为硬上限，超限须先评估 NativeAOT / 裁剪，不得再次无条件放宽 |
 | NFR-A4 | 可靠性 | 单个文件解析失败不得中断整体分析；所有 IO 操作有异常捕获 |
 | NFR-A5 | 可靠性 | 执行阶段遇错（占用、权限）记录并继续，结束汇总报告；**SAF 源删除失败须记录为失败而非计入成功** |
 | NFR-A6 | 可移植 | Core 多目标编译，`#if ANDROID` 切换平台实现；桌面版不受影响 |
@@ -263,7 +263,7 @@ MediaOrganizer Android 版访问用户指定的源目录（全局存储权限直
 |------|------|------|
 | R-A1 | ExifInterface 不支持 TIFF/BMP，EXIF 覆盖面低于桌面版 Magick.NET | 落入文件名提取器兜底；后续可引入第三方库 |
 | R-A2 | SAF 批量文件操作性能（ContentResolver 查询开销） | AndroidFileScanner 批量查询 + 缓存 URI 映射 |
-| R-A3 | Avalonia Android 性能/包体未验证 | 已实测：包体 50.0MB（目标已按 ADR-0008 决策 5 放宽至 ≤60MB）；超过 60MB 硬上限则评估 NativeAOT / 移除 Magick.NET |
+| R-A3 | Avalonia Android 性能/包体未验证 | 已实测：包体 50.0MB → **23.6MB**（见 NFR-A3 优化阶梯，Magick.NET 已移出闭包）；冷启动 1.2~1.4s（荣耀真机）。余量充足，60MB 硬上限暂不需再评估 |
 | R-A4 | ViewModel 跨平台耦合（桌面版 VM 可能有 Avalonia.Desktop 依赖） | 审查现有 VM，平台相关逻辑抽到接口 |
 | R-A5 | Android Keystore 在不同厂商设备上行为差异 | 主流设备测试；降级方案：EncryptedSharedPreferences |
 | R-A5b | SMBLibrary 不支持 SMB 3.1.1 加密/签名，强制加密的服务器连不上；手机 Wi-Fi 下长传稳定性 | 覆盖主流家用 NAS（群晖/威联通默认不强制加密）；失败给明确文案；WakeLock + 重试 + `.mo-tmp` 保护（ADR-0007） |

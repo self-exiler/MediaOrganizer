@@ -124,6 +124,15 @@ jobs:
           path: packaging/releases/MediaOrganizer-android-arm64-*.apk
           if-no-files-found: error
 
+      # r8（AndroidLinkTool）会混淆 Java 侧栈帧，还原崩溃栈必须靠 publish 目录下的 mapping.txt。
+      # 只进 Actions 产物、不进公开 Release：映射表相当于把代码结构反还给外人，排障够用即可。
+      - name: Upload R8 mapping artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MediaOrganizer-android-arm64-${{ env.APP_VERSION }}-mapping
+          path: src/MediaOrganizer.Android/**/mapping.txt
+          if-no-files-found: ignore
+
       # 仅 tag 触发创建 Release，且排在构建、产物上传之后——构建失败就不会出现不完整的 Release
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
