@@ -20,9 +20,10 @@ public sealed class WebDavFileStorage : IFileStorage
         _client = new Client(new NetworkCredential(username, password));
         // 防御性清洗：旧配置可能含不可见/全角污染字符（手机输入法），清洗后再解析（含合法性校验）
         var uri = new Uri(WebDavAddress.Sanitize(baseAddress));
-        _client.Server = uri.Host;
+        // 库内部直接 new UriBuilder(Server)，Server 必须是含 scheme 的完整 URI，
+        // 赋 uri.Host 会让 UriBuilder 抛 UriFormatException(BadUriFormat)
+        _client.Server = uri.GetLeftPart(UriPartial.Authority);
         _client.BasePath = uri.AbsolutePath.TrimEnd('/');
-        if (!uri.IsDefaultPort) _client.Port = uri.Port;
         _basePath = _client.BasePath;
     }
 

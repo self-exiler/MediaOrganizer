@@ -70,4 +70,17 @@ public class WebDavAddressTests
         using var storage = new WebDavFileStorage("http://\uFEFF132.145.99.231:5244\u200B/dav/图片", "u", "p");
         Assert.NotNull(storage);
     }
+
+    [Fact]
+    public void Server属性必须是含scheme的完整URI()
+    {
+        // 库内部 new UriBuilder(Server)：赋裸主机名会在首个请求抛 UriFormatException（BadUriFormat）
+        using var storage = new WebDavFileStorage("http://192.168.1.9:19000/", "u", "p");
+        var client = typeof(WebDavFileStorage)
+            .GetField("_client", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+            .GetValue(storage)!;
+        var server = (string)client.GetType().GetProperty("Server")!.GetValue(client)!;
+        Assert.Equal("http://192.168.1.9:19000", server);
+        Assert.True(Uri.TryCreate(server, UriKind.Absolute, out _));
+    }
 }
