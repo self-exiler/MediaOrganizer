@@ -4,9 +4,14 @@
     <!-- ADR-0006 决策 8：多目标编译，#if ANDROID 切换平台实现，桌面版不受影响。
          未安装 android 工作负载的机器（纯桌面开发）自动排除 net10.0-android，
          否则 Desktop 引用 Core 的 restore 会因缺少工作负载报 NETSDK1147。
-         判定依据：android 工作负载会把 Microsoft.Android.Sdk 装进 dotnet\packs -->
+         判定依据：android 工作负载把 SDK 装成 packs\Microsoft.Android.Sdk.<平台>（本机为 .Windows，
+         Linux CI 为 .Linux），目录名**不带**裸的 `.Sdk`。
+         2026-10-04 修正：原条件 Exists('$(NetCoreRoot)packs\Microsoft.Android.Sdk') 恒为 false
+         （Exists 的通配符不匹配目录，且裸目录名不存在），导致 Core/Shared 从未真正编出
+         net10.0-android，Android 闭包按 net10.0 取库 → Magick.NET 15MB 混入 APK、#if ANDROID 全部失效。
+         改用 Directory.GetDirectories 的目录名通配，实测本机返回 1。 -->
     <TargetFrameworks>net10.0</TargetFrameworks>
-    <TargetFrameworks Condition="Exists('$(NetCoreRoot)packs\Microsoft.Android.Sdk')">net10.0;net10.0-android</TargetFrameworks>
+    <TargetFrameworks Condition="$([System.IO.Directory]::GetDirectories('$(NetCoreRoot)packs', 'Microsoft.Android.Sdk*').Length) > 0">net10.0;net10.0-android</TargetFrameworks>
     <RootNamespace>MediaOrganizer.Core</RootNamespace>
     <AssemblyName>MediaOrganizer.Core</AssemblyName>
     <Description>MediaOrganizer 核心逻辑库（跨平台，零 UI 依赖）</Description>

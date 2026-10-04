@@ -60,13 +60,15 @@
 
   <!-- 8.3：已删除原 Magick.NET ExcludeAssets="native" 补丁——
        Shared 现为条件多目标（net10.0-android），Android 下其引用的 Core 用 net10.0-android 版本（不含 Magick.NET），
-       Magick 原生库不再进入 Android 闭包，16KB 页面对齐（XA0141）问题随之消除。 -->
+       Magick 原生库不再进入 Android 闭包，16KB 页面对齐（XA0141）问题随之消除。
+       2026-10-04 更正：该条件多目标自 09-05 起从未真正生效——Core/Shared 的工作负载检测条件恒为 false
+       （见 Core.csproj 注释），期间 APK 一直带着 Magick.NET 约 15MB。条件修正后 Magick 与
+       System.Security.Cryptography.ProtectedData 均已从 APK 消失，#if ANDROID 平台分支首次真正编译。 -->
 
   <!-- 内嵌中文字体（Noto Sans SC，SIL OFL）：放 Fonts/ 而非 Assets/，避免 .NET Android 把
        Assets/** 自动标记为 AndroidAsset 与 AvaloniaResource 冲突。
-       2026-09-07：曾于 09-06 移除并改走系统字体回退，v1.1.0 真机中文不可见，已恢复。
-       不要再删——代价是 APK 增约 3.5~5MB，收益是中文可用。
-       （评估见 docs/review/2026-09-05-系统字体与并行度评估.md） -->
+       不要再删——系统字体在荣耀真机中文缺失（Avalonia 与国产定制 ROM 的兼容性冲突），代价是 APK 增约 7MB。
+       评估见 docs/review/2026-10-04-踩坑记录-Avalonia-Android-中文字体.md。 -->
   <ItemGroup>
     <AvaloniaResource Include="Fonts\**" />
   </ItemGroup>

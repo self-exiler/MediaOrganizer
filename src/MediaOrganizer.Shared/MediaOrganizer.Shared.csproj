@@ -4,9 +4,10 @@
          net10.0 版本，把整包 Magick.NET（含 linux-x64 原生库）拖进 Android 闭包，Android csproj 被迫写一段
          ExcludeAssets="native" 补丁压 XA0141。改为条件 net10.0-android 后，Android 下 Shared 引用 Core 的
          net10.0-android 版本（已排除 Magick），补丁可删、APK 更小、#if !ANDROID 真正生效。
-         未装 android 工作负载的机器自动排除 net10.0-android，纯桌面开发不受影响。 -->
+         未装 android 工作负载的机器自动排除 net10.0-android，纯桌面开发不受影响。
+         2026-10-04：检测条件与 Core 同步修正（原 Exists 写法恒为 false，本条件从未生效过）。 -->
     <TargetFrameworks>net10.0</TargetFrameworks>
-    <TargetFrameworks Condition="Exists('$(NetCoreRoot)packs\Microsoft.Android.Sdk')">net10.0;net10.0-android</TargetFrameworks>
+    <TargetFrameworks Condition="$([System.IO.Directory]::GetDirectories('$(NetCoreRoot)packs', 'Microsoft.Android.Sdk*').Length) > 0">net10.0;net10.0-android</TargetFrameworks>
     <Nullable>enable</Nullable>
     <!-- 双端共享 VM 层：Avalonia 仅用基类库（Bitmap 预览类型），无桌面/移动专属依赖 -->
     <IsAotCompatible>true</IsAotCompatible>

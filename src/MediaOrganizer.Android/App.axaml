@@ -14,11 +14,9 @@
         <SolidColorBrush x:Key="SuccessBrush" Color="#107C10"/>
         <SolidColorBrush x:Key="ErrorBrush" Color="#C42B1C"/>
 
-        <!-- 自打包中文字体（Noto Sans SC，SIL OFL 许可，可随 APK 分发）。
-             2026-09-07 真机验证：移除本字体、改走「系统字体 + 按码点回退」后，v1.1.0 中文再次不可见，
-             证明该回退路径在本应用（Avalonia 12.1.1 / Android）上确实不可用——**不要再移除本字体**。
-             评估与还原方式见 docs/review/2026-09-05-系统字体与并行度评估.md。
-             注意 UI 文本避免使用 emoji/生僻符号（本字体不含，见 docs 字体说明）。 -->
+        <!-- 自打包中文字体（Noto Sans SC，SIL OFL 许可，可随 APK 分发）——不要再移除：
+             系统字体在荣耀真机中文缺失（Avalonia 12 与国产定制 ROM 的兼容性冲突，两条回退路径均已真机否证）。
+             UI 文本避免使用本字体不含的 emoji/生僻符号。 -->
         <FontFamily x:Key="AppFont">avares://MediaOrganizer.Android/Fonts/NotoSansSC-Regular.otf#Noto Sans SC</FontFamily>
         <!-- 覆盖 FluentTheme 模板内部引用的主题字体资源键（Button/ComboBox/ContentControl 等）。
              注意：FontFamily 元素的内容按“字体族名字符串”解析，不会展开 {} 标记扩展；
