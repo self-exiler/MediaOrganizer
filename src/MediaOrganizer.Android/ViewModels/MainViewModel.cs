@@ -105,7 +105,7 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private int _selectedPage; // 0 工作台 / 1 失败 / 2 报告 / 3 设置
 
-    /// <summary>抽屉导航项（失败文件项带角标，角标变化时替换条目触发刷新）。</summary>
+    /// <summary>抽屉导航项（失败文件项带角标，角标值原地变更）。</summary>
     public ObservableCollection<NavItem> NavItems { get; } =
     [
         new NavItem("整理工作台", 0),

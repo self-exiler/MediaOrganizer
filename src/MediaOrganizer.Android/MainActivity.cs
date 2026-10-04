@@ -18,7 +18,7 @@ public static class RequestCodes
 }
 
 /// <summary>
-/// Avalonia Android 应用入口（ADR-0005）：AppBuilder 仅做主题与字体定制，
+/// Avalonia Android 应用入口（ADR-0005）：主题与字体定制在 App.axaml；
 /// VM 图与平台服务注入推迟到 MainActivity.OnCreate → App.InitializeApp（此时 Activity 才可用）。
 /// </summary>
 [Application]

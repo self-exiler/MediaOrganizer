@@ -21,7 +21,20 @@
          HTTP 方法，且直连套接字不受 Java 层 HttpURLConnection 限制。 -->
     <AndroidHttpClientHandlerType>System.Net.Http.SocketsHttpHandler, System.Net.Http</AndroidHttpClientHandlerType>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
-    <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
+    <!-- IL 裁剪：2026-10-04 真机实测后**不开**。工作负载虽报 XA1030（AOT 但不裁剪），但收益太小：
+         PublishTrimmed=true 时 AndroidLinkMode 自动取 SdkOnly / TrimMode=partial，libassembly-store.so
+         原始大小一字不变（13,958,520B），APK 25.16MB → 24.86MB（−0.3MB）；再显式 -p:AndroidLinkMode=Full
+         也只到 24.37MB（store −0.83MB、libaot 88→80 个），累计 −1.9%。
+         代价却不小：Full 图下暴露 6×IL2026 + 2×IL2072（静态 ViewLocator 的 Assembly.GetType(String)
+         正是页面解析入口，类型可能被裁掉）+ IL2104 整程序集告警（SMBLibrary、TagLibSharp）。
+         若将来真要开：先给 ViewLocator 的候选类型加 DynamicDependency/保留描述符，再整轮真机回归。 -->
+    <!-- Profiled AOT（工作负载自带 dotnet.aotprofile）：Release + MonoVM 下 RunAOTCompilation 默认为 true，
+         此前显式写 false 关掉 profiled 反而走了「全部程序集无差别完整 AOT」的最贵路径——实测 88 个
+         libaot-*.dll.so 共 9.6MB（占 APK 30%）。改为 true（即工作负载默认值）后仍每程序集一个 .so，
+         但只预热 profile 内的方法，AOT 段压到 2.0MB，APK 实测 32.8MB → 25.2MB。
+         冷启动已真机复测（荣耀 PGT-AN10，arm64）：完整 AOT 1368/1232/1239ms，profiled AOT 1357/1203/1174ms，
+         未命中 profile 的解释器回退没有可测代价。 -->
+    <AndroidEnableProfiledAot>true</AndroidEnableProfiledAot>
     <!-- 只打 arm64：实测设备为 arm64，默认会额外打 x86_64 一套。
          .NET 10 为满足 Android 16 的 16KB 页面对齐，把每个程序集都包成独立
          ELF 共享库（lib_<Assembly>.dll.so），本项目共 345 个程序集 → 双架构 690 个 .so，

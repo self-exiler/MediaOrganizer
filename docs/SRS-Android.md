@@ -234,7 +234,7 @@ MediaOrganizer Android 版访问用户指定的源目录（全局存储权限直
 |------|------|------|
 | NFR-A1 | 性能 | 千张规模：分析吞吐 ≥ 50 文件/秒（手机存储，含 EXIF 读取）；UI 全程无阻塞 |
 | NFR-A2 | 性能 | 内存峰值 ≤ 300MB（不缓存原图/缩略图） |
-| NFR-A3 | 性能 | APK 包体 ≤ **60MB**（.NET 运行时 + Core + Avalonia + Magick.NET + SMBLibrary）。<br>**实测 50.0MB；原目标 40MB 已作废**（ADR-0008 决策 5：ADR-0007 曾预估 SMBLibrary 体积影响 <1MB，实测不成立）。60MB 为硬上限，超限须先评估 NativeAOT / 移除 Magick.NET，不得再次无条件放宽 |
+| NFR-A3 | 性能 | APK 包体 ≤ **60MB**（.NET 运行时 + Core + Avalonia + SMBLibrary）。<br>**2026-10-04 实测 25.2MB**（arm64 单 ABI、内嵌中文字体约 5.8MB）。<br>历史值：v1.1~v1.3 实测 50.0MB 中约 15MB 是**误打包**——Core/Shared 的 android 工作负载检测条件恒为 false，Magick.NET 一直随 Android 闭包上机；该条件已修正，Magick 不再进 APK。<br>原目标 40MB 已作废（ADR-0008 决策 5）；60MB 仍为硬上限，超限须先评估 NativeAOT / 裁剪，不得再次无条件放宽 |
 | NFR-A4 | 可靠性 | 单个文件解析失败不得中断整体分析；所有 IO 操作有异常捕获 |
 | NFR-A5 | 可靠性 | 执行阶段遇错（占用、权限）记录并继续，结束汇总报告；**SAF 源删除失败须记录为失败而非计入成功** |
 | NFR-A6 | 可移植 | Core 多目标编译，`#if ANDROID` 切换平台实现；桌面版不受影响 |

@@ -129,7 +129,7 @@ public partial class App : Avalonia.Application
 }
 
 /// <summary>
-/// 移动端轻量主题：卡片/输入框/按钮的触屏尺寸与配色（对齐 docs/android-prototype，≥48dp 热区）。
+/// 移动端轻量主题：卡片/输入框/按钮的触屏尺寸与配色（控件 MinHeight 44dp，列表项 48dp）。
 /// 以 FluentTheme 为基，仅覆盖控件尺寸与圆角，不引入第三方主题。
 /// </summary>
 public class AppTheme : Styles
