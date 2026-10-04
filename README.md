@@ -48,7 +48,7 @@ MediaOrganizer 是一个用于整理照片和视频文件的桌面工具。它�
 ```text
 MediaOrganizer/
 ├─ docs/                            # 需求文档、ADR、功能说明
-├─ packaging/                       # 桌面版打包：发布脚本 + Inno Setup 安装包脚本
+├─ packaging/                       # 桌面版打包：发布脚本 + WiX v5 打包脚本（产出 MSI）
 ├─ src/
 │  ├─ MediaOrganizer.Core/         # 核心扫描、分析、提取、归档逻辑（net10.0 + net10.0-android 双目标）
 │  ├─ MediaOrganizer.Shared/       # 桌面 / 安卓共享的 ViewModel 层（net10.0 单目标）
@@ -149,8 +149,8 @@ dotnet test MediaOrganizer.slnx
 # 仅运行桌面应用
 dotnet run --project src/MediaOrganizer.Desktop/MediaOrganizer.Desktop.csproj
 
-# 打包桌面版安装包（自包含 + ReadyToRun，详见 packaging/README.md）
-cd packaging && ./publish.ps1 && ISCC.exe MediaOrganizer.iss
+# 打包桌面版安装包（Native AOT + MSI，详见 packaging/README.md）
+cd packaging && ./publish.ps1 && ./build-installer.ps1 -Version 1.4.0
 
 # 安卓端本地验证构建
 dotnet build src/MediaOrganizer.Android/MediaOrganizer.Android.csproj -f net10.0-android

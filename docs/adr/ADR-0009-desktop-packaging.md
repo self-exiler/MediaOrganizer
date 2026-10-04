@@ -1,10 +1,11 @@
-# ADR-0009: 桌面版分发与打包策略（自包含 + ReadyToRun）
+# ADR-0009: 桌面版分发与打包策略（Native AOT + MSI）
 
 - 状态：已接受（Accepted）——重写版，取代 2026-09-01 的"运行时外置"决策
 - 日期：2026-09-05
 - 修订：2026-10-02 决策 2 改选 NativeAOT（见文末「修订记录」），原"NativeAOT 不可控"的前提经实测推翻
+- 修订：2026-10-04 决策 4/5 的实现由 Inno Setup 改为 WiX v5 出 MSI，语言包与 `.iss` 一并删除
 - 关联：ADR-0006（Core/Shared/Desktop 分层）、ADR-0008（v1.0 范围冻结）
-- 关联文件：`packaging/publish.ps1`、`packaging/MediaOrganizer.iss`、`packaging/README.md`
+- 关联文件：`packaging/publish.ps1`、`packaging/build-installer.ps1`、`packaging/Product.wxs`、`packaging/README.md`
 
 ## 背景
 
@@ -54,19 +55,23 @@
 
 Native AOT 隐含**全量裁剪**，因此"裁剪友好"已是硬约束（见决策 2）。但 `PublishTrimmed` 作为 R2R 通道上的独立开关仍不启用：在没有 AOT 编译器的路径上做裁剪，只得到裁剪风险而没有本机代码收益。体积治理走 AOT + 剔除无用文件路线。
 
-### 4. 打包工具：Inno Setup，弃用 Velopack
+### 4. 打包工具：WiX v5（MSI），弃用 Velopack 与 Inno Setup（2026-10-04 修订）
 
-主路线改为 **Inno Setup**（6.3+，本机为用户级安装于 `%LocalAppData%\Programs\Inno Setup 6`）：
+主路线为 **WiX v5**（`dotnet tool install --global wix --version 5.0.2` + `WixToolset.UI.wixext/5.0.2`），产标准 MSI。取代原先的 Inno Setup 6.3。
 
-- 自包含后不再需要 Velopack 的 `--framework` 运行时引导——那是选它的核心理由，理由已消失。
-- Inno 提供中文向导（`ChineseSimplified.isl`，置于 `packaging/Languages/` 随脚本走，因用户级安装可能不带非英文语言包）、LZMA2/ultra64 压缩、标准卸载体验。
-- 弃用 Velopack 同时意味着**放弃自动更新通道**；v1.0 范围内可接受，后续若要增量更新可重新评估。
+- 自包含后不再需要 Velopack 的 `--framework` 运行时引导——那是选它的核心理由，理由已消失。弃用同时意味着**放弃自动更新通道**；v1.0 范围内可接受。
+- **换掉 Inno 的直接动因**：`.iss` 手工罗列发布文件，Native AOT 后虽收敛到 5 个文件，但依赖一变目录内容就变，`.iss` 不会报错只会静默漏装；且 Inno 的卸载与 MSI 的 Upgrade 表互不相识，后续若再换容器无法平滑升级。WiX 侧由 `build-installer.ps1` 按发布目录实际内容生成清单，多文件/少文件都会被构建拦下。
+- 中文向导由 `wix build -culture zh-CN` 直接选出（WiX UI 扩展自带 zh-CN 资源），**不再需要随仓库分发语言包文件**，故删除 `packaging/Languages/ChineseSimplified.isl`。
+- 压缩由 `<MediaTemplate EmbedCab="yes" CompressionLevel="high" />` 承担，等价 Inno 的 LZMA2/ultra64。
+- 代价：`.wxs` 是 XML，比 `.iss` 啰嗦，且 MSI 强制走 Windows Installer 的组件/产品码规则（`Product.wxs` 里的 GUID 一旦定了就永不可改，否则升级时旧文件不会被清理）。换来的是标准卸载信息、可校验（ICE）、可被企业管理工具识别。
 
 ### 5. 安装目录：用户目录，全程不提权
 
-- `DefaultDirName={localappdata}\Programs\MediaOrganizer`（即 `%LocalAppData%\Programs\MediaOrganizer`）
-- `PrivilegesRequired=lowest`：受限账户/企业管控环境也能安装。
+- `%LocalAppData%\Programs\MediaOrganizer`：`<Package Scope="perUser">` + 目录层级 `LocalAppDataFolder → Programs → MediaOrganizer`。
+  注意别把 `APPLICATIONFOLDER` 直接挂在 `LocalAppDataFolder` 下——那样会装到 `%LocalAppData%\MediaOrganizer`（真机实测踩过一次）。
+- `Scope="perUser"` 保证全程不写 HKLM，受限账户/企业管控环境也能安装。
 - 代价：多用户共用一台机器时各自装一份。对本项目（自用/小众分发）可接受。
+- **`UpgradeCode` 沿用原 AppId GUID** `7E4C1B52-…`：值不变即可让 MSI 的升级链连上原来那条产品线，与 Inno 的注册表键无技术关联。另加 `<Launch Condition>` 检测旧 Inno 卸载键，挡住"两套卸载器互相删文件"的混合安装。
 
 ### 6. 体积治理：沿用既有机制，新增自包含校验
 
@@ -102,12 +107,14 @@ Native AOT 隐含**全量裁剪**，因此"裁剪友好"已是硬约束（见决
 packaging\publish.ps1
 #    产物默认落 packaging\publish\win-x64，原生 pdb 移入 packaging\symbols\win-x64
 
-# 2) 打安装包
-ISCC.exe packaging\MediaOrganizer.iss
-#    产物：packaging\releases\MediaOrganizer_Setup_<版本>.exe
+# 2) 打安装包（MSI）
+packaging\build-installer.ps1 -Version 1.4.0
+#    产物：packaging\releases\MediaOrganizer-windows-x64-1.4.0.msi
 ```
 
-版本号在 `packaging/MediaOrganizer.iss` 的 `#define MyAppVersion` 维护。
+版本号由 `-Version` 参数给出（CI 传 `$env:APP_VERSION`，本地缺省取 csproj 兜底值）。
+注意不能直接 `wix build Product.wxs`：应用文件清单 `obj\Harvest.wxs` 由脚本按发布目录生成，
+Product.wxs 还需要 `-d Version / AppFilesGuid / AppIcon` 三个预处理器变量。
 
 ## 后果
 
@@ -138,3 +145,31 @@ ISCC.exe packaging\MediaOrganizer.iss
 3. 6 个导航页逐一打开确认渲染。
 
 `packaging/publish.ps1` 现只有 AOT 一条路径（R2R 分支与 `-NoReadyToRun`/`-Aot` 开关移除）。若 AOT 在线上暴露裁剪问题，回退方式是回退该提交重新出包，而不是加开关。
+
+## 修订记录（2026-10-04）：打包工具由 Inno Setup 改为 WiX v5（MSI）
+
+决策 4/5 的实现按本节修订，原因与边界：
+
+**为什么换。** `.iss` 静态罗列发布文件， Native AOT 后虽只剩 5 个文件，但依赖变化会改变发布目录内容，
+而 `.iss` 既不报错也不给出漏装警告——静默漏装是分发侧最难排查的故障。WiX 侧改成
+`build-installer.ps1` 按发布目录 `Get-ChildItem` 的实际结果生成组件清单，多一个少一个都会被后续
+验证步骤拦下。附带收益：产物是标准 MSI，"设置 - 应用"里的卸载信息、升级链、企业管控策略识别
+都落到 Windows Installer 的标准机制上。
+
+**体积对比。** v1.3.0 实测：发布目录 67.4 MB → MSI **22.9 MB**（Inno + LZMA2/ultra64 时代为 20.8 MB，
+约差 2 MB）。这点增量换标准卸载信息与 ICE 校验能力，可接受。
+
+**不可改的东西（漏改则升级会崩）：**
+- `UpgradeCode` = `7E4C1B52-3A9D-4E58-9C1F-6D2A8B70F431`（沿用 Inno AppId，保证升级链连通）。
+- `build-installer.ps1` 里的 `$AppFilesGuid`（应用文件组件 GUID）：改了以后旧版本文件在升级时不会被清理。
+- 安装目录 `%LocalAppData%\Programs\MediaOrganizer`：改了会造成"新 MSI 装到新目录、旧文件留原地"。
+
+**为什么是 perUser 而不是 perMachine / InstallScope 二者可选。** WiX v5 的 `Package/@Scope`
+只有 `perUser`/`perMachine` 两个值，没有 v3 的 `"both"`，一个包只能选一种。延续决策 5（不提权）选 perUser，
+也因此不能用带"仅我/所有用户"单选框的 `WixUI_Advanced`——选了"所有用户"会让 MSI 去写 HKLM，与 perUser 包模板矛盾。改用 `WixUI_InstallDir`。
+
+**已知的 ICE warning（属预期，勿"修"）：**
+- `ICE61`（Maximum version is not less than the current product）：引入 `<MajorUpgrade AllowSameVersionUpgrades="yes">` 的必然结果。CI 对同一版本号重跑发布时需要能原地覆盖。
+- `ICE91`（file installed to per-user directory that doesn't vary based on ALLUSERS）：perUser 安装的固有提示，本包不支持 per-machine，无意义。
+
+两者均为 `warning`，`build-installer.ps1` 只在出现 `error` 时 fail。

@@ -1,0 +1,139 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+
+  <!-- MediaOrganizer 桌面版 MSI 源（WiX v5）。
+       不直接编译本文件：先跑 packaging\build-installer.ps1，它负责
+       ① 从发布目录生成 obj\Harvest.wxs（应用文件清单，随发布产物自动变化）
+       ② 传入 -d 预处理器变量（Version / AppFilesGuid）
+       ③ wix build + wix msi validate（ICE 校验，error 即失败）
+
+       设计约束（ADR-0009 决策 4/5 的 2026-10-04 修订）：
+       · Scope=perUser：WiX v5 的 Package/@Scope 只有 perUser / perMachine 两个值，没有 v3 的
+         "both"，所以一个包只能选一种范围。按 ADR 决策 5 选 perUser —— 装进 %LocalAppData%、
+         全程不提权，受限账户可装。也因此不能用带"仅我/所有用户"单选框的 WixUI_Advanced
+         （选了"所有用户"会让 MSI 去写 HKLM，与本包模板矛盾），改用 WixUI_InstallDir。
+       · 向导中文由 -culture zh-CN 选出（WiX UI 扩展自带 zh-CN 资源），不需要额外语言包文件。
+       · 应用文件合并为单个 Component：Native AOT 的 exe 与 4 个原生 dll 必须同进同退，
+         拆成多组件反而允许被单独卸载/引用计数掉。代价是 WiX 不允许"注册表 keypath + 文件"
+         用自动 GUID，故该组件的 GUID 由脚本以 $(var.AppFilesGuid) 传入且**永不可改**
+         （改了旧版本的文件在升级时不会被清理）。 -->
+
+  <Package Name="MediaOrganizer"
+           Manufacturer="dioha"
+           Version="$(var.Version)"
+           UpgradeCode="7E4C1B52-3A9D-4E58-9C1F-6D2A8B70F431"
+           Scope="perUser"
+           Language="2052"
+           Codepage="936"
+           InstallerVersion="500"
+           Compressed="yes">
+
+    <!-- UpgradeCode 沿用 Inno 时代的 AppId GUID：值不变即可，与 Inno 的注册表键无技术关联。
+         AllowSameVersionUpgrades：CI 对同一版本号重复出包（重跑发布）时仍可原地覆盖。 -->
+    <MajorUpgrade AllowSameVersionUpgrades="yes"
+                  DowngradeErrorMessage="本机已安装更新版本的 MediaOrganizer（[ProductVersion]），安装已中止。如需重装，请先在「设置 - 应用」中卸载。" />
+
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <!-- 旧 Inno 版残留检测：Inno 的卸载键与 MSI 的 Upgrade 表互不相识，两者装到同一目录会
+         互相删文件（Inno 卸载直接清空目录）。检测到就挡下来，让用户先卸旧版。 -->
+    <Property Id="MO_LEGACY_INNO">
+      <RegistrySearch Id="LegacyInnoUninstallKey"
+                      Root="HKCU"
+                      Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\{7E4C1B52-3A9D-4E58-9C1F-6D2A8B70F431}_is1"
+                      Name="UninstallString"
+                      Type="raw" />
+    </Property>
+    <Launch Condition="NOT MO_LEGACY_INNO"
+            Message="检测到由 Inno Setup 安装的旧版 MediaOrganizer。MSI 与它互不识别，同目录共存会导致卸载时互相删文件，请先在「设置 - 应用」中卸载旧版（或手工删除 %LocalAppData%\Programs\MediaOrganizer）后重试。" />
+
+    <Property Id="WIXUI_INSTALLDIR" Value="APPLICATIONFOLDER" />
+    <Property Id="ARPPRODUCTICON" Value="AppIconIco" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/self-exiler/MediaOrganizer" />
+
+    <!-- 桌面快捷方式：与 Inno 时代一致，默认不建。命令行开：
+         msiexec /i MediaOrganizer.msi MO_DESKTOP_SHORTCUT=1
+         注意 MSI 条件里"属性存在且非空"即为真，所以这里不定义默认值（定义了 0 也算真），
+         判断写成显式等值比较。 -->
+    <Property Id="MO_DESKTOP_SHORTCUT" Value="0" />
+
+    <!-- 完成页的「启动 MediaOrganizer」复选框（对应 Inno 的 postinstall 项）。
+         Impersonate=yes + immediate：以当前交互用户身份异步启动，不提权。 -->
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="启动 MediaOrganizer" />
+    <CustomAction Id="LaunchMediaOrganizer"
+                  Directory="APPLICATIONFOLDER"
+                  ExeCommand="&quot;[APPLICATIONFOLDER]MediaOrganizer.Desktop.exe&quot;"
+                  Execute="immediate"
+                  Impersonate="yes"
+                  Return="asyncNoWait" />
+
+    <!-- AppIcon 由 build-installer.ps1 以绝对路径传入：wix build 按调用者 CWD 解析相对路径。 -->
+    <Icon Id="AppIconIco" SourceFile="$(var.AppIcon)" />
+
+    <!-- 安装目录：%LocalAppData%\Programs\MediaOrganizer，与 Inno 时代（ADR-0009 决策 5）保持一致。
+         注意别把 APPLICATIONFOLDER 直接挂在 LocalAppDataFolder 下——那样会装到
+         %LocalAppData%\MediaOrganizer（真机实测踩过一次）。 -->
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="LocalAppProgramsDir" Name="Programs">
+        <Directory Id="APPLICATIONFOLDER" Name="MediaOrganizer" />
+      </Directory>
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="AppMenuFolder" Name="MediaOrganizer" />
+    </StandardDirectory>
+    <StandardDirectory Id="DesktopFolder" />
+
+    <Feature Id="Complete" Title="MediaOrganizer" Level="1"
+             ConfigurableDirectory="APPLICATIONFOLDER" AllowAdvertise="no">
+      <ComponentGroupRef Id="MediaOrganizerFiles" />
+      <ComponentGroupRef Id="StartMenuShortcut" />
+    </Feature>
+
+    <Feature Id="DesktopIcon" Title="桌面快捷方式" Level="1" AllowAdvertise="no">
+      <ComponentGroupRef Id="DesktopShortcut" />
+      <!-- NOT REMOVE 是必需的：卸载会话不会带 MO_DESKTOP_SHORTCUT，若条件在此仍成立则
+           特性被判为未安装，组件不会被移除，桌面上会留下失效快捷方式。 -->
+      <Level Value="0" Condition='NOT (MO_DESKTOP_SHORTCUT = "1") AND NOT REMOVE' />
+    </Feature>
+
+    <ui:WixUI Id="WixUI_InstallDir" />
+
+    <UI>
+      <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchMediaOrganizer"
+               Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 AND NOT Installed" />
+    </UI>
+  </Package>
+
+  <Fragment>
+    <!-- 开始菜单快捷方式。per-user 安装下 ICE38 要求 keypath 用 HKCU 注册表值而非文件，
+         快捷方式组件同理；RemoveFolder 保证卸载后不留空目录（ICE64）。 -->
+    <ComponentGroup Id="StartMenuShortcut" Directory="AppMenuFolder">
+      <Component Id="StartMenuShortcut">
+        <Shortcut Id="AppStartMenu" Name="MediaOrganizer"
+                  Target="[APPLICATIONFOLDER]MediaOrganizer.Desktop.exe"
+                  Icon="AppIconIco" WorkingDirectory="APPLICATIONFOLDER" />
+        <Shortcut Id="AppStartMenuUninstall" Name="卸载 MediaOrganizer"
+                  Target="[System6432Folder]msiexec.exe" Arguments="/x [ProductCode]" />
+        <RemoveFolder Id="RemoveAppMenuFolder" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\MediaOrganizer" Name="StartMenuShortcut"
+                       Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <ComponentGroup Id="DesktopShortcut" Directory="DesktopFolder">
+      <Component Id="DesktopShortcut">
+        <!-- 不写 Icon：桌面快捷方式一旦引用 Icon 表条目，Windows Installer 在卸载时会判定
+             "移除快捷方式会孤立该图标"而跳过整个组件（u3.log: "'AppDesktop' shortcut's,
+             'DesktopShortcut' component will not be removed, so that 'AppIconIco' icon will
+             not be removed"），于是桌面上留下失效快捷方式。不指定 Icon 时资源管理器直接取
+             exe 内嵌图标（csproj 的 ApplicationIcon 就是同一个 ico），显示效果一致。 -->
+        <Shortcut Id="AppDesktop" Name="MediaOrganizer"
+                  Target="[APPLICATIONFOLDER]MediaOrganizer.Desktop.exe"
+                  WorkingDirectory="APPLICATIONFOLDER" />
+        <RegistryValue Root="HKCU" Key="Software\MediaOrganizer" Name="DesktopShortcut"
+                       Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+</Wix>

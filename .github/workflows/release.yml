@@ -57,15 +57,24 @@ jobs:
         shell: pwsh
         run: ./packaging/publish.ps1 -OutputDir packaging/publish/win-x64
 
-      - name: Install Inno Setup
+      - name: Install WiX Toolset
         shell: pwsh
-        run: choco install innosetup -y --no-progress
+        run: |
+          $ErrorActionPreference = 'Stop'
+          # 工具与扩展都钉死版本：CI 与本地 build-installer.ps1 用同一套 WiX v5，避免版本漂移。
+          # 幂等写法：重复安装、镜像预装都不会让这一步失败。
+          if (-not (Get-Command wix -ErrorAction SilentlyContinue)) {
+            dotnet tool install --global wix --version 5.0.2
+          }
+          wix extension add -g WixToolset.UI.wixext/5.0.2
+          # 全局工具目录不一定在 PATH 上，显式补进去，后续步骤才能直接调用 wix
+          Add-Content -Path $env:GITHUB_PATH -Value "$env:USERPROFILE\.dotnet\tools"
+          wix --version
 
-      - name: Build installer
-        shell: cmd
-        env:
-          ISCC: C:\Program Files (x86)\Inno Setup 6\ISCC.exe
-        run: '"%ISCC%" /DMyAppVersion=${{ env.APP_VERSION }} packaging/MediaOrganizer.iss'
+      # APP_VERSION 由前面 Resolve version 步骤写入 GITHUB_ENV，pwsh 里取 $env:APP_VERSION
+      - name: Build MSI installer
+        shell: pwsh
+        run: ./packaging/build-installer.ps1 -Version $env:APP_VERSION -PublishDir packaging/publish/win-x64 -OutputDir packaging/releases
 
       # ---------- 安卓版 ----------
       - name: Restore Android keystore from secrets
@@ -93,13 +102,22 @@ jobs:
         id: artifacts
         shell: pwsh
         run: |
-          $setup = Get-ChildItem packaging/releases/*.exe | Select-Object -First 1
+          $setup = Get-ChildItem packaging/releases/*.msi | Select-Object -First 1
           $apk   = Get-ChildItem src/MediaOrganizer.Android/*-Signed.apk -Recurse |
                    Sort-Object LastWriteTime -Descending | Select-Object -First 1
           if (-not $setup) { throw "未找到桌面安装包" }
           if (-not $apk)   { throw "未找到签名 APK" }
 
-          # APK 按命名约定重命名（程序名-操作系统-cpu架构-版本号，与 .iss 的 OutputBaseFilename 同规则）。
+          # 文件名必须与本次版本号完全一致。build-installer.ps1 在 -Version 取到空值时会
+          # 静默回退到 csproj 兜底版本，那样 tag 与产物版本会错位；文件名与 MSI 内的
+          # ProductVersion 同源（都来自同一个 $Version），断言文件名即可挡住这类漂移。
+          $expectName = "MediaOrganizer-windows-x64-$env:APP_VERSION.msi"
+          if ($setup.Name -ne $expectName) {
+            throw "桌面安装包版本号不符：期望 $expectName，实际 $($setup.Name)"
+          }
+          Write-Host "MSI 版本校验通过：$expectName"
+
+          # APK 按命名约定重命名（程序名-操作系统-cpu架构-版本号，与 MSI 产物同规则）。
           # .NET Android 默认输出 org.mediaorganizer.android-Signed.apk（单 RID android-arm64）。
           $apkNamed = "packaging/releases/MediaOrganizer-android-arm64-$env:APP_VERSION.apk"
           Copy-Item $apk.FullName $apkNamed -Force
@@ -114,7 +132,8 @@ jobs:
         with:
           # 命名约定：程序名-操作系统-cpu架构-版本号
           name: MediaOrganizer-windows-x64-${{ env.APP_VERSION }}
-          path: packaging/releases/*.exe
+          # 只收 .msi：wix build 会顺带产出同名 .wixpdb（符号/补丁元数据），不应对外分发
+          path: packaging/releases/*.msi
           if-no-files-found: error
 
       - name: Upload APK artifact
@@ -139,7 +158,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            packaging/releases/*.exe
+            packaging/releases/*.msi
             packaging/releases/MediaOrganizer-android-arm64-*.apk
           generate_release_notes: true
           fail_on_unmatched_files: true
