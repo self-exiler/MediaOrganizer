@@ -22,7 +22,7 @@ jobs:
     runs-on: windows-latest
     steps:
       # fetch-depth: 0 拉全量历史,versionCode 用 git rev-list --count 计算
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -44,7 +44,7 @@ jobs:
           Add-Content $env:GITHUB_ENV "APP_VERSION=$v"
           Add-Content $env:GITHUB_ENV "VERSION_CODE=$code"
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: "10.0.x"
 
@@ -128,7 +128,7 @@ jobs:
 
       # 每次运行都上传 Actions 产物：验证管线取包、失败排障（glob 保持宽松，产物改名不动工作流）
       - name: Upload installer artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           # 命名约定：程序名-操作系统-cpu架构-版本号
           name: MediaOrganizer-windows-x64-${{ env.APP_VERSION }}
@@ -137,7 +137,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: MediaOrganizer-android-arm64-${{ env.APP_VERSION }}
           path: packaging/releases/MediaOrganizer-android-arm64-*.apk
@@ -146,7 +146,7 @@ jobs:
       # r8（AndroidLinkTool）会混淆 Java 侧栈帧，还原崩溃栈必须靠 publish 目录下的 mapping.txt。
       # 只进 Actions 产物、不进公开 Release：映射表相当于把代码结构反还给外人，排障够用即可。
       - name: Upload R8 mapping artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: MediaOrganizer-android-arm64-${{ env.APP_VERSION }}-mapping
           path: src/MediaOrganizer.Android/**/mapping.txt
@@ -155,7 +155,7 @@ jobs:
       # 仅 tag 触发创建 Release，且排在构建、产物上传之后——构建失败就不会出现不完整的 Release
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             packaging/releases/*.msi
