@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using MediaOrganizer.Core.Configuration;
+using MediaOrganizer.Core.Diagnostics;
 using MediaOrganizer.Core.Planning;
 using MediaOrganizer.Core.Storage;
 
@@ -222,13 +223,25 @@ public sealed class FileOperator
                 }
                 catch
                 {
-                    // 传输或改名失败：删掉目标端残留的 .mo-tmp，避免留下垃圾文件
-                    await TryDeleteTempAsync(temp, ct);
+                    // 传输或改名失败：删掉目标端残留的 .mo-tmp，避免留下垃圾文件。
+                    // 用 None 而非 ct：取消场景下 ct 已失效，SMB 闸的 WaitAsync(ct) 会立即抛出导致清理被吞（审计 8）
+                    await TryDeleteTempAsync(temp, CancellationToken.None);
                     throw;
                 }
 
+                // 数据已落盘，mtime 矫正失败只降级为警告，绝不触发整文件重传（审计 19）
                 if (_fixMtime)
-                    await TimeAsync(() => _target.SetModifiedUtcAsync(finalTarget, f.Date.UtcDateTime, ct), _metaMs);
+                {
+                    try
+                    {
+                        await TimeAsync(() => _target.SetModifiedUtcAsync(finalTarget, f.Date.UtcDateTime, ct), _metaMs);
+                    }
+                    catch (OperationCanceledException) { throw; }
+                    catch (Exception ex)
+                    {
+                        CoreLog.Warn($"[FileOperator] 时间戳设置失败（文件已归档成功）{finalTarget}：{ex.Message}");
+                    }
+                }
                 return;
             }
             catch (OperationCanceledException)

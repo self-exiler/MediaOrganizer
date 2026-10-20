@@ -56,9 +56,10 @@ public sealed class ExifExtractor(bool enabled, double weight, IExifReader? exif
         {
             var abstraction = new TagLibStreamFileAbstraction(file.FileName, file.Source.OpenRead);
             using var tagFile = TagLib.File.Create(abstraction);
-            // 容器标签日期（QuickTime ©day / ID3 TDRC 等）；优先取完整日期，退化到年份兜底
-            var dt = tagFile.Tag.DateTagged ?? YearOnly(tagFile.Tag.Year);
-            if (dt is { } d)
+            // 容器标签日期：TaglibSharp 文档明示 DateTagged =「标签写入时间」（MP4 映射 ©day/UDTA），非拍摄时间。
+            // 原 YearOnly 兜底会把只有年份标签的视频固定归到 1 月 1 日（Exif 权重 1.2 又压掉文件名提取，审计 7）
+            // → 删除年份回退，无完整日期时交给文件名/文件系统提取器兜底
+            if (tagFile.Tag.DateTagged is { } d)
                 return new DateTimeOffset(DateTime.SpecifyKind(d, DateTimeKind.Unspecified),
                     TimeZoneInfo.Local.GetUtcOffset(d));
         }
@@ -69,7 +70,4 @@ public sealed class ExifExtractor(bool enabled, double weight, IExifReader? exif
         }
         return null;
     }
-
-    private static DateTime? YearOnly(uint year)
-        => year is >= 1970 and <= 2100 ? new DateTime((int)year, 1, 1) : null;
 }

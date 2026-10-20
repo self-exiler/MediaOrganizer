@@ -23,8 +23,12 @@ public sealed class AppState
     public AppConfig Config { get; }
     public List<PatternDefinition> Patterns { get; }
 
-    /// <summary>任意配置/模式变更后触发（保存或即时生效均通知，工作台据此重建提取链）。</summary>
+    /// <summary>任意配置/模式保存后触发（网络位置增删、UI 重读路径/目标/待处理目录等）。</summary>
     public event Action? Changed;
+
+    /// <summary>影响提取链的变更（模式、提取器权重/开关、格式白名单、追溯年限等）后触发，
+    /// 工作台仅订阅此事件重建链——网络位置等纯持久化变更不得作废已有分析结果（审计 11）。</summary>
+    public event Action? ChainChanged;
 
     /// <summary>加载时配置/模式文件的解析错误；正常加载为 null。UI 须据此提示用户，不得静默回退出厂设置。</summary>
     public string? LoadError { get; private init; }
@@ -69,19 +73,19 @@ public sealed class AppState
     }
 
     /// <summary>
-    /// 保存配置。默认触发 Changed（配置变更 → 工作台重建提取链并失效旧计划）；
-    /// 仅持久化执行偏好等不影响提取链的字段时传 notifyChanged: false，避免误清计划。
+    /// 保存配置。notifyChanged: true = 影响提取链（Changed + ChainChanged，工作台重建链）；
+    /// false = 完全静默仅落盘，需要通知 UI 刷新时由调用方显式 NotifyChanged / NotifyChainChanged。
     /// </summary>
     public void SaveConfig(bool notifyChanged = true)
     {
         JsonFileStore.Save(_configPath, Config, AppJson.AppConfig);
-        if (notifyChanged) Changed?.Invoke();
+        if (notifyChanged) NotifyChainChanged();
     }
 
     public void SavePatterns()
     {
         PatternsStore.Save(_patternsPath, Patterns);
-        Changed?.Invoke();
+        NotifyChainChanged();
     }
 
     public void SaveAll()
@@ -90,6 +94,13 @@ public sealed class AppState
         SavePatterns();
     }
 
-    /// <summary>仅通知变更（内存即时生效但尚未落盘时调用），工作台据此提示重新分析。</summary>
+    /// <summary>仅通知持久化类变更（内存即时生效但尚未落盘时调用），不重建提取链。</summary>
     public void NotifyChanged() => Changed?.Invoke();
+
+    /// <summary>通知影响提取链的变更：工作台重建链，其余订阅方同步刷新。</summary>
+    public void NotifyChainChanged()
+    {
+        Changed?.Invoke();
+        ChainChanged?.Invoke();
+    }
 }

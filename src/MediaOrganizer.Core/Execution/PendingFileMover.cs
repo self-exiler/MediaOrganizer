@@ -3,7 +3,7 @@ using MediaOrganizer.Core.Storage;
 
 namespace MediaOrganizer.Core.Execution;
 
-public sealed record PendingMoveResult(int Moved, int Failed, IReadOnlyList<string> MovedNames, IReadOnlyList<string> Errors);
+public sealed record PendingMoveResult(int Moved, int Failed, IReadOnlyList<string> MovedIdentifiers, IReadOnlyList<string> Errors);
 
 /// <summary>
 /// 失败文件批量移动到待处理目录（FR-A6.5，ADR-0006 决策 5）：
@@ -21,7 +21,8 @@ public sealed class PendingFileMover
     {
         int moved = 0, failed = 0;
         var errors = new List<string>();
-        var movedNames = new List<string>();
+        // 按源完整路径（Identifier 语义）而非文件名记账：不同目录同名文件不得被一并移除（审计 12）
+        var movedIdentifiers = new List<string>();
         await target.CreateDirectoryAsync("", ct);
 
         for (var i = 0; i < files.Count; i++)
@@ -50,7 +51,7 @@ public sealed class PendingFileMover
 
                 file.Source.Delete();
                 moved++;
-                movedNames.Add(file.FileName);
+                movedIdentifiers.Add(file.Path);
             }
             catch (OperationCanceledException)
             {
@@ -63,6 +64,6 @@ public sealed class PendingFileMover
             }
             progress?.Report((double)(i + 1) / files.Count);
         }
-        return new PendingMoveResult(moved, failed, movedNames, errors);
+        return new PendingMoveResult(moved, failed, movedIdentifiers, errors);
     }
 }

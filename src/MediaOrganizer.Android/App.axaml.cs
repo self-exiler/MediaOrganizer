@@ -109,7 +109,7 @@ public partial class App : Avalonia.Application
             report.Set(result, state.Config.Paths.OutputDir, workbench.LastReportText); // P1-1：复用 Session 报告，避免重复分组统计
             main.RefreshFailedBadge(result);
         };
-        state.Changed += workbench.RebuildChain;
+        state.ChainChanged += workbench.RebuildChain; // 仅提取链变更重建，网络位置增删不作废分析结果（审计 11）
         state.Changed += workbench.ReloadPathsFromConfig; // 恢复出厂等重置后回读路径，避免旧目录写回配置
         state.Changed += () => failedFiles.PendingDir = state.Config.Paths.PendingDir;
         state.Changed += workbench.ReloadOutputTargets;

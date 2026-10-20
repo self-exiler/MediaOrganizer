@@ -175,7 +175,7 @@
                     </Grid>
                     <StackPanel Spacing="6">
                         <TextBlock Text="扩展名白名单（逗号分隔）" FontSize="12" Foreground="#616161"/>
-                        <TextBox Text="{Binding SupportedFormatsText, Mode=TwoWay}" MinHeight="72"
+                        <TextBox Text="{Binding SupportedFormatsText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" MinHeight="72"
                                  AcceptsReturn="True" TextWrapping="Wrap"/>
                     </StackPanel>
                     <StackPanel Spacing="6">

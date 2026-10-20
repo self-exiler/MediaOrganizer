@@ -27,11 +27,14 @@ public static class StorageFactory
     public static IFileStorage CreateTarget(AppConfig config, string? profileName = null)
     {
         var name = profileName ?? config.Paths.OutputNetworkProfile;
-        var profile = config.NetworkProfiles.FirstOrDefault(p => p.Name == name);
-        if (profile is not null)
-            return CreateProfileStorage(profile);
+        if (string.IsNullOrEmpty(name))
+            return CreateLocalStorage(config.Paths.OutputDir);
 
-        return CreateLocalStorage(config.Paths.OutputDir);
+        // 指定了网络位置却找不到该条目（多半已被删除）：必须报错，静默改写本地 OutputDir 会把文件送到用户以为的"网络"之外（审计 15）
+        var profile = config.NetworkProfiles.FirstOrDefault(p => p.Name == name)
+            ?? throw new InvalidOperationException(
+                $"输出网络位置「{name}」不存在（可能已被删除）。请在设置中重新配置，或在工作台改选输出目标。");
+        return CreateProfileStorage(profile);
     }
 
     /// <summary>测试连接：创建目录 + 写探针源 + 校验 + 清理（探针为内存源，不落临时文件）。</summary>

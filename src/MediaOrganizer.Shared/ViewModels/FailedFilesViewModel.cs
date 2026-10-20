@@ -220,9 +220,9 @@ public partial class FailedFilesViewModel : ViewModelBase
             // 批量移动内含大量同步文件 IO（Exists/Length/Delete/CreateDirectory），移出 UI 线程（P1-1）
             var result = await Task.Run(() => new PendingFileMover().MoveAsync(files, target, progress));
 
-            // 从列表移除已移动的条目（HashSet 避免 List.Contains 的 O(n²)）
-            var movedSet = result.MovedNames.ToHashSet();
-            foreach (var item in items.Where(i => movedSet.Contains(i.Name)))
+            // 从列表移除已移动的条目：按源完整路径判定（文件名会误伤不同目录的同名文件，审计 12）
+            var movedSet = result.MovedIdentifiers.ToHashSet(StringComparer.Ordinal);
+            foreach (var item in items.Where(i => movedSet.Contains(i.File.File.Path)))
                 Items.Remove(item);
 
             MoveHint = $"移动完成：成功 {result.Moved}，失败 {result.Failed}";

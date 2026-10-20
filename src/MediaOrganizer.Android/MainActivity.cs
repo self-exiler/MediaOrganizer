@@ -103,6 +103,12 @@ public class MainActivity : AvaloniaMainActivity
     public Task<Intent?> StartForResultAsync(Intent intent, int requestCode)
     {
         var tcs = new TaskCompletionSource<Intent?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        // 同一请求码重复发起：先以「取消」（回调 null）了结先前悬挂的等待，其 Task 不至于永不完成（审计 20）
+        if (_pending.TryGetValue(requestCode, out var stale))
+        {
+            _pending.Remove(requestCode);
+            stale(null);
+        }
         _pending[requestCode] = data => tcs.TrySetResult(data);
         RunOnUiThread(() => StartActivityForResult(intent, requestCode));
         return tcs.Task;

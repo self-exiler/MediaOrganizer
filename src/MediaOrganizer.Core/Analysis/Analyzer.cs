@@ -58,6 +58,10 @@ public sealed class Analyzer
             return ValueTask.CompletedTask;
         });
 
-        return new AnalysisResult(sourceDir, DateTimeOffset.Now, parsed.ToArray(), unparsed.ToArray());
+        // ConcurrentQueue 出队顺序取决于并行完成时序，跨次分析不稳定；
+        // 排序锁定后 Rename 的 _n 后缀、报告与失败清单顺序才可复现（审计 18）
+        return new AnalysisResult(sourceDir, DateTimeOffset.Now,
+            parsed.OrderBy(p => p.File.Path, StringComparer.Ordinal).ToArray(),
+            unparsed.OrderBy(u => u.File.Path, StringComparer.Ordinal).ToArray());
     }
 }

@@ -506,9 +506,8 @@ public partial class MagicToolsViewModel : ViewModelBase
             Weight = 1.0,
             Builtin = false
         });
-        _state.SavePatterns();
+        _state.SavePatterns(); // SavePatterns 自带 Changed + ChainChanged（工作台重建提取链）
         SaveHint = $"已保存「{PatternName}」到 patterns.json";
-        _state.NotifyChanged();
     }
 }
 

@@ -71,6 +71,10 @@ public sealed class SmbFileStorage : IFileStorage
     private string ToSmbPath(string relativePath)
         => string.Join('\\', new[] { _baseSmbPath, relativePath.Replace('/', '\\') }.Where(s => !string.IsNullOrEmpty(s)));
 
+    /// <summary>目录列表缓存的唯一键口径：含 _baseSmbPath 前缀、'\' 分隔的规范化 SMB 路径（审计 9）。
+    /// 此前 Exists/CreateDirectory/Delete 三处各用相对 '/' 路径、拼接 SMB '\' 路径、ToSmbPath 三种写法，互相读不到。</summary>
+    private string DirCacheKey(string relativeDirPath) => ToSmbPath(relativeDirPath);
+
     /// <summary>按 '/' 拆出父目录与叶子名（计划路径恒为 '/' 分隔）。</summary>
     private static (string Dir, string Leaf) SplitParent(string relativePath)
     {
@@ -174,12 +178,13 @@ public sealed class SmbFileStorage : IFileStorage
     public async Task<bool> ExistsAsync(string relativePath, CancellationToken ct = default)
     {
         var (dirPath, leaf) = SplitParent(relativePath);
-        if (_dirCache.TryGetValue(dirPath, out var listing))
+        var key = DirCacheKey(dirPath);
+        if (_dirCache.TryGetValue(key, out var listing))
             return listing.TryGetValue(leaf, out var isDir) && !isDir;
 
         // 目录列表加载失败（目录不存在等 NTStatus 错误）→ 回退单文件探测，保持原语义
-        if (await InvokeAsync(store => TryListDir(store, dirPath), ct))
-            return _dirCache[dirPath].TryGetValue(leaf, out var isDir2) && !isDir2;
+        if (await InvokeAsync(store => TryListDir(store, key), ct))
+            return _dirCache[key].TryGetValue(leaf, out var isDir2) && !isDir2;
         return await ProbeExistsAsync(relativePath, ct);
     }
 
@@ -188,11 +193,12 @@ public sealed class SmbFileStorage : IFileStorage
     /// socket 级异常照抛（经 InvokeAsync 置脏重连）。SMBLibrary 的 QueryDirectory 内部已按
     /// MaxTransactSize 循环续传至 NO_MORE_FILES，单次调用即完整列表（SMB2FileStore.cs 已核实）。
     /// </summary>
-    private bool TryListDir(ISMBFileStore store, string dirPath)
+    private bool TryListDir(ISMBFileStore store, string key)
     {
-        if (_dirCache.ContainsKey(dirPath)) return true;
+        if (_dirCache.ContainsKey(key)) return true;
 
-        var openPath = dirPath.Length == 0 ? "\\" : dirPath;
+        // key 已是含 base 前缀的规范化路径；share 根用 "\\"，share 内路径不带前导分隔符
+        var openPath = key.Length == 0 ? "\\" : key;
         var status = store.CreateFile(out var handle, out _, openPath, AccessMask.GENERIC_READ,
             FileAttributes.Normal, ShareAccess.Read | ShareAccess.Write, CreateDisposition.FILE_OPEN,
             CreateOptions.FILE_DIRECTORY_FILE, null);
@@ -207,7 +213,7 @@ public sealed class SmbFileStorage : IFileStorage
             foreach (var entry in entries)
                 if (entry is FileDirectoryInformation info && info.FileName is not "." and not "..")
                     listing[info.FileName] = info.FileAttributes.HasFlag(FileAttributes.Directory);
-            _dirCache[dirPath] = listing;
+            _dirCache[key] = listing;
             return true;
         }
         finally
@@ -220,7 +226,7 @@ public sealed class SmbFileStorage : IFileStorage
     private void UpdateDirCache(string relativePath, bool present, bool isDir = false)
     {
         var (dirPath, leaf) = SplitParent(relativePath);
-        if (!_dirCache.TryGetValue(dirPath, out var listing)) return;
+        if (!_dirCache.TryGetValue(DirCacheKey(dirPath), out var listing)) return;
         if (present) listing[leaf] = isDir;
         else listing.TryRemove(leaf, out _);
     }
@@ -401,7 +407,7 @@ public sealed class SmbFileStorage : IFileStorage
         if (_knownDirs.TryRemove(ToSmbPath(relativePath), out _))
         {
             var (parentPath, leaf) = SplitParent(relativePath);
-            if (_dirCache.TryGetValue(ToSmbPath(parentPath), out var parentListing))
+            if (_dirCache.TryGetValue(DirCacheKey(parentPath), out var parentListing))
                 parentListing.TryRemove(leaf, out _);
         }
     }

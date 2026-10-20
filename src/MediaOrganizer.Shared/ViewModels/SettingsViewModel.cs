@@ -377,6 +377,9 @@ public partial class SettingsViewModel : ViewModelBase
         }
         else
         {
+            // 编辑改名时同样查重（不得撞上其他条目，审计 14）
+            if (existing is not null && !ReferenceEquals(existing, _editingProfile))
+            { NetworkHint = $"名称「{profile.Name}」已存在"; return; }
             // 验证状态已由 BuildEditProfile 携带；密码的保留/更新也在其中处理，此处只做替换
             var idx = _config.NetworkProfiles.IndexOf(_editingProfile);
             if (idx >= 0) _config.NetworkProfiles[idx] = profile;
@@ -468,8 +471,7 @@ public partial class SettingsViewModel : ViewModelBase
         if (sender is not PatternSettingVM vm) return;
         PatternSummary = $"{_patterns.Count} 条 · {_patterns.Count(p => p.Enabled)} 启用";
         SaveHint = $"「{vm.Name}」启用状态已即时生效并保存";
-        _state.SavePatterns();
-        _state.NotifyChanged(); // 触发工作台链重建提示
+        _state.SavePatterns(); // SavePatterns 自带 Changed + ChainChanged
     }
 
     [RelayCommand]
@@ -479,22 +481,21 @@ public partial class SettingsViewModel : ViewModelBase
         RefreshPatterns();
         SaveHint = $"已删除「{vm.Name}」并保存";
         _state.SavePatterns();
-        _state.NotifyChanged();
     }
 
     [RelayCommand]
     private void RestoreDefaultPatterns()
     {
-        // 内置模式回到出厂清单（保留自定义模式）
+        // 内置模式回到出厂清单：缺失的补回，已存在但被禁用/改过的也重置为出厂值（审计 13）；自定义模式保留
         foreach (var builtin in PatternsStore.GetBuiltinPatterns())
         {
-            if (_patterns.All(p => p.Name != builtin.Name))
-                _patterns.Add(builtin);
+            var idx = _patterns.FindIndex(p => p.Name == builtin.Name);
+            if (idx >= 0) _patterns[idx] = builtin;
+            else _patterns.Add(builtin);
         }
         RefreshPatterns();
         SaveHint = "已恢复全部内置模式并保存";
         _state.SavePatterns();
-        _state.NotifyChanged();
     }
 
     [RelayCommand]
@@ -529,7 +530,7 @@ public partial class SettingsViewModel : ViewModelBase
             await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
             {
                 _state.SaveConfig(notifyChanged: false);
-                _state.NotifyChanged(); // 触发工作台链重建提示
+                _state.NotifyChainChanged(); // 提取器权重/开关影响提取链
             });
         });
     }

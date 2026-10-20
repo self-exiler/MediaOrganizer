@@ -77,7 +77,7 @@ public partial class MainWindowViewModel : ViewModelBase
             Report.Set(result, State.Config.Paths.OutputDir, Workbench.LastReportText); // P1-1：复用 Session 报告，避免重复分组统计
             MagicTools.LoadFromAnalysisResult(result); // FR-7.1：魔术工具可用最近分析结果作样本
         };
-        State.Changed += Workbench.RebuildChain;
+        State.ChainChanged += Workbench.RebuildChain; // 仅提取链相关变更重建；网络位置等持久化变更不作废分析结果（审计 11）
         State.Changed += Workbench.ReloadPathsFromConfig; // 恢复出厂等重置后回读路径，避免旧目录写回配置
         State.Changed += () => FailedFiles.PendingDir = State.Config.Paths.PendingDir;
         State.Changed += Workbench.ReloadOutputTargets; // 网络位置增删 → 工作台目标下拉刷新
