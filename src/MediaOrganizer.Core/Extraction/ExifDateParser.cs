@@ -1,7 +1,7 @@
 namespace MediaOrganizer.Core.Extraction;
 
 /// <summary>
-/// EXIF 日期字符串解析（双端共享，ADR-0006 决策 2）：
+/// EXIF 日期字符串解析（双端共享）：
 /// 桌面 MagickExifReader 与 Android AndroidExifReader 读取的 EXIF 日期值格式相同，解析规则统一在此。
 /// </summary>
 public static class ExifDateParser

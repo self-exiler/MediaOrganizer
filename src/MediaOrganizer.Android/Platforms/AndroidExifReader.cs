@@ -7,7 +7,7 @@ namespace MediaOrganizer.Android.Platforms;
 
 /// <summary>
 /// 图片 EXIF 读取（FR-A2.1/FR-A2.6）：Android.Media.ExifInterface 走流构造，
-/// 支持 jpg/jpeg/png/webp/heic/heif；tiff/bmp 不保证（提取器链由 FileName 兜底，R-A1）。
+/// 支持 jpg/jpeg/png/webp/heic/heif；tiff/bmp 不保证（提取器链由 FileName 兜底）。
 /// 视频不走此类（ExifExtractor 统一走 TagLib# 容器元数据，双端共享）。
 /// </summary>
 public sealed class AndroidExifReader : IExifReader

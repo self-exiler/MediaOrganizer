@@ -27,7 +27,7 @@ public sealed class AppState
     public event Action? Changed;
 
     /// <summary>影响提取链的变更（模式、提取器权重/开关、格式白名单、追溯年限等）后触发，
-    /// 工作台仅订阅此事件重建链——网络位置等纯持久化变更不得作废已有分析结果（审计 11）。</summary>
+    /// 工作台仅订阅此事件重建链——网络位置等纯持久化变更不得作废已有分析结果。</summary>
     public event Action? ChainChanged;
 
     /// <summary>加载时配置/模式文件的解析错误；正常加载为 null。UI 须据此提示用户，不得静默回退出厂设置。</summary>
@@ -36,7 +36,7 @@ public sealed class AppState
     /// <summary>损坏配置文件被隔离后的副本路径（保留供人工恢复）；未发生隔离时为 null。</summary>
     public string? QuarantinedConfigPath { get; private init; }
 
-    /// <summary>损坏 patterns.json 被隔离后的副本路径；未发生隔离时为 null（P2-4：与配置同规则，免被 SavePatterns 覆盖而永久丢失）。</summary>
+    /// <summary>损坏 patterns.json 被隔离后的副本路径；未发生隔离时为 null。</summary>
     public string? QuarantinedPatternsPath { get; private init; }
 
     public static AppState Load(string configPath, string patternsPath)

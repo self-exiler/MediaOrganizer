@@ -9,7 +9,7 @@ using MediaOrganizer.Core.Security;
 namespace MediaOrganizer.Android.Platforms;
 
 /// <summary>
-/// Android Keystore 凭据加密（FR-A10，ADR-0005 §7）：AES-256-GCM，密钥由 Keystore 生成且不可导出（硬件 backed，设备绑定）。
+/// Android Keystore 凭据加密（FR-A10）：AES-256-GCM，密钥由 Keystore 生成且不可导出（硬件 backed，设备绑定）。
 /// 存储格式 KS:base64(IV ‖ 密文)，与 CredentialCrypto 的 DPAPI:/B64: 前缀约定并存。
 /// </summary>
 public sealed class AndroidCredentialCrypto : ICredentialCrypto
@@ -35,7 +35,7 @@ public sealed class AndroidCredentialCrypto : ICredentialCrypto
         }
         catch (Exception ex)
         {
-            // 加密失败抛异常由调用方提示（评审 2.7：不得静默存空密码导致“看似保存成功、连接时原因不明”）；
+            // 加密失败抛异常由调用方提示
             // 同时满足 FR-A10.4：宁可不保存凭据，也不明文落盘。
             throw new System.Security.Cryptography.CryptographicException("Keystore 加密失败，无法安全存储凭据", ex);
         }

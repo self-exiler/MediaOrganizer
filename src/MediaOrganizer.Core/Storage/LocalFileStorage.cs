@@ -36,7 +36,7 @@ public class LocalFileStorage(string rootPath) : IFileStorage
     public virtual Task<long> GetLengthAsync(string relativePath, CancellationToken ct = default)
     {
         var info = new FileInfo(Resolve(relativePath));
-        // P3-7：与契约一致——文件不可用返回 -1，而非抛 FileNotFoundException
+        // 与契约一致——文件不可用返回 -1，而非抛 FileNotFoundException
         return Task.FromResult(info.Exists ? info.Length : -1L);
     }
 

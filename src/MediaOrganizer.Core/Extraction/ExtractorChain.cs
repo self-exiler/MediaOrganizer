@@ -21,7 +21,7 @@ public sealed class ExtractorChain
         IExifReader? exifReader = null, DateTimeOffset? now = null)
     {
         // 手改过的 config.json 或异常合并可能出现重名：ToDictionary 会直接抛 ArgumentException 让每次分析都失败，且报错对用户无指导。
-        // 改为 GroupBy 取首个（P2-9），保持"开关/权重按名覆盖"的最简语义不崩溃。
+        // 改为 GroupBy 取首个，保持"开关/权重按名覆盖"的最简语义不崩溃。
         var settings = cfg.Extractors
             .GroupBy(s => s.Name)
             .ToDictionary(g => g.Key, g => g.First());

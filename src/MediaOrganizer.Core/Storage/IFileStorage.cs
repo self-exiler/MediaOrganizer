@@ -3,7 +3,7 @@ using MediaOrganizer.Core.Sources;
 namespace MediaOrganizer.Core.Storage;
 
 /// <summary>
-/// 目标文件存储抽象（ADR-0004 / ADR-0006 决策 3）：本地 / SMB(SMBLibrary) / WebDAV / Android SAF 实现。
+/// 目标文件存储抽象：本地 / SMB(SMBLibrary) / WebDAV / Android SAF 实现。
 /// 所有路径为归档计划产出的相对路径（'/' 分隔），由实现负责解析到目标根。
 /// 源参数为 IMediaSource——SAF→本地 / SAF→网络的流式拷贝天然打通。
 /// </summary>

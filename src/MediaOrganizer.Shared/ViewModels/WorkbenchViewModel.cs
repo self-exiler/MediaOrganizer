@@ -11,7 +11,7 @@ using MediaOrganizer.Shared.Services;
 namespace MediaOrganizer.Shared.ViewModels;
 
 /// <summary>
-/// 整理工作台：选目录 → 分析 → 确认计划 → 执行归档（双端共享，ADR-0006 决策 4）。
+/// 整理工作台：选目录 → 分析 → 确认计划 → 执行归档（双端共享）。
 /// 平台差异经注入抽象：目录选取走 IFolderPicker；分析器由组合根工厂构建（桌面本地扫描 + Magick EXIF，
 /// Android SAF 扫描 + ExifInterface）；分析结果与报告落盘到应用专有目录（决策 6，不写源目录）。
 /// </summary>
@@ -29,7 +29,7 @@ public partial class WorkbenchViewModel : ViewModelBase
 
     public event Action<AnalysisResult>? AnalysisCompleted;
 
-    /// <summary>最近一次分析生成的报告文本（透传 Session 缓存，P1-1 报告页复用）。</summary>
+    /// <summary>最近一次分析生成的报告文本（透传 Session 缓存 报告页复用）。</summary>
     public string? LastReportText => _session.LastReportText;
 
     public string[] OperationOptions { get; } = ["复制 copy（保留原文件）", "移动 move"];
@@ -123,8 +123,8 @@ public partial class WorkbenchViewModel : ViewModelBase
         _pendingDir = _config.Paths.PendingDir;
         _fixMtime = _config.Execute.FixMtime;
         _operationIndex = _config.Execute.Operation == FileOperation.Move ? 1 : 0;
-        _existActionIndex = _config.Execute.ExistAction.ToIndex();
-        _levelIndex = _config.Execute.ClassificationLevel.ToIndex();
+        _existActionIndex = (int)_config.Execute.ExistAction;
+        _levelIndex = (int)_config.Execute.ClassificationLevel;
 
         _session = new OrganizeSession(
             _config,
@@ -364,8 +364,8 @@ public partial class WorkbenchViewModel : ViewModelBase
 
         // 执行前把当前选项快照进 session（选项变更已即时触发重规划）
         _session.Operation = OperationIndex == 1 ? FileOperation.Move : FileOperation.Copy;
-        _session.ExistAction = ExistActionIndex.ToExistAction();
-        _session.Level = LevelIndex.ToClassificationLevel();
+        _session.ExistAction = (ExistAction)ExistActionIndex;
+        _session.Level = (ClassificationLevel)LevelIndex;
         _session.FixMtime = FixMtime;
 
         _config.Execute.Operation = _session.Operation;
@@ -436,7 +436,7 @@ public partial class WorkbenchViewModel : ViewModelBase
         var lastFlush = DateTime.UtcNow;
         return new Progress<double>(p =>
         {
-            // 节流（评估文档 P3）：大批量时每文件一次 UI 刷新过频；终值 1.0 恒刷，其余 200ms 一刷
+            // 节流：大批量时每文件一次 UI 刷新过频；终值 1.0 恒刷，其余 200ms 一刷
             if (p < 1.0 && (DateTime.UtcNow - lastFlush).TotalMilliseconds < 200)
                 return;
             lastFlush = DateTime.UtcNow;

@@ -8,7 +8,7 @@ namespace MediaOrganizer.Android.Platforms;
 
 /// <summary>
 /// 归档任务前台服务（dataSync 类型）：常驻通知展示进度并提供「停止」操作，
-/// 把进程优先级抬到前台——退后台/锁屏后传输继续、网络不受 Doze 限制（评估文档 M1）。
+/// 把进程优先级抬到前台——退后台/锁屏后传输继续、网络不受 Doze 限制。
 /// Android 15+ 对 dataSync 有 24 小时累计约 6 小时的时长配额，触顶回调 OnTimeout，
 /// 必须数秒内停止自身，否则系统抛 RemoteServiceException。
 /// </summary>

@@ -18,7 +18,8 @@ public partial class MagicToolsViewModel : ViewModelBase
 {
     private readonly List<PatternDefinition> _patterns;
     private readonly AppState _state;
-    private readonly string _dataDir;
+    // 最近一次内存分析结果：「从失败文件载入」直接读取，analysis-result.json 已废弃
+    private AnalysisResult? _lastResult;
 
     public ObservableCollection<string> Samples { get; } = [];
     public ObservableCollection<RegexTestItem> TestResults { get; } = [];
@@ -62,10 +63,9 @@ public partial class MagicToolsViewModel : ViewModelBase
     [ObservableProperty]
     private string _regexInfo = "";
 
-    public MagicToolsViewModel(AppState state, string dataDir)
+    public MagicToolsViewModel(AppState state)
     {
         _state = state;
-        _dataDir = dataDir;
         _patterns = state.Patterns;
     }
 
@@ -81,7 +81,7 @@ public partial class MagicToolsViewModel : ViewModelBase
     }
 
     /// <summary>从源目录加载前 100 个文件名字样（FR-7.1）。
-    /// 必须无参：带默认值的 int 参数经命令绑定传入 null 会让 RelayCommand.CanExecute 恒 false（按钮永久禁用，F-1）。</summary>
+    /// 必须无参：带默认值的 int 参数经命令绑定传入 null 会让 RelayCommand.CanExecute 恒 false（按钮永久禁用）。</summary>
     [RelayCommand]
     private void LoadFromSourceDir()
     {
@@ -105,6 +105,7 @@ public partial class MagicToolsViewModel : ViewModelBase
     /// <summary>从分析结果（成功或失败）载入文件名字样（FR-7.1）。</summary>
     public void LoadFromAnalysisResult(AnalysisResult? result, int max = 100)
     {
+        _lastResult = result;
         if (result is null)
         {
             SaveHint = "尚无分析结果，请先在工作台完成一次分析";
@@ -118,22 +119,15 @@ public partial class MagicToolsViewModel : ViewModelBase
         SaveHint = $"已从分析结果载入 {names.Length} 个文件名样本";
     }
 
-    /// <summary>从应用数据目录的 analysis-result.json 载入失败文件（原型「从失败文件载入」）。
-    /// JSON 解析移入后台线程（perf-15）：大报告在 UI 线程同步解析会秒级卡顿。</summary>
+    /// <summary>从失败文件载入（原型「从失败文件载入」）：直接取内存中最近一次分析结果，
+    /// analysis-result.json 落盘已废弃。</summary>
     [RelayCommand]
-    private async Task LoadFromFailedFilesAsync()
+    private void LoadFromFailedFiles()
     {
-        var path = Path.Combine(_dataDir, "analysis-result.json");
-        if (!File.Exists(path))
-        {
-            SaveHint = "应用数据目录下未找到 analysis-result.json，请先完成一次分析";
-            return;
-        }
-
-        var result = await Task.Run(() => AnalysisResultStore.Load(path));
+        var result = _lastResult;
         if (result is null)
         {
-            SaveHint = "analysis-result.json 解析失败";
+            SaveHint = "尚无分析结果，请先在工作台完成一次分析";
             return;
         }
 
@@ -189,8 +183,8 @@ public partial class MagicToolsViewModel : ViewModelBase
 
     private static async Task<string[]> LoadFileNamesFromJsonAsync(string path)
     {
-    var mediaExts = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-    {
+        var mediaExts = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
             ".jpg", ".jpeg", ".png", ".tiff", ".bmp", ".gif", ".webp",
             ".mp4", ".mov", ".avi", ".mkv", ".wmv", ".flv", ".webm",
             ".heic", ".heif"
@@ -198,21 +192,7 @@ public partial class MagicToolsViewModel : ViewModelBase
 
         bool IsMediaFile(string? name) => name is not null && mediaExts.Contains(Path.GetExtension(name));
 
-        // 1. analysis-result.json 结构：优先用 AnalysisResultStore 解析，避免先 ReadAllText 又由其读一次同一文件（7.2）。
-        //    Load 读一次即可命中 analysis-result 结构；解析在后台线程（perf-15）。
-        var result = await Task.Run(() => AnalysisResultStore.Load(path));
-        if (result is not null)
-        {
-            var names = result.Parsed.Select(p => p.File.FileName)
-                .Concat(result.Unparsed.Select(u => u.File.FileName))
-                .Where(n => IsMediaFile(n))
-                .Distinct()
-                .OrderBy(n => n)
-                .ToArray();
-            if (names.Length > 0) return names;
-        }
-
-        // 2. 兜底：顶层字符串数组（仅当非 analysis-result 结构时才读取原始文本）
+        // 手动选择的 JSON 支持顶层字符串数组（文件名清单）；analysis-result.json 结构随落盘一并废弃
         string json;
         try { json = await File.ReadAllTextAsync(path); }
         catch { return []; }
@@ -230,8 +210,8 @@ public partial class MagicToolsViewModel : ViewModelBase
                     .ToArray();
             }
         }
-        // 兜底分支：JSON 非 analysis-result 结构且非字符串数组时，返回空样本列表（不视为错误）
-        catch { /* 顶层字符串数组解析失败不阻断流程 */ }
+        // 兜底分支：非字符串数组时返回空样本列表（不视为错误）
+        catch { /* 解析失败不阻断流程 */ }
 
         return [];
     }
@@ -396,7 +376,7 @@ public partial class MagicToolsViewModel : ViewModelBase
     private void GenerateVariants()
     {
         if (Samples.Count == 0) { SaveHint = "请先载入样本"; return; }
-        // 与测试/运行时口径统一：按不含扩展名的主文件名生成，否则正则会含字面 \.jpg 而永不命中（审计 6）
+        // 与测试/运行时口径统一：按不含扩展名的主文件名生成，否则正则会含字面 \.jpg 而永不命中
         var nameOnlySamples = Samples.Select(s => Path.GetFileNameWithoutExtension(s) ?? s).ToArray();
         RegexText = PatternInferrer.GenerateVariantRegex(nameOnlySamples);
         SaveHint = $"已按 {Samples.Count} 个样本生成多变体正则；点「测试」验证覆盖";
@@ -409,7 +389,7 @@ public partial class MagicToolsViewModel : ViewModelBase
 
     partial void OnRegexTextChanged(string value)
     {
-        // 150ms 防抖（perf-14）：逐键入时避免 UI 线程反复跑 100 样本 × 正则推理
+        // 150ms 防抖：逐键入时避免 UI 线程反复跑 100 样本 × 正则推理
         _testDebounceCts?.Cancel();
         _testDebounceCts = new CancellationTokenSource();
         var token = _testDebounceCts.Token;
@@ -449,7 +429,7 @@ public partial class MagicToolsViewModel : ViewModelBase
         foreach (var sample in Samples)
         {
             var nameWithoutExt = Path.GetFileNameWithoutExtension(sample);
-            // P1-4：魔术工具实时测试用不缓存、不编译提取，避免逐键入字符泄漏 Compiled 正则
+            // 魔术工具实时测试用不缓存、不编译提取，避免逐键入字符泄漏 Compiled 正则
             var date = PatternEngine.TryExtract(nameWithoutExt, pattern, cache: false);
             TestResults.Add(new RegexTestItem(sample, date is not null,
                 date is { } d ? d.ToString("yyyy-MM-dd HH:mm:ss") : "未命中"));

@@ -7,6 +7,18 @@ public class PatternEngineTests
 {
     private static readonly List<PatternDefinition> Builtins = PatternsStore.GetBuiltinPatterns();
 
+    // 运行时 FileNameExtractor 的循环语义（列表版重载已作为「仅测试用」删除，C6）
+    private static DateTimeOffset? ExtractAll(string name)
+    {
+        foreach (var p in Builtins.Where(p => p.Enabled).OrderByDescending(p => p.Weight))
+            if (PatternEngine.TryExtract(name, p) is DateTimeOffset d)
+                return d;
+        return null;
+    }
+
+    private static bool LikelyDate(string name)
+        => PatternEngine.ContainsLikelyDate(name, Builtins.Any(p => p.Enabled && p.TimestampLength is not null));
+
     [Fact]
     public void 微信导出13位时间戳()
     {
@@ -59,7 +71,7 @@ public class PatternEngineTests
     [Fact]
     public void 通用日期时间()
     {
-        var d = PatternEngine.TryExtract("2024-01-15 14-30-00_photo.jpg", Builtins);
+        var d = ExtractAll("2024-01-15 14-30-00_photo.jpg");
         Assert.NotNull(d);
         Assert.Equal(new DateTime(2024, 1, 15, 14, 30, 0), d.Value.DateTime);
     }
@@ -67,7 +79,7 @@ public class PatternEngineTests
     [Fact]
     public void 紧凑日期()
     {
-        var d = PatternEngine.TryExtract("IMG_20240115_123456.jpg", Builtins);
+        var d = ExtractAll("IMG_20240115_123456.jpg");
         Assert.NotNull(d);
         Assert.Equal(2024, d!.Value.Year);
         Assert.Equal(1, d.Value.Month);
@@ -88,15 +100,15 @@ public class PatternEngineTests
     [Fact]
     public void 无日期文件名返回null()
     {
-        Assert.Null(PatternEngine.TryExtract("scan001.tif", Builtins));
+        Assert.Null(ExtractAll("scan001.tif"));
     }
 
     [Fact]
     public void 快速预扫描判定()
     {
-        Assert.True(PatternEngine.ContainsLikelyDate("IMG_20240115.jpg", Builtins));
-        Assert.True(PatternEngine.ContainsLikelyDate("mm_export1718012345678.jpg", Builtins)); // 时间戳模式
-        Assert.False(PatternEngine.ContainsLikelyDate("scan001.tif", Builtins));
+        Assert.True(LikelyDate("IMG_20240115.jpg"));
+        Assert.True(LikelyDate("mm_export1718012345678.jpg")); // 时间戳模式
+        Assert.False(LikelyDate("scan001.tif"));
     }
 
     [Fact]

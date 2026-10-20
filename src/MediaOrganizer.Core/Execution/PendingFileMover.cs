@@ -1,4 +1,6 @@
+using MediaOrganizer.Core.Configuration;
 using MediaOrganizer.Core.Models;
+using MediaOrganizer.Core.Planning;
 using MediaOrganizer.Core.Storage;
 
 namespace MediaOrganizer.Core.Execution;
@@ -6,64 +8,30 @@ namespace MediaOrganizer.Core.Execution;
 public sealed record PendingMoveResult(int Moved, int Failed, IReadOnlyList<string> MovedIdentifiers, IReadOnlyList<string> Errors);
 
 /// <summary>
-/// 失败文件批量移动到待处理目录（FR-A6.5，ADR-0006 决策 5）：
-/// 复用 IMediaSource（源）+ IFileStorage（目标）——SAF→SAF / SAF→本地的移动语义 = 流式复制 + 删除源。
-/// 同名冲突沿用 rename `_n` 规则（与 FileOperator.FindFreeNameAsync 语义一致）。
+/// 失败文件批量移动到待处理目录（FR-A6.5）：
+/// 复用 FileOperator（Move + Rename，目标平铺文件名）——临时名 .mo-tmp、写入自证大小校验、
+/// 查重名退避、大小写互斥闸与删除时机全部与主流程同一套实现（精简项：曾各写一套且校验口径不同）。
 /// </summary>
 public sealed class PendingFileMover
 {
-    /// <summary>逐个移动；单文件失败记录并继续（NFR-A4）。源端无 IMediaSource（结果回读场景）的条目跳过并计失败。</summary>
+    /// <summary>逐个移动；单文件失败记录并继续（NFR-A4）。源端无 IMediaSource 的条目由 FileOperator 计入失败清单。</summary>
     public async Task<PendingMoveResult> MoveAsync(
         IReadOnlyList<MediaFile> files,
         IFileStorage target,
         IProgress<double>? progress = null,
         CancellationToken ct = default)
     {
-        int moved = 0, failed = 0;
-        var errors = new List<string>();
-        // 按源完整路径（Identifier 语义）而非文件名记账：不同目录同名文件不得被一并移除（审计 12）
-        var movedIdentifiers = new List<string>();
-        await target.CreateDirectoryAsync("", ct);
+        // 平铺目标名：清洗路径分隔符，防同名解析把 PendingFile 的 Path 当目录结构
+        var planned = files
+            .Select(f => new PlannedFile(f, DateTimeOffset.Now,
+                f.FileName.Replace('\\', '_').Replace('/', '_')))
+            .ToArray();
+        var result = new AnalysisResult("", DateTimeOffset.Now, [], []);
+        var plan = new ArchivePlan(result, "", ClassificationLevel.Day, planned);
 
-        for (var i = 0; i < files.Count; i++)
-        {
-            ct.ThrowIfCancellationRequested();
-            var file = files[i];
-            if (file.Source is null)
-            {
-                failed++;
-                errors.Add($"{file.FileName}: 源端不可用（结果回读后未重新解析）");
-                continue;
-            }
+        var r = await new FileOperator(target, FileOperation.Move, ExistAction.Rename, fixMtime: false)
+            .ExecuteAsync(plan, progress, ct);
 
-            try
-            {
-                var name = file.FileName;
-                var relative = await NameCollisionResolver.FindFreeAsync(target, name, ct);
-                await target.CopyFromAsync(file.Source, relative, null, ct);
-
-                var expected = file.Source.Length;
-                var actual = await target.GetLengthAsync(relative, ct);
-                if (actual < 0)
-                    throw new IOException("无法获取目标文件长度，大小校验不可用");
-                if (actual != expected)
-                    throw new IOException($"大小校验失败：期望 {expected}，实际 {actual}");
-
-                file.Source.Delete();
-                moved++;
-                movedIdentifiers.Add(file.Path);
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                failed++;
-                errors.Add($"{file.FileName}: {ex.Message}");
-            }
-            progress?.Report((double)(i + 1) / files.Count);
-        }
-        return new PendingMoveResult(moved, failed, movedIdentifiers, errors);
+        return new PendingMoveResult(r.Succeeded, r.Failed, r.SucceededPaths ?? [], r.Errors);
     }
 }

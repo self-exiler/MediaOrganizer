@@ -1,7 +1,7 @@
 namespace MediaOrganizer.Shared.Services;
 
 /// <summary>
-/// 文件导出抽象（ADR-0006 决策 6）：桌面 StorageProvider 另存为对话框；
+/// 文件导出抽象：桌面 StorageProvider 另存为对话框；
 /// Android SAF ACTION_CREATE_DOCUMENT 或系统分享（FR-A 报告页「另存为/分享」）。
 /// </summary>
 public interface IFileSaver

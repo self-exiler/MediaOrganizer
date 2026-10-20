@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using MediaOrganizer.Core.Diagnostics;
 using MediaOrganizer.Core.Sources;
 using SMBLibrary;
 using SMBLibrary.Client;
@@ -8,14 +7,14 @@ using FileAttributes = SMBLibrary.FileAttributes;
 namespace MediaOrganizer.Core.Storage;
 
 /// <summary>
-/// SMB 存储输出目标（ADR-0007）：基于 SMBLibrary 纯托管客户端（SMB2，445 端口），双端统一实现，
+/// SMB 存储输出目标：基于 SMBLibrary 纯托管客户端（SMB2，445 端口），双端统一实现，
 /// 替代旧 UNC/OS 重定向器方式——连接配置的用户名/密码真正生效。
 /// 限制：首版不支持 guest/匿名；SMBLibrary 不支持 SMB 3.1.1 强制加密的服务器（主流家用 NAS 默认不强制）。
 /// 连接在首次操作时懒建立并在存储生命周期内复用（连接 + NTLM 登录开销大）；
 /// SMBLibrary 客户端非线程安全，除 CopyFromAsync 的写入环节按块持锁外，其余操作经 _gate 整体串行化。
 /// 写入按 min(协商 MaxWriteSize, 1MB) 分块（SMBLibrary 的 WriteFile 不自动分片，超限必失败）；
 /// .mo-tmp 临时名 + 写入自证大小校验、重试退避由 FileOperator 层统一保证。
-/// 提速（评估文档 §5）：目录创建缓存 + 目录列表缓存（ExistsAsync 免往返）+ 读写流水线（预读与写重叠）。
+/// 提速：目录创建缓存 + 目录列表缓存（ExistsAsync 免往返）+ 读写流水线（预读与写重叠）。
 /// </summary>
 public sealed class SmbFileStorage : IFileStorage
 {
@@ -71,7 +70,7 @@ public sealed class SmbFileStorage : IFileStorage
     private string ToSmbPath(string relativePath)
         => string.Join('\\', new[] { _baseSmbPath, relativePath.Replace('/', '\\') }.Where(s => !string.IsNullOrEmpty(s)));
 
-    /// <summary>目录列表缓存的唯一键口径：含 _baseSmbPath 前缀、'\' 分隔的规范化 SMB 路径（审计 9）。
+    /// <summary>目录列表缓存的唯一键口径：含 _baseSmbPath 前缀、'\' 分隔的规范化 SMB 路径。
     /// 此前 Exists/CreateDirectory/Delete 三处各用相对 '/' 路径、拼接 SMB '\' 路径、ToSmbPath 三种写法，互相读不到。</summary>
     private string DirCacheKey(string relativeDirPath) => ToSmbPath(relativeDirPath);
 
@@ -117,8 +116,8 @@ public sealed class SmbFileStorage : IFileStorage
                 throw new IOException($"连接共享 \\{_server}\\{_share} 失败：{treeStatus}");
             _client = client;
             _store = store;
-            // 弱网下若协商到 64KB，单流吞吐会掉一个数量级（评估文档 §3.3），此日志是排查首要检查项
-            CoreLog.Info($"[SMB] \\\\{_server}\\{_share} 已连接：协商 MaxWriteSize={client.MaxWriteSize}，实际写入块={WriteChunkSize} 字节");
+            // 弱网下若协商到 64KB，单流吞吐会掉一个数量级，此日志是排查首要检查项
+            Platforms.PlatformServices.Current.Log($"[SMB] \\\\{_server}\\{_share} 已连接：协商 MaxWriteSize={client.MaxWriteSize}，实际写入块={WriteChunkSize} 字节");
         }
         catch (Exception ex)
         {
@@ -144,7 +143,7 @@ public sealed class SmbFileStorage : IFileStorage
         try { client?.Disconnect(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[SmbFileStorage] Client disconnect failed: {ex.Message}"); }
     }
 
-    /// <summary>串行执行一次 SMB 操作；传输层失效（连接被断/会话失效）时置脏连接，让下次调用重建（P2-1）。</summary>
+    /// <summary>串行执行一次 SMB 操作；传输层失效（连接被断/会话失效）时置脏连接，让下次调用重建。</summary>
     private async Task<T> InvokeAsync<T>(Func<ISMBFileStore, T> action, CancellationToken ct)
     {
         await _gate.WaitAsync(ct);
@@ -159,7 +158,7 @@ public sealed class SmbFileStorage : IFileStorage
         }
         catch (Exception)
         {
-            // P2-1：真实的连接断开（WiFi 漫游、手机休眠、NAS 重启）在 SMBLibrary 里表现为
+            // 真实的连接断开（WiFi 漫游、手机休眠、NAS 重启）在 SMBLibrary 里表现为
             // IOException/SocketException/NTStatus 错误码，而非 ObjectDisposedException。
             // 只认 ObjectDisposedException 重连会让 FileOperator 的三次退避重试全部撞在死连接上。
             // 此处对任何操作异常都置脏并重建，确保下一次操作走新连接；具体错误交由上层重试。
@@ -320,7 +319,7 @@ public sealed class SmbFileStorage : IFileStorage
         // 与 SMB 写入（每块独立过 _gate）重叠，隐藏源端读取时间——原实现读写在锁内完全串行。
         // 连接失效时 InvokeAsync 置脏，FileOperator 按整文件退避重试（FILE_OVERWRITE_IF 重开覆盖半成品）。
         var writeChunk = WriteChunkSize;
-        // perf-2：缓冲区走 ArrayPool（原先每文件 new 2×writeChunk 进 LOH，大归档下频繁 GC）；
+        // 缓冲区走 ArrayPool（原先每文件 new 2×writeChunk 进 LOH，大归档下频繁 GC）；
         // Rent 可能返回大于 writeChunk 的数组，读侧一律限长，保证单次 WriteFile 载荷不超协商 MaxWriteSize。
         var bufA = System.Buffers.ArrayPool<byte>.Shared.Rent(writeChunk);
         var bufB = System.Buffers.ArrayPool<byte>.Shared.Rent(writeChunk);
@@ -344,7 +343,7 @@ public sealed class SmbFileStorage : IFileStorage
                 await InvokeAsync<object?>(store =>
                 {
                     // 单次 WriteFile 载荷不得超过协商 MaxWriteSize（SMBLibrary 不自动分片，超限必被拒）；
-                    // 整块直接传 buffer（除末块恒成立），仅末块切片拷贝 ≤writeChunk 的新数组（perf-2）
+                    // 整块直接传 buffer（除末块恒成立），仅末块切片拷贝 ≤writeChunk 的新数组
                     var payload = len == writeChunk ? buffer : buffer[..len];
                     var writeStatus = store.WriteFile(out written, handle!, offset, payload);
                     if (writeStatus != NTStatus.STATUS_SUCCESS)

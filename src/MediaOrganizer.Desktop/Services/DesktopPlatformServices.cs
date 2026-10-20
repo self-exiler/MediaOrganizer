@@ -4,7 +4,7 @@ using MediaOrganizer.Shared.Services;
 
 namespace MediaOrganizer.Desktop.Services;
 
-/// <summary>桌面目录选取：StorageProvider 文件夹对话框（ADR-0006 决策 4）。</summary>
+/// <summary>桌面目录选取：StorageProvider 文件夹对话框。</summary>
 public sealed class DesktopFolderPicker : IFolderPicker
 {
     public async Task<string?> PickFolderAsync()
@@ -45,7 +45,7 @@ public sealed class DesktopFileSaver : IFileSaver
         => SaveTextAsync("analysis-report.txt", content);
 }
 
-/// <summary>桌面确认弹窗：包装 ConfirmDialog 模态窗口。owner 不可得时默认拒绝（P3-3）：
+/// <summary>桌面确认弹窗：包装 ConfirmDialog 模态窗口。owner 不可得时默认拒绝：
 /// 无归属窗口的确认无法展示给用户，放行等于跳过用户确认，宁可放弃操作。</summary>
 public sealed class DesktopConfirmDialog : IConfirmDialog
 {

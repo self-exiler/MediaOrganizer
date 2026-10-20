@@ -25,7 +25,7 @@ public sealed class Analyzer
 
     public async Task<AnalysisResult> AnalyzeAsync(string sourceDir, IProgress<AnalysisProgress>? progress = null, CancellationToken ct = default)
     {
-        // 扫描本身是同步阻塞（真实路径递归遍历 / SAF 每目录 Binder IPC），必须先移出 UI 线程（P0-2）
+        // 扫描本身是同步阻塞（真实路径递归遍历 / SAF 每目录 Binder IPC），必须先移出 UI 线程
         var files = await Task.Run(() => _scanner.Scan(sourceDir), ct);
         var parsed = new ConcurrentQueue<ParsedFile>();
         var unparsed = new ConcurrentQueue<UnparsedFile>();
@@ -59,7 +59,7 @@ public sealed class Analyzer
         });
 
         // ConcurrentQueue 出队顺序取决于并行完成时序，跨次分析不稳定；
-        // 排序锁定后 Rename 的 _n 后缀、报告与失败清单顺序才可复现（审计 18）
+        // 排序锁定后 Rename 的 _n 后缀、报告与失败清单顺序才可复现
         return new AnalysisResult(sourceDir, DateTimeOffset.Now,
             parsed.OrderBy(p => p.File.Path, StringComparer.Ordinal).ToArray(),
             unparsed.OrderBy(u => u.File.Path, StringComparer.Ordinal).ToArray());

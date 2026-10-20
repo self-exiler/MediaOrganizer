@@ -71,7 +71,7 @@ public static class PatternsStore
         },
         new()
         {
-            // 前后数字边界：13 位毫秒时间戳的前 8 位可能被抠成 16xx 年的「紧凑日期」（审计 5）
+            // 前后数字边界：13 位毫秒时间戳的前 8 位可能被抠成 16xx 年的「紧凑日期」
             Name = "紧凑日期时间", Pattern = @"(?<!\d)(\d{4})(\d{2})(\d{2})[ _]?(\d{2})(\d{2})(\d{2})(?!\d)",
             GroupMapping = new() { ["year"] = 1, ["month"] = 2, ["day"] = 3, ["hour"] = 4, ["minute"] = 5, ["second"] = 6 },
             Weight = 0.9, Builtin = true

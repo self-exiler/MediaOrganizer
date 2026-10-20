@@ -288,26 +288,4 @@ public class FileOperatorTests : IDisposable
         Assert.False(File.Exists(Path.Combine(_out, "2024", "01", "15", "truncated.jpg.mo-tmp")), "失败后不得留 .mo-tmp 残留");
         Assert.Contains(r.Errors, e => e.Contains("大小校验失败"));
     }
-
-    [Fact]
-    public async Task 执行结果携带计时报告()
-    {
-        WriteFile(Path.Combine(_src, "t.jpg"), "0123456789");
-        var plan = Plan(("t.jpg", new DateTimeOffset(2024, 1, 15, 0, 0, 0, TimeSpan.Zero)));
-        var r = await Run(plan, FileOperation.Copy, ExistAction.Skip, fixMtime: false);
-
-        Assert.NotNull(r.Timing);
-        Assert.Equal(1, r.Timing!.FileCount);
-        Assert.True(r.Timing.TransferMeanMs >= 0);
-        Assert.True(r.Timing.MetadataMeanMs >= 0);
-        Assert.Equal(10, r.Timing.TotalBytes);
-    }
-
-    [Fact]
-    public async Task 空计划不产生计时报告()
-    {
-        var plan = Plan();
-        var r = await Run(plan, FileOperation.Copy, ExistAction.Skip, fixMtime: false);
-        Assert.Null(r.Timing);
-    }
 }

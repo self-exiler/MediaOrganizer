@@ -18,7 +18,7 @@ public static class RequestCodes
 }
 
 /// <summary>
-/// Avalonia Android 应用入口（ADR-0005）：主题与字体定制在 App.axaml；
+/// Avalonia Android 应用入口：主题与字体定制在 App.axaml；
 /// VM 图与平台服务注入推迟到 MainActivity.OnCreate → App.InitializeApp（此时 Activity 才可用）。
 /// </summary>
 [Application]
@@ -103,7 +103,7 @@ public class MainActivity : AvaloniaMainActivity
     public Task<Intent?> StartForResultAsync(Intent intent, int requestCode)
     {
         var tcs = new TaskCompletionSource<Intent?>(TaskCreationOptions.RunContinuationsAsynchronously);
-        // 同一请求码重复发起：先以「取消」（回调 null）了结先前悬挂的等待，其 Task 不至于永不完成（审计 20）
+        // 同一请求码重复发起：先以「取消」（回调 null）了结先前悬挂的等待，其 Task 不至于永不完成
         if (_pending.TryGetValue(requestCode, out var stale))
         {
             _pending.Remove(requestCode);

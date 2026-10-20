@@ -5,7 +5,7 @@ using MediaOrganizer.Core.Platforms;
 namespace MediaOrganizer.Core.Extraction;
 
 /// <summary>
-/// 桌面版图片 EXIF 读取器（Magick.NET，走流）：ExifExtractor 经 IExifReader 抽象调用（ADR-0006 决策 2）。
+/// 桌面版图片 EXIF 读取器（Magick.NET，走流）：ExifExtractor 经 IExifReader 抽象调用。
 /// Android 侧由 AndroidExifReader（ExifInterface）替换，提取器逻辑双端共享。
 /// </summary>
 public sealed class MagickExifReader : IExifReader

@@ -36,7 +36,7 @@ public static class PatternInferrer
             if (!m.Success) return probe; // 允许零命中（测试显示未命中）
 
             var map = new Dictionary<string, int>();
-            // 命名组优先，但只采纳语义白名单内的组名（P2-3）：
+            // 命名组优先，但只采纳语义白名单内的组名：
             // 否则诸如 (?<foo>…) 的任意命名组会作出 map.Count != 0 让位置推断被跳过，而该规则永远解析不出日期。
             var whitelist = new HashSet<string>(StringComparer.Ordinal)
                 { "year", "month", "day", "hour", "minute", "second", "timestamp" };
@@ -68,7 +68,7 @@ public static class PatternInferrer
             }
 
             probe.GroupMapping = map;
-            // 命名组 timestamp 时 TimestampLength 也须给出，否则 TimestampToDate 按秒解析 13 位毫秒时间戳会越界返回 null（P0-3 附带缺口）
+            // 命名组 timestamp 时 TimestampLength 也须给出，否则 TimestampToDate 按秒解析 13 位毫秒时间戳会越界返回 null
             if (map.TryGetValue("timestamp", out var tsIdx) && m.Groups[tsIdx].Success)
             {
                 var len = m.Groups[tsIdx].Value.Length;
@@ -184,7 +184,7 @@ public static class PatternInferrer
 
     /// <summary>
     /// FR-7.4：多变体智能生成——对比多个同指纹样本，把差异部分生成 \d{n} 或通配，
-    /// 产出覆盖全部样本的正则并带命名捕获组，使 Infer/TryExtract 能解析出日期（P0-3）。
+    /// 产出覆盖全部样本的正则并带命名捕获组，使 Infer/TryExtract 能解析出日期。
     /// 修复前逐位输出 \d{1} 不产生任何捕获组，Infer 的 map 恒空 → TryExtract 无 year/timestamp →
     /// 全部样本"未命中"，SavePattern 永远无法通过。
     /// 关键：按"最大连续数字块"切分（而非逐位），避免同数字前缀（如 2023/2024 前三位 "202"）把

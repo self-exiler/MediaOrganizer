@@ -11,7 +11,7 @@ public sealed class FileScanner : IFileScanner
 
     public FileScanner(IEnumerable<string> supportedFormats, bool scanAllFiles = false)
     {
-        // perf-5：白名单预存带点扩展名 + OrdinalIgnoreCase（原先每文件 TrimStart+ToLower 两次字符串分配）
+        // 白名单预存带点扩展名 + OrdinalIgnoreCase（原先每文件 TrimStart+ToLower 两次字符串分配）
         _formats = supportedFormats
             .Where(f => !string.IsNullOrWhiteSpace(f))
             .Select(f => "." + f.TrimStart('.'))
@@ -32,7 +32,7 @@ public sealed class FileScanner : IFileScanner
         {
             RecurseSubdirectories = true,
             IgnoreInaccessible = true,
-            // 仅跳过 ReparsePoint（符号链接/交接点）以避免递归死循环；System/Hidden 不再跳过（P2-11）：
+            // 仅跳过 ReparsePoint（符号链接/交接点）以避免递归死循环；System/Hidden 不再跳过：
             // FR-1.1「递归扫描所有文件」要求隐藏文件也应参与归档，此前静默丢弃且无可关配置。
             AttributesToSkip = FileAttributes.ReparsePoint
         };
@@ -44,7 +44,7 @@ public sealed class FileScanner : IFileScanner
             if (!_scanAllFiles && _formats.Count > 0 && !_formats.Contains(ext)) continue;
             try
             {
-                // perf-4：长度/mtime 直接取枚举时已有的 FileInfo 值注入源端，消除提取链路上的重复 stat
+                // 长度/mtime 直接取枚举时已有的 FileInfo 值注入源端，消除提取链路上的重复 stat
                 list.Add(new MediaFile(fi.FullName, fi.Length, ext.TrimStart('.'))
                 {
                     Source = new LocalMediaSource(fi.FullName, fi.LastWriteTimeUtc, fi.Length)

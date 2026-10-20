@@ -6,7 +6,7 @@ namespace MediaOrganizer.Core.Extraction;
 /// <summary>文件名提取器：用正则模式集合解析文件名中的日期。</summary>
 public sealed class FileNameExtractor(IReadOnlyList<Configuration.PatternDefinition> patterns, bool enabled, double weight) : IDateExtractor
 {
-    // perf-1：启用模式按权重降序在构造期排一次（原先每文件 Where().OrderByDescending() 纯浪费）
+    // 启用模式按权重降序在构造期排一次（原先每文件 Where().OrderByDescending() 纯浪费）
     private readonly Configuration.PatternDefinition[] _sortedPatterns =
         patterns.Where(p => p.Enabled).OrderByDescending(p => p.Weight).ToArray();
 
@@ -20,16 +20,16 @@ public sealed class FileNameExtractor(IReadOnlyList<Configuration.PatternDefinit
 
     public DateTimeOffset? Extract(MediaFile file)
     {
-        // SAF 下 URI 字符串不保证含可读文件名/扩展名 → 统一取源端 DisplayName（ADR-0006 决策 2）
+        // SAF 下 URI 字符串不保证含可读文件名/扩展名 → 统一取源端 DisplayName
         // 口径与魔术工具/PatternInferrer 统一为不含扩展名的主文件名，
-        // 否则以 $ 收尾的用户正则会被 ".jpg" 挡住（审计 6）
+        // 否则以 $ 收尾的用户正则会被 ".jpg" 挡住
         var name = Path.GetFileNameWithoutExtension(file.FileName);
         // 快速年份预扫描：文件名无合理年份且无时间戳模式时直接跳过全部正则（SRS FR-3.3）
         if (!PatternEngine.ContainsLikelyDate(name, _hasTimestampPattern))
             return null;
         foreach (var pattern in _sortedPatterns)
         {
-            // TryExtract 对不合理日期返回 null → 自然继续尝试下一模式（审计 5 校验下放）
+            // TryExtract 对不合理日期返回 null → 自然继续尝试下一模式
             if (PatternEngine.TryExtract(name, pattern) is DateTimeOffset d) return d;
         }
         return null;

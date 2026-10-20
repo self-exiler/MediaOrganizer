@@ -73,7 +73,7 @@ public partial class PatternSettingVM : ObservableObject
 }
 
 /// <summary>
-/// 设置：提取器 / 文件名模式 / 网络位置 / 扫描参数（双端共享，ADR-0006 决策 4）。
+/// 设置：提取器 / 文件名模式 / 网络位置 / 扫描参数（双端共享）。
 /// 主题应用经注入委托（桌面 ThemeHelper；Android 侧可为空）。
 /// </summary>
 public partial class SettingsViewModel : ViewModelBase
@@ -110,6 +110,9 @@ public partial class SettingsViewModel : ViewModelBase
     // ---- 网络位置内联编辑表单状态 ----
     private NetworkProfile? _editingProfile; // null = 新建
 
+    /// <summary>批量回读配置中：OnXxxChanged 只写回 config，不落盘不发事件（初始化由调用方统一 SaveAll）。</summary>
+    private bool _loading;
+
     [ObservableProperty]
     private bool _editingNetwork;
 
@@ -131,7 +134,7 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     private string _networkHint = "";
 
-    /// <summary>连接测试忙碌态（评审 2.13）：防重入 + 供 UI 展示“正在测试”。</summary>
+    /// <summary>连接测试忙碌态：防重入 + 供 UI 展示“正在测试”。</summary>
     [ObservableProperty]
     private bool _isTestingNetwork;
 
@@ -189,17 +192,23 @@ public partial class SettingsViewModel : ViewModelBase
     {
         if (notify)
         {
-            // 走属性赋值：触发 PropertyChanged，使已绑定的设置页 UI 立刻刷新（P0-4「初始化默认配置」后）
-            MaxYearsPast = _config.Extraction.MaxYearsPast;
-            FutureDateBufferDays = _config.Extraction.FutureDateBufferDays;
-            ProgressInterval = _config.Scan.ProgressInterval;
-            PreviewSize = _config.General.PreviewSize;
-            ThemeIndex = ThemeIndexFromName(_config.General.Theme);
-            WindowSize = _config.General.WindowSize;
-            SupportedFormatsText = string.Join(", ", _config.Scan.SupportedFormats);
-            ScanAllFiles = _config.Scan.ScanAllFiles;
-            MaxDegreeOfParallelism = _config.Scan.MaxDegreeOfParallelism;
-            ExecutionParallelism = _config.Execute.MaxDegreeOfParallelism;
+            // 走属性赋值触发 PropertyChanged 刷新绑定，
+            // 但批量赋值期间静音落盘/通知副作用——由调用方（Initialize）统一保存一次
+            _loading = true;
+            try
+            {
+                MaxYearsPast = _config.Extraction.MaxYearsPast;
+                FutureDateBufferDays = _config.Extraction.FutureDateBufferDays;
+                ProgressInterval = _config.Scan.ProgressInterval;
+                PreviewSize = _config.General.PreviewSize;
+                ThemeIndex = ThemeIndexFromName(_config.General.Theme);
+                WindowSize = _config.General.WindowSize;
+                SupportedFormatsText = string.Join(", ", _config.Scan.SupportedFormats);
+                ScanAllFiles = _config.Scan.ScanAllFiles;
+                MaxDegreeOfParallelism = _config.Scan.MaxDegreeOfParallelism;
+                ExecutionParallelism = _config.Execute.MaxDegreeOfParallelism;
+            }
+            finally { _loading = false; }
         }
         else
         {
@@ -220,7 +229,7 @@ public partial class SettingsViewModel : ViewModelBase
         }
     }
 
-    /// <summary>按当前配置重建提取器列表。重建前先解绑旧 VM 的 PropertyChanged，避免重复/残留订阅（P0-5）。</summary>
+    /// <summary>按当前配置重建提取器列表。重建前先解绑旧 VM 的 PropertyChanged，避免重复/残留订阅。</summary>
     private void RefreshExtractors()
     {
         foreach (var vm in Extractors) vm.PropertyChanged -= OnExtractorChanged;
@@ -247,8 +256,8 @@ public partial class SettingsViewModel : ViewModelBase
     {
         ResetConfigToDefaults(_config);
         RestoreDefaultPatternsCommand.Execute(null);
-        LoadFromConfig(notify: true); // 刷新设置页已绑定控件的显示值（P0-4）
-        RefreshExtractors();          // 提取器列表指向新的默认配置，避免界面与配置长期打架（P0-5）
+        LoadFromConfig(notify: true); // 刷新设置页已绑定控件的显示值
+        RefreshExtractors();          // 提取器列表指向新的默认配置，避免界面与配置长期打架
         _state.SaveAll();
         SaveHint = "已恢复默认配置与内置文件名模式";
         _state.NotifyChanged();
@@ -336,7 +345,7 @@ public partial class SettingsViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// 统一的连接测试入口（评审 2.13）：忙碌态防重入 + 30s 超时；
+    /// 统一的连接测试入口：忙碌态防重入 + 30s 超时；
     /// 经 Task.Run 移出 UI 线程——SMB 的 TCP+NTLM 登录是同步阻塞，直接 await 会冻结界面直到 OS 超时。
     /// </summary>
     private async Task<(bool Ok, string Message)> RunConnectionTestAsync(NetworkProfile profile, string label = "")
@@ -377,7 +386,7 @@ public partial class SettingsViewModel : ViewModelBase
         }
         else
         {
-            // 编辑改名时同样查重（不得撞上其他条目，审计 14）
+            // 编辑改名时同样查重（不得撞上其他条目）
             if (existing is not null && !ReferenceEquals(existing, _editingProfile))
             { NetworkHint = $"名称「{profile.Name}」已存在"; return; }
             // 验证状态已由 BuildEditProfile 携带；密码的保留/更新也在其中处理，此处只做替换
@@ -438,7 +447,7 @@ public partial class SettingsViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            // 加密失败不得静默存空密码（评审 2.7）：给出可见提示并拒绝保存该条目
+            // 加密失败不得静默存空密码：给出可见提示并拒绝保存该条目
             NetworkHint = $"密码无法加密存储：{ex.Message}";
             return null;
         }
@@ -486,7 +495,7 @@ public partial class SettingsViewModel : ViewModelBase
     [RelayCommand]
     private void RestoreDefaultPatterns()
     {
-        // 内置模式回到出厂清单：缺失的补回，已存在但被禁用/改过的也重置为出厂值（审计 13）；自定义模式保留
+        // 内置模式回到出厂清单：缺失的补回，已存在但被禁用/改过的也重置为出厂值；自定义模式保留
         foreach (var builtin in PatternsStore.GetBuiltinPatterns())
         {
             var idx = _patterns.FindIndex(p => p.Name == builtin.Name);
@@ -514,7 +523,7 @@ public partial class SettingsViewModel : ViewModelBase
         setting.Weight = vm.Weight;
         SaveHint = $"「{vm.Name}」{Describe(e.PropertyName)}已即时生效并保存";
 
-        // perf-11（09-03 P1-5 残余）：滑块已 SnapToTick 0.1，拖满量程仍触发 ~20 次本回调；
+        // 滑块已 SnapToTick 0.1，拖满量程仍触发 ~20 次本回调；
         // 300ms 防抖合并落盘（临时文件+改名）与工作台链重建（NotifyChanged），内存配置即时生效。
         // 代价：停止拖动 300ms 内退出应用，最后一次改动可能未落盘。
         _extractorSaveCts?.Cancel();
@@ -540,46 +549,69 @@ public partial class SettingsViewModel : ViewModelBase
 
     // ---- 配置项变更实时保存 ----
 
+    /// <summary>变更影响面分类（决定落盘后发哪类事件）。</summary>
+    private enum ConfigChange
+    {
+        /// <summary>仅落盘，不发事件（执行偏好等，调用时无 UI 订阅者需要刷新）。</summary>
+        Silent,
+        /// <summary>落盘 + Changed（UI 刷新类，如扫描开关）。</summary>
+        Ui,
+        /// <summary>落盘 + Changed + ChainChanged（提取链/白名单/年限等，工作台重建链）。</summary>
+        Chain
+    }
+
+    /// <summary>统一落盘样板（精简项：原先十几个 OnXxxChanged 各写一遍）。</summary>
+    private void Persist(string hint, ConfigChange kind)
+    {
+        _state.SaveConfig(notifyChanged: false);
+        switch (kind)
+        {
+            case ConfigChange.Ui: _state.NotifyChanged(); break;
+            case ConfigChange.Chain: _state.NotifyChainChanged(); break;
+        }
+        SaveHint = hint;
+    }
+
     partial void OnMaxYearsPastChanged(int value)
     {
         _config.Extraction.MaxYearsPast = value;
-        SaveHint = "最多追溯年限已保存";
-        _state.SaveConfig();
+        if (_loading) return;
+        Persist("最多追溯年限已保存", ConfigChange.Chain);
     }
 
     partial void OnFutureDateBufferDaysChanged(int value)
     {
         _config.Extraction.FutureDateBufferDays = value;
-        SaveHint = "未来缓冲天数已保存";
-        _state.SaveConfig();
+        if (_loading) return;
+        Persist("未来缓冲天数已保存", ConfigChange.Chain);
     }
 
     partial void OnProgressIntervalChanged(int value)
     {
         _config.Scan.ProgressInterval = value;
-        SaveHint = "进度间隔已保存";
-        _state.SaveConfig(notifyChanged: false);
+        if (_loading) return;
+        Persist("进度间隔已保存", ConfigChange.Silent);
     }
 
     partial void OnMaxDegreeOfParallelismChanged(int value)
     {
         _config.Scan.MaxDegreeOfParallelism = value;
-        SaveHint = "扫描并发数已保存";
-        _state.SaveConfig(notifyChanged: false);
+        if (_loading) return;
+        Persist("扫描并发数已保存", ConfigChange.Silent);
     }
 
     partial void OnExecutionParallelismChanged(int value)
     {
         _config.Execute.MaxDegreeOfParallelism = value;
-        SaveHint = "执行并发数已保存";
-        _state.SaveConfig(notifyChanged: false);
+        if (_loading) return;
+        Persist("执行并发数已保存", ConfigChange.Silent);
     }
 
     partial void OnScanAllFilesChanged(bool value)
     {
         _config.Scan.ScanAllFiles = value;
-        SaveHint = "扫描所有文件选项已保存";
-        _state.SaveConfig();
+        if (_loading) return;
+        Persist("扫描所有文件选项已保存", ConfigChange.Ui);
     }
 
     partial void OnSupportedFormatsTextChanged(string value)
@@ -589,8 +621,8 @@ public partial class SettingsViewModel : ViewModelBase
             .Select(s => s.Trim().TrimStart('.'))
             .Where(s => s.Length > 0)
             .ToList();
-        SaveHint = "扩展名白名单已保存";
-        _state.SaveConfig();
+        if (_loading) return;
+        Persist("扩展名白名单已保存", ConfigChange.Chain);
     }
 
     /// <summary>主题切换即时生效（不等保存）。桌面注入 ThemeHelper.Apply；Android 侧可为空。</summary>
@@ -599,22 +631,22 @@ public partial class SettingsViewModel : ViewModelBase
         var theme = ThemeNameFromIndex(value);
         _config.General.Theme = theme;
         _applyTheme?.Invoke(theme);
-        SaveHint = "主题已保存";
-        _state.SaveConfig(notifyChanged: false);
+        if (_loading) return;
+        Persist("主题已保存", ConfigChange.Silent);
     }
 
     partial void OnWindowSizeChanged(string value)
     {
         _config.General.WindowSize = string.IsNullOrWhiteSpace(value) ? "1280x760" : value.Trim();
-        SaveHint = "窗口尺寸已保存";
-        _state.SaveConfig(notifyChanged: false);
+        if (_loading) return;
+        Persist("窗口尺寸已保存", ConfigChange.Silent);
     }
 
     partial void OnPreviewSizeChanged(int value)
     {
         _config.General.PreviewSize = value;
-        SaveHint = "预览图大小已保存";
-        _state.SaveConfig(notifyChanged: false);
+        if (_loading) return;
+        Persist("预览图大小已保存", ConfigChange.Silent);
     }
 
     private static readonly string[] ThemeNames = ["Default", "Light", "Dark"];

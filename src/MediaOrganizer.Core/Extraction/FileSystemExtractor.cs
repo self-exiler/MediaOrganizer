@@ -4,7 +4,7 @@ namespace MediaOrganizer.Core.Extraction;
 
 /// <summary>
 /// 文件系统提取器：以文件修改时间（mtime）兜底。默认禁用。
-/// 读取扫描时预取的 IMediaSource.ModifiedTime——SAF 下 File.GetLastWriteTimeUtc(content://…) 会抛异常被吞（ADR-0006 背景点 4）。
+/// 读取扫描时预取的 IMediaSource.ModifiedTime——SAF 下 File.GetLastWriteTimeUtc(content://…) 会抛异常被吞。
 /// </summary>
 public sealed class FileSystemExtractor(bool enabled, double weight) : IDateExtractor
 {

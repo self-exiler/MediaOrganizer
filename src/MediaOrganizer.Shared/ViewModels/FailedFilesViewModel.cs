@@ -33,7 +33,7 @@ public partial class FailedItem : ObservableObject
 }
 
 /// <summary>
-/// 失败文件：列表 + 预览 + 批量移动 + 打开系统应用（双端共享，ADR-0006 决策 4/5）。
+/// 失败文件：列表 + 预览 + 批量移动 + 打开系统应用（双端共享/5）。
 /// 批量移动下沉 Core PendingFileMover（流式复制 + 删除源，SAF/本地统一语义）；
 /// 确认弹窗 / 系统打开 / 缩略图预览经注入抽象（桌面实现齐全；Android 无预览、其余走系统 Intent）。
 /// </summary>
@@ -47,7 +47,7 @@ public partial class FailedFilesViewModel : ViewModelBase
 
     public event Action<IEnumerable<string>>? NavigateToMagic;
 
-    /// <summary>失败文件列表。用 AvaloniaList 以获得 AddRange 单次 CollectionChanged（perf-16：逐项 Add 上千条时每条都触发布局）。</summary>
+    /// <summary>失败文件列表。用 AvaloniaList 以获得 AddRange 单次 CollectionChanged。</summary>
     public Avalonia.Collections.AvaloniaList<FailedItem> Items { get; } = [];
 
     [ObservableProperty]
@@ -98,7 +98,7 @@ public partial class FailedFilesViewModel : ViewModelBase
             .ThenBy(x => x.Item.File.FileName)
             .Select(x => new FailedItem(x.Item, x.Fp))
             .ToArray();
-        Items.AddRange(items); // 单次 CollectionChanged（perf-16）
+        Items.AddRange(items); // 单次 CollectionChanged
         _logger.Info($"失败文件列表已刷新：{Items.Count} 个（按指纹聚类排序）");
     }
 
@@ -106,7 +106,7 @@ public partial class FailedFilesViewModel : ViewModelBase
     {
         ReplacePreview(null);
         PreviewInfo = value is null ? "选择文件查看预览" : value.Path;
-        // perf-13：快速切换选中时取消上一个未开始的解码任务，避免堆积 Magick 解码
+        // 快速切换选中时取消上一个未开始的解码任务，避免堆积 Magick 解码
         _previewCts?.Cancel();
         if (value is null) return;
         var cts = new CancellationTokenSource();
@@ -116,7 +116,7 @@ public partial class FailedFilesViewModel : ViewModelBase
 
     private CancellationTokenSource? _previewCts;
 
-    /// <summary>替换预览位图并释放旧实例（评审 2.14：Bitmap 是 IDisposable，不释放则原生位图持续增长）。</summary>
+    /// <summary>替换预览位图并释放旧实例。</summary>
     private void ReplacePreview(Bitmap? next)
     {
         var old = Preview;
@@ -217,10 +217,10 @@ public partial class FailedFilesViewModel : ViewModelBase
             var target = StorageFactory.CreateLocalStorage(targetDir);
             var progress = new Progress<double>(p => MoveProgress = p * 100);
             var files = items.Select(i => i.File.File).ToArray();
-            // 批量移动内含大量同步文件 IO（Exists/Length/Delete/CreateDirectory），移出 UI 线程（P1-1）
+            // 批量移动内含大量同步文件 IO（Exists/Length/Delete/CreateDirectory），移出 UI 线程
             var result = await Task.Run(() => new PendingFileMover().MoveAsync(files, target, progress));
 
-            // 从列表移除已移动的条目：按源完整路径判定（文件名会误伤不同目录的同名文件，审计 12）
+            // 从列表移除已移动的条目：按源完整路径判定（文件名会误伤不同目录的同名文件）
             var movedSet = result.MovedIdentifiers.ToHashSet(StringComparer.Ordinal);
             foreach (var item in items.Where(i => movedSet.Contains(i.File.File.Path)))
                 Items.Remove(item);

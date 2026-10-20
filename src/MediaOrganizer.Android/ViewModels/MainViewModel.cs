@@ -10,7 +10,7 @@ using MediaOrganizer.Shared.ViewModels;
 namespace MediaOrganizer.Android.ViewModels;
 
 /// <summary>抽屉导航项（FR-A7.1）：标签 + 页索引 + 失败文件角标（Badge=0 时角标隐藏）。
-/// 可变 ObservableObject：角标变化时原地更新属性，避免替换实例破坏 ListBox 选中状态（P1-8）。</summary>
+/// 可变 ObservableObject：角标变化时原地更新属性，避免替换实例破坏 ListBox 选中状态。</summary>
 public sealed partial class NavItem : ObservableObject
 {
     public NavItem(string label, int page)

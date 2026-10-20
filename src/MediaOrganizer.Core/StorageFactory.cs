@@ -7,18 +7,12 @@ using WebDAVClient.Helpers;
 
 namespace MediaOrganizer.Core;
 
-/// <summary>按配置/输出目标创建目标存储（ADR-0004）。</summary>
+/// <summary>按配置/输出目标创建目标存储。</summary>
 public static class StorageFactory
 {
-    /// <summary>
-    /// 本地目录存储工厂钩子：Android 组合根启动时设置为 SAF 实现（content:// URI），
-    /// 桌面保持默认 LocalFileStorage。待处理目录（PendingFileMover）同样经此创建。
-    /// </summary>
-    public static Func<string, IFileStorage>? CustomLocalStorageFactory { get; set; }
-
-    /// <summary>创建本地目录存储（桌面文件路径 / Android SAF 树 URI）。</summary>
+    /// <summary>创建本地目录存储（桌面文件路径 / Android content: URI 经 PlatformServices 换算真实路径）。</summary>
     public static IFileStorage CreateLocalStorage(string path)
-        => CustomLocalStorageFactory is { } factory ? factory(path) : new LocalFileStorage(path);
+        => Platforms.PlatformServices.Current.CreateLocalStorage(path);
 
     /// <summary>
     /// 依据 config 与当前选定的输出目标创建存储。
@@ -30,7 +24,7 @@ public static class StorageFactory
         if (string.IsNullOrEmpty(name))
             return CreateLocalStorage(config.Paths.OutputDir);
 
-        // 指定了网络位置却找不到该条目（多半已被删除）：必须报错，静默改写本地 OutputDir 会把文件送到用户以为的"网络"之外（审计 15）
+        // 指定了网络位置却找不到该条目（多半已被删除）：必须报错，静默改写本地 OutputDir 会把文件送到用户以为的"网络"之外
         var profile = config.NetworkProfiles.FirstOrDefault(p => p.Name == name)
             ?? throw new InvalidOperationException(
                 $"输出网络位置「{name}」不存在（可能已被删除）。请在设置中重新配置，或在工作台改选输出目标。");
@@ -110,7 +104,7 @@ public static class StorageFactory
     public static IFileStorage CreateProfileStorage(NetworkProfile profile)
         => profile.Type switch
         {
-            // ADR-0007：SMBLibrary 客户端 + 显式 NTLM 认证（凭据真正生效，替代旧 UNC 方式）
+            // SMBLibrary 客户端 + 显式 NTLM 认证（凭据真正生效，替代旧 UNC 方式）
             NetworkType.Smb => new SmbFileStorage(profile.Address, profile.Username, CredentialCrypto.Decrypt(profile.Password)),
             _ => new WebDavFileStorage(profile.Address, profile.Username, CredentialCrypto.Decrypt(profile.Password))
         };

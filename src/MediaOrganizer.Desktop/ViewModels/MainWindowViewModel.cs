@@ -57,7 +57,7 @@ public partial class MainWindowViewModel : ViewModelBase
             _logger.Warn($"损坏的模式文件已隔离至：{State.QuarantinedPatternsPath}");
         ThemeHelper.Apply(State.Config.General.Theme);
 
-        // 桌面平台服务注入共享 VM（ADR-0006 决策 4）：目录选取/另存为/确认/系统打开/缩略图
+        // 桌面平台服务注入共享 VM：目录选取/另存为/确认/系统打开/缩略图
         var folderPicker = new DesktopFolderPicker();
         Workbench = new WorkbenchViewModel(
             State, _logger, folderPicker,
@@ -65,7 +65,7 @@ public partial class MainWindowViewModel : ViewModelBase
             appData);
         FailedFiles = new FailedFilesViewModel(State, _logger,
             new DesktopConfirmDialog(), new DesktopSystemFileOpener(), new DesktopImageLoader());
-        MagicTools = new MagicToolsViewModel(State, appData);
+        MagicTools = new MagicToolsViewModel(State);
         Settings = new SettingsViewModel(State, ThemeHelper.Apply);
         Report = new ReportViewModel(new DesktopFileSaver());
         Logs = new LogsViewModel(_logger);
@@ -74,10 +74,10 @@ public partial class MainWindowViewModel : ViewModelBase
         Workbench.AnalysisCompleted += result =>
         {
             FailedFiles.Refresh(result);
-            Report.Set(result, State.Config.Paths.OutputDir, Workbench.LastReportText); // P1-1：复用 Session 报告，避免重复分组统计
+            Report.Set(result, State.Config.Paths.OutputDir, Workbench.LastReportText); // 复用 Session 报告，避免重复分组统计
             MagicTools.LoadFromAnalysisResult(result); // FR-7.1：魔术工具可用最近分析结果作样本
         };
-        State.ChainChanged += Workbench.RebuildChain; // 仅提取链相关变更重建；网络位置等持久化变更不作废分析结果（审计 11）
+        State.ChainChanged += Workbench.RebuildChain; // 仅提取链相关变更重建；网络位置等持久化变更不作废分析结果
         State.Changed += Workbench.ReloadPathsFromConfig; // 恢复出厂等重置后回读路径，避免旧目录写回配置
         State.Changed += () => FailedFiles.PendingDir = State.Config.Paths.PendingDir;
         State.Changed += Workbench.ReloadOutputTargets; // 网络位置增删 → 工作台目标下拉刷新

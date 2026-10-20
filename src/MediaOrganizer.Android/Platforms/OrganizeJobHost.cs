@@ -4,8 +4,8 @@ using Android.OS;
 using Avalonia.Threading;
 using MediaOrganizer.Core;
 using MediaOrganizer.Core.Analysis;
-using MediaOrganizer.Core.Diagnostics;
 using MediaOrganizer.Core.Execution;
+using MediaOrganizer.Core.Platforms;
 using MediaOrganizer.Shared.Services;
 
 namespace MediaOrganizer.Android.Platforms;
@@ -207,7 +207,7 @@ public sealed class OrganizeJobHost : IJobHost
         catch (Exception ex)
         {
             // FGS 启动失败（后台启动限制/ROM 拦截）：不阻断任务，退化为旧行为（退后台可能被回收）
-            CoreLog.Warn($"[JobHost] 前台服务启动失败，任务继续但退后台可能被系统回收：{ex.Message}");
+            PlatformServices.Current.Log($"[JobHost] 前台服务启动失败，任务继续但退后台可能被系统回收：{ex.Message}");
         }
     }
 
@@ -237,14 +237,14 @@ public sealed class OrganizeJobHost : IJobHost
                     }
                     catch (Exception ex)
                     {
-                        CoreLog.Warn($"[JobHost] 打开电池优化设置失败：{ex.Message}");
+                        PlatformServices.Current.Log($"[JobHost] 打开电池优化设置失败：{ex.Message}");
                     }
                 });
             });
         }
         catch (Exception ex)
         {
-            CoreLog.Warn($"[JobHost] 电池优化检查失败：{ex.Message}");
+            PlatformServices.Current.Log($"[JobHost] 电池优化检查失败：{ex.Message}");
         }
     }
 
@@ -262,7 +262,7 @@ public sealed class OrganizeJobHost : IJobHost
         }
         catch (Exception ex)
         {
-            CoreLog.Warn($"[JobHost] WifiLock 获取失败：{ex.Message}");
+            PlatformServices.Current.Log($"[JobHost] WifiLock 获取失败：{ex.Message}");
         }
     }
 

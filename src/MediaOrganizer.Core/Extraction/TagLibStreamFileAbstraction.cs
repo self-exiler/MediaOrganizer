@@ -1,9 +1,9 @@
 namespace MediaOrganizer.Core.Extraction;
 
 /// <summary>
-/// TagLib# 流抽象（ADR-0006 决策 2）：让容器元数据解析从 IMediaSource 流读取，
+/// TagLib# 流抽象：让容器元数据解析从 IMediaSource 流读取，
 /// 桌面传 FileStream、Android 传 ContentResolver 流——同一份解析代码双端共享。
-/// TagLib 需要可 seek 的流；不可 seek 的提供者降级拷贝到 MemoryStream（ADR-0006 风险表）。
+/// TagLib 需要可 seek 的流；不可 seek 的提供者降级拷贝到 MemoryStream。
 /// </summary>
 public sealed class TagLibStreamFileAbstraction(string name, Func<Stream> openRead) : TagLib.File.IFileAbstraction
 {

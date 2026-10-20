@@ -26,7 +26,7 @@ public partial class ReportViewModel : ViewModelBase
 
     public void Set(AnalysisResult result, string outputDir, string? pregenerated = null)
     {
-        // P1-1：优先复用 Session 已生成的报告文本（避免 UI 线程重复全量分组统计）；缺省时才现场生成
+        // 优先复用 Session 已生成的报告文本（避免 UI 线程重复全量分组统计）；缺省时才现场生成
         ReportText = pregenerated is { Length: > 0 }
             ? pregenerated
             : AnalysisReportGenerator.Generate(result, outputDir);

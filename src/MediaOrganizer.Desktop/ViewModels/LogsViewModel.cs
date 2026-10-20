@@ -22,7 +22,7 @@ public partial class LogsViewModel : ViewModelBase
 
     private void OnEntryAdded(LogEntry entry)
     {
-        // perf-17：已在 UI 线程则直接追加（Post 会把通知排队到下一轮循环，高频日志时堆积延迟）
+        // 已在 UI 线程则直接追加（Post 会把通知排队到下一轮循环，高频日志时堆积延迟）
         if (Dispatcher.UIThread.CheckAccess()) Append(entry);
         else Dispatcher.UIThread.Post(() => Append(entry));
     }

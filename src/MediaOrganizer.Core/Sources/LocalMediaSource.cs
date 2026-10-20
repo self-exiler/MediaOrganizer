@@ -4,7 +4,7 @@ namespace MediaOrganizer.Core.Sources;
 public sealed class LocalMediaSource : IMediaSource
 {
     private readonly FileInfo _info;
-    // perf-4：扫描时预取的长度/mtime（FileScanner 枚举时 FileInfo 已持有，避免提取链每文件重复 stat）；null = 按需读取
+    // 扫描时预取的长度/mtime（FileScanner 枚举时 FileInfo 已持有，避免提取链每文件重复 stat）；null = 按需读取
     private readonly long? _length;
     private readonly DateTimeOffset? _modifiedAt;
 

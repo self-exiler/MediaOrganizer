@@ -34,7 +34,7 @@ public sealed class ArchivePlanner(ClassificationLevel level, int futureDateBuff
 
     private string BuildRelative(DateTimeOffset date, DateTimeOffset now)
     {
-        // 统一按本地日期归档：时间戳/mtime 提取器产出 UTC 口径，其余为本地口径，在规划层一次性归一（审计 1）
+        // 统一按本地日期归档：时间戳/mtime 提取器产出 UTC 口径，其余为本地口径，在规划层一次性归一
         var local = date.ToLocalTime();
         var sub = level switch
         {

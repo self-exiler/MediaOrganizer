@@ -8,8 +8,8 @@ using MediaOrganizer.Android.Platforms;
 using MediaOrganizer.Android.ViewModels;
 using MediaOrganizer.Android.Views;
 using MediaOrganizer.Core;
-using MediaOrganizer.Core.Diagnostics;
 using MediaOrganizer.Core.Logging;
+using MediaOrganizer.Core.Platforms;
 using MediaOrganizer.Core.Scanning;
 using MediaOrganizer.Core.Security;
 using MediaOrganizer.Core.Storage;
@@ -57,20 +57,21 @@ public partial class App : Avalonia.Application
         if (state.QuarantinedPatternsPath is not null)
             logger.Warn($"损坏的模式文件已隔离至：{state.QuarantinedPatternsPath}");
 
-        // 平台服务注入：Keystore 凭据 + 双模式本地存储（content: → SAF；真实路径 → System.IO）+ EXIF/选取/导出/确认。
-        // 已获全局存储权限时把残留的 content: 树 URI 换算为真实路径（治愈旧配置/持久授权丢失），
-        // 输出与待处理目录同样受益（PendingFileMover 经 CreateLocalStorage 创建）。
-        CredentialCrypto.Current = new AndroidCredentialCrypto();
-        // Core 内部诊断（SMB 协商 MaxWriteSize、FGS 启动失败等）落到应用日志（评估文档 M0/P1）
-        CoreLog.Sink = message => logger.Info(message);
-        StorageFactory.CustomLocalStorageFactory = path =>
+        // 平台服务一次性注入（PlatformServices 取代旧三个全局静态钩子）：
+        // Keystore 凭据 + 本地存储（content: 树 URI 在「所有文件访问」下换算真实路径，映射失败明确报错——SAF 回退已删除）+ Core 诊断落应用日志。
+        PlatformServices.Current = new PlatformServices
         {
-            var real = SafPaths.IsSafIdentifier(path) && AndroidStorageAccess.HasAllFilesAccess
-                ? SafPaths.TryTreeUriToPath(path)
-                : null;
-            return SafPaths.IsSafIdentifier(path) && real is null
-                ? new AndroidSafStorage(path, activity.Resolver)
-                : new LocalFileStorage(real ?? path);
+            Credentials = new AndroidCredentialCrypto(),
+            LogSink = message => logger.Info(message),
+            LocalStorageFactory = path =>
+            {
+                var real = SafPaths.IsSafIdentifier(path) && AndroidStorageAccess.HasAllFilesAccess
+                    ? SafPaths.TryTreeUriToPath(path)
+                    : null;
+                if (SafPaths.IsSafIdentifier(path) && real is null)
+                    throw new IOException($"无法将所选目录映射为真实路径：{path}。请授予「所有文件访问」权限后重新选择目录。");
+                return new LocalFileStorage(real ?? path);
+            }
         };
 
         var folderPicker = new SafFolderPicker(activity);
@@ -79,7 +80,7 @@ public partial class App : Avalonia.Application
         var opener = new AndroidSystemFileOpener(activity);
         var wakeLock = new WakeLockHolder();
 
-        // 进程级任务宿主（评估文档 M1）：分析/执行交 dataSync 前台服务保活，退后台/锁屏不中断；
+        // 进程级任务宿主：分析/执行交 dataSync 前台服务保活，退后台/锁屏不中断；
         // CTS 随宿主，Activity 重建不失效。VM 图仅构建一次，宿主同样进程内单例。
         var jobHost = new OrganizeJobHost(confirm);
         OrganizeJobHost.Current = jobHost;
@@ -106,10 +107,10 @@ public partial class App : Avalonia.Application
         workbench.AnalysisCompleted += result =>
         {
             failedFiles.Refresh(result);
-            report.Set(result, state.Config.Paths.OutputDir, workbench.LastReportText); // P1-1：复用 Session 报告，避免重复分组统计
+            report.Set(result, state.Config.Paths.OutputDir, workbench.LastReportText); // 复用 Session 报告，避免重复分组统计
             main.RefreshFailedBadge(result);
         };
-        state.ChainChanged += workbench.RebuildChain; // 仅提取链变更重建，网络位置增删不作废分析结果（审计 11）
+        state.ChainChanged += workbench.RebuildChain; // 仅提取链变更重建，网络位置增删不作废分析结果
         state.Changed += workbench.ReloadPathsFromConfig; // 恢复出厂等重置后回读路径，避免旧目录写回配置
         state.Changed += () => failedFiles.PendingDir = state.Config.Paths.PendingDir;
         state.Changed += workbench.ReloadOutputTargets;

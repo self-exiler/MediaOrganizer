@@ -35,7 +35,7 @@ public sealed class WebDavFileStorage : IFileStorage
     }
 
     private string Resolve(string relativePath)
-        => _basePath + "/" + relativePath.TrimStart('/'); // _basePath 构造时已 TrimEnd（perf-9）
+        => _basePath + "/" + relativePath.TrimStart('/'); // _basePath 构造时已 TrimEnd
 
     private static string ParentOf(string relativePath)
     {
@@ -53,7 +53,7 @@ public sealed class WebDavFileStorage : IFileStorage
         catch (WebDAVException ex) when (ex.GetHttpCode() == 404)
         {
             // 仅 404 = 确定不存在；错误码 0 / HTTP 异常 / 其他状态码一律上抛，
-            // 由 FileOperator 的退避重试接管——瞬时故障误判「不存在」会让 Skip 策略形同虚设（审计 4）
+            // 由 FileOperator 的退避重试接管——瞬时故障误判「不存在」会让 Skip 策略形同虚设
             return false;
         }
     }
@@ -112,14 +112,14 @@ public sealed class WebDavFileStorage : IFileStorage
 
     public async Task<long> CopyFromAsync(IMediaSource source, string relativeTarget, IProgress<long>? progress = null, CancellationToken ct = default)
     {
-        // perf-9：Upload 本身是异步库调用，直接 await，勿再包 Task.Run 多一次线程切换
+        // Upload 本身是异步库调用，直接 await，勿再包 Task.Run 多一次线程切换
         var parent = ParentOf(relativeTarget);
         var name = relativeTarget[(relativeTarget.LastIndexOf('/') + 1)..];
         await using var src = source.OpenRead();
         var ok = await _client.Upload(Resolve(parent), src, name, null, ct);
         if (!ok) throw new IOException($"WebDAV 上传失败：{relativeTarget}");
         progress?.Report(source.Length);
-        // 上传后回查服务端实际长度自证（审计 4）：直接返回源长度会让 FileOperator 的大小校验恒真
+        // 上传后回查服务端实际长度自证：直接返回源长度会让 FileOperator 的大小校验恒真
         var actual = await GetLengthAsync(relativeTarget, ct);
         if (actual < 0)
             throw new IOException($"WebDAV 上传后无法回查文件大小：{relativeTarget}");
