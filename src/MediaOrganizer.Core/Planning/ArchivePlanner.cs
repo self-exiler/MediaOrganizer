@@ -34,13 +34,15 @@ public sealed class ArchivePlanner(ClassificationLevel level, int futureDateBuff
 
     private string BuildRelative(DateTimeOffset date, DateTimeOffset now)
     {
+        // 统一按本地日期归档：时间戳/mtime 提取器产出 UTC 口径，其余为本地口径，在规划层一次性归一（审计 1）
+        var local = date.ToLocalTime();
         var sub = level switch
         {
-            ClassificationLevel.Year => $"{date.Year:0000}",
-            ClassificationLevel.Month => $"{date.Year:0000}/{date.Month:00}",
-            _ => $"{date.Year:0000}/{date.Month:00}/{date.Day:00}"
+            ClassificationLevel.Year => $"{local.Year:0000}",
+            ClassificationLevel.Month => $"{local.Year:0000}/{local.Month:00}",
+            _ => $"{local.Year:0000}/{local.Month:00}/{local.Day:00}"
         };
         // 与校验器一致：仅超出 now+缓冲 的日期归入 FutureDate/
-        return date.Date > now.Date.AddDays(futureDateBufferDays) ? $"FutureDate/{sub}" : sub;
+        return local.Date > now.Date.AddDays(futureDateBufferDays) ? $"FutureDate/{sub}" : sub;
     }
 }

@@ -27,6 +27,13 @@ public sealed class WebDavFileStorage : IFileStorage
         _basePath = _client.BasePath;
     }
 
+    /// <summary>测试/DI 注入口：直接使用已配置好的 IClient（basePath 含前导 '/' 或为空串）。</summary>
+    public WebDavFileStorage(IClient client, string basePath)
+    {
+        _client = client;
+        _basePath = basePath;
+    }
+
     private string Resolve(string relativePath)
         => _basePath + "/" + relativePath.TrimStart('/'); // _basePath 构造时已 TrimEnd（perf-9）
 
@@ -43,13 +50,24 @@ public sealed class WebDavFileStorage : IFileStorage
             var item = await _client.GetFile(Resolve(relativePath), ct);
             return item is not null;
         }
-        catch (WebDAVException ex) when (ex.GetHttpCode() is 404 or 0)
+        catch (WebDAVException ex) when (ex.GetHttpCode() == 404)
         {
-            // 404 = 不存在；0 = 非 HTTP 错误（解析失败等）
+            // 仅 404 = 确定不存在；错误码 0 / HTTP 异常 / 其他状态码一律上抛，
+            // 由 FileOperator 的退避重试接管——瞬时故障误判「不存在」会让 Skip 策略形同虚设（审计 4）
             return false;
         }
-        catch (HttpRequestException)
+    }
+
+    /// <summary>建目录专用的宽容版：查询失败即视为不存在并尝试创建，误判由 WebDAVConflictException 兜底。</summary>
+    private async Task<bool> ExistsForCreateAsync(string relativePath, CancellationToken ct)
+    {
+        try
         {
+            return await ExistsAsync(relativePath, ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            System.Diagnostics.Debug.WriteLine($"[WebDavFileStorage] 目录探测失败按不存在处理 {relativePath}：{ex.Message}");
             return false;
         }
     }
@@ -63,7 +81,7 @@ public sealed class WebDavFileStorage : IFileStorage
         {
             current = current.Length == 0 ? seg : current + "/" + seg;
             if (_knownDirs.ContainsKey(current)) continue;
-            if (!await ExistsAsync(current + "/", ct))
+            if (!await ExistsForCreateAsync(current + "/", ct))
             {
                 try
                 {
@@ -101,8 +119,13 @@ public sealed class WebDavFileStorage : IFileStorage
         var ok = await _client.Upload(Resolve(parent), src, name, null, ct);
         if (!ok) throw new IOException($"WebDAV 上传失败：{relativeTarget}");
         progress?.Report(source.Length);
-        // 库按整个流上传且成功即完整，写入自证大小 = 源长度
-        return source.Length;
+        // 上传后回查服务端实际长度自证（审计 4）：直接返回源长度会让 FileOperator 的大小校验恒真
+        var actual = await GetLengthAsync(relativeTarget, ct);
+        if (actual < 0)
+            throw new IOException($"WebDAV 上传后无法回查文件大小：{relativeTarget}");
+        if (actual != source.Length)
+            throw new IOException($"WebDAV 上传大小校验失败：期望 {source.Length}，实际 {actual}");
+        return actual;
     }
 
     public Task DeleteAsync(string relativePath, CancellationToken ct = default)

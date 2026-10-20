@@ -396,7 +396,9 @@ public partial class MagicToolsViewModel : ViewModelBase
     private void GenerateVariants()
     {
         if (Samples.Count == 0) { SaveHint = "请先载入样本"; return; }
-        RegexText = PatternInferrer.GenerateVariantRegex(Samples.ToArray());
+        // 与测试/运行时口径统一：按不含扩展名的主文件名生成，否则正则会含字面 \.jpg 而永不命中（审计 6）
+        var nameOnlySamples = Samples.Select(s => Path.GetFileNameWithoutExtension(s) ?? s).ToArray();
+        RegexText = PatternInferrer.GenerateVariantRegex(nameOnlySamples);
         SaveHint = $"已按 {Samples.Count} 个样本生成多变体正则；点「测试」验证覆盖";
         TestRegex();
     }

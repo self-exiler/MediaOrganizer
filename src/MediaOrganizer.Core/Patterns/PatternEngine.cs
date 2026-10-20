@@ -94,6 +94,9 @@ public static class PatternEngine
 
         var year = Group("year", -1);
         if (year < 1) return null;
+        // 合理年份外的结果视为未命中，让提取循环继续尝试下一模式
+        // （用户 patterns.json 里的旧正则不会自动获得数字边界，紧凑日期可能从时间戳里抠出 16xx 年，审计 5）
+        if (year is < 1970 or > 2100) return null;
         var month = Group("month", 1);
         var day = Group("day", 1);
         var hour = Group("hour");

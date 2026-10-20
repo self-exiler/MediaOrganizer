@@ -39,7 +39,8 @@ public sealed class FileOperator
     private readonly int _maxDegreeOfParallelism;
     // 同一原始目标路径的碰撞检查 + 传输必须串行：并行下 Exists 检查与临时文件落盘交错会漏判同名（覆盖丢文件/漏计 Skipped）。
     // 执行结束后统一 Dispose，避免每文件一个信号量永不释放的累积泄漏（评审 2.10）
-    private readonly ConcurrentDictionary<string, SemaphoreSlim> _targetGates = new();
+    // 大小写比较器：Windows/SMB 文件系统不区分大小写，IMG.JPG 与 img.jpg 必须共用同一把闸（审计 3）
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _targetGates = new(StringComparer.OrdinalIgnoreCase);
 
     // M0 埋点：按毫秒收集各阶段耗时（含重试的每次尝试），执行结束聚合为 TransferTimingReport
     private readonly ConcurrentBag<double> _metaMs = new();
@@ -70,10 +71,10 @@ public sealed class FileOperator
 
         // perf-8：仅计划内重名的目标需要互斥闸（并行下同名目标的 Exists 检查与传输交错会漏判）；
         // 重名几乎不出现，避免每文件一次字典 + 信号量分配。
-        var duplicatedTargets = files.GroupBy(f => f.RelativeTarget)
+        var duplicatedTargets = files.GroupBy(f => f.RelativeTarget, StringComparer.OrdinalIgnoreCase)
             .Where(g => g.Count() > 1)
             .Select(g => g.Key)
-            .ToHashSet();
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         try
         {
@@ -105,7 +106,8 @@ public sealed class FileOperator
                         if (resolution.Action == CollisionAction.Rename) Interlocked.Increment(ref rename);
 
                         var temp = f.RelativeTarget + ".mo-tmp";
-                        await TransferWithRetryAsync(f, temp, resolution.Target, token);
+                        await TransferWithRetryAsync(f, temp, resolution.Target,
+                            resolution.Action == CollisionAction.Overwrite, token);
 
                         // move 语义：目标确认落盘后删除源（网络目标下 GUI 已禁用 move，此处防御性生效）
                         // SAF→SAF / SAF→网络的移动 = 流式复制 + 删除源，由 IMediaSource.Delete 保证（ADR-0006 决策 3）
@@ -169,7 +171,7 @@ public sealed class FileOperator
 
     private async Task<CollisionResolution> ResolveCollisionAsync(string relativeTarget, CancellationToken ct)
     {
-        if (!await _target.ExistsAsync(relativeTarget, ct))
+        if (!await ExistsWithRetryAsync(relativeTarget, ct))
             return new CollisionResolution(relativeTarget, CollisionAction.None);
 
         switch (_existAction)
@@ -177,7 +179,8 @@ public sealed class FileOperator
             case ExistAction.Skip:
                 return new CollisionResolution(null, CollisionAction.Skip);
             case ExistAction.Overwrite:
-                await _target.DeleteAsync(relativeTarget, ct);
+                // 删除时机挪到传输层：临时文件写完、即将改名前才删旧文件（审计 2）。
+                // 若在碰撞解析阶段先删，网络中断且重试耗尽时新旧俱失。
                 return new CollisionResolution(relativeTarget, CollisionAction.Overwrite);
             default:
                 var free = await FindFreeNameAsync(relativeTarget, ct);
@@ -185,7 +188,7 @@ public sealed class FileOperator
         }
     }
 
-    private async Task TransferWithRetryAsync(PlannedFile f, string temp, string finalTarget, CancellationToken ct)
+    private async Task TransferWithRetryAsync(PlannedFile f, string temp, string finalTarget, bool deleteBeforeMove, CancellationToken ct)
     {
         for (var attempt = 0; ; attempt++)
         {
@@ -210,6 +213,10 @@ public sealed class FileOperator
                     Interlocked.Add(ref _totalBytes, actual);
                     if (actual != expected)
                         throw new IOException($"大小校验失败：期望 {expected}，实际 {actual}");
+
+                    // Overwrite：新数据已完整落盘到 .mo-tmp，此刻才删旧文件（审计 2）
+                    if (deleteBeforeMove && await _target.ExistsAsync(finalTarget, ct))
+                        await TimeAsync(() => _target.DeleteAsync(finalTarget, ct), _metaMs);
 
                     await TimeAsync(() => _target.MoveAsync(temp, finalTarget, ct), _metaMs);
                 }
@@ -266,6 +273,26 @@ public sealed class FileOperator
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[FileOperator] 清理临时文件失败 {temp}：{ex.Message}");
+        }
+    }
+
+    /// <summary>存在检查与传输同等待遇：瞬时故障（网络存储的 Exists 上抛）走同样的 ≤3 次退避重试（审计 4）。</summary>
+    private async Task<bool> ExistsWithRetryAsync(string relativeTarget, CancellationToken ct)
+    {
+        for (var attempt = 0; ; attempt++)
+        {
+            try
+            {
+                return await _target.ExistsAsync(relativeTarget, ct);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception) when (attempt < MaxRetries - 1)
+            {
+                await Task.Delay(Backoff[Math.Min(attempt, Backoff.Length - 1)], ct);
+            }
         }
     }
 
