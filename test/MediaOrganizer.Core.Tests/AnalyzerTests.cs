@@ -59,7 +59,10 @@ public class AnalyzerTests : IDisposable
     {
         var analyzer = CoreFactory.CreateAnalyzer(Config(), PatternsStore.GetBuiltinPatterns());
         using var cts = new CancellationTokenSource();
-        cts.CancelAfter(TimeSpan.FromMilliseconds(1));
+        // 预先取消（原 1ms CancelAfter 与毫秒级小目录扫描存在竞态：CI 高负载下分析可能先跑完，
+        // 2026-11-04 夜间管道首次复现）。Analyzer 扫描循环入口即 ThrowIfCancellationRequested，
+        // 预取消令牌必然在起点抛 OCE，语义不变（验证取消能传播）且结果确定。
+        cts.Cancel();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => analyzer.AnalyzeAsync(_dir, null, cts.Token));
     }
 
