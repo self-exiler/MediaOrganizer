@@ -45,8 +45,10 @@ public class Application(IntPtr javaReference, JniHandleOwnership transfer) : Av
     Icon = "@mipmap/ic_launcher",
     MainLauncher = true,
     LaunchMode = LaunchMode.SingleTop,
-    // 软键盘弹出时压缩窗口（设置页底部输入框不被遮挡）；SoftInput 枚举在 Android.Views 命名空间
-    WindowSoftInputMode = Android.Views.SoftInput.AdjustResize,
+    // 软键盘弹出时压缩窗口（设置页底部输入框不被遮挡）。必须 global:: 限定：
+    // 本文件处于 MediaOrganizer.Android 命名空间，裸写 Android.Views 会被自身根命名空间
+    // 遮蔽（解析成 MediaOrganizer.Android.Views），与下方 global::Android.Manifest 同理
+    WindowSoftInputMode = global::Android.Views.SoftInput.AdjustResize,
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.UiMode
         | ConfigChanges.KeyboardHidden | ConfigChanges.SmallestScreenSize)]
 public class MainActivity : AvaloniaMainActivity
