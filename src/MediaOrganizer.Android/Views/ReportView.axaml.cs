@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using MediaOrganizer.Shared.ViewModels;
@@ -22,7 +23,9 @@ public partial class ReportView : UserControl
 
         try
         {
-            await clipboard.SetTextAsync(text);
+            // Avalonia 12 移除了 IClipboard.SetTextAsync 实例方法（v12 破坏性变更），
+            // 改经 ClipboardExtensions.SetTextAsync 扩展（Avalonia.Input 命名空间）
+            await ClipboardExtensions.SetTextAsync(clipboard, text);
         }
         catch
         {
