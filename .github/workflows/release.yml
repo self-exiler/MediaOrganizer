@@ -1,8 +1,11 @@
 name: release
 
-# 既定发布管线（技能约定：本地构建脚本与云端共用同一入口，发布完全由 v* 标签驱动）：
+# 既定发布管线（技能约定：本地构建脚本与云端共用同一入口）：
 # ① 推送 v* 标签 → 云端编译 → 构建成功才创建 GitHub Release 并附产物；
-# ② 手动 workflow_dispatch（填版本号）→ 仅编译 + 上传 Actions 产物，不创建 Release（验证管线/临时出包）。
+# ② 手动 workflow_dispatch（nightly=false，填版本号）→ 仅编译 + 上传 Actions 产物，不创建 Release（验证管线/临时出包）；
+# ③ 手动 workflow_dispatch（nightly=true）→ 夜间滚动预发布：固定 tag=nightly 的 prerelease，
+#    每次删除旧 Release/tag 后重建（下载链接恒定）；版本 = csproj 基数.run_number 四段数字，
+#    保证 MSI ProductVersion 严格变大、可覆盖升级（技能 versioning.md §3）。
 # 快速编译验证（不签名、不需要 secrets）请用 ci.yml。
 on:
   push:
@@ -10,9 +13,13 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "版本号（如 1.2.0，不带 v 前缀）"
+        description: "版本号（如 1.2.0，不带 v 前缀；nightly=true 时忽略）"
         required: true
         default: "1.2.0"
+      nightly:
+        description: "夜间版（滚动替换 nightly 预发布）"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -21,28 +28,45 @@ jobs:
   build-and-release:
     runs-on: windows-latest
     steps:
-      # fetch-depth: 0 拉全量历史,versionCode 用 git rev-list --count 计算
+      # fetch-depth: 0 拉全量历史,versionCode 用 git rev-list --count 计算;nightly notes 也依赖全量历史
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
-      # 版本号：tag 触发 → tag 名剥掉前导 v（startsWith 是文档保证的函数名，别写小写）；
-      # 手动触发 → inputs.version。versionCode(Android ApplicationVersion,必须单调递增)
-      # 用提交数自动生成,与仓库历史绑定,天然单调,发版零人肉。csproj 里的值仅作本地构建兜底。
+      # 版本号三态（单一出口，下游统一消费 APP_VERSION / RELEASE_TAG / PRERELEASE，不在别处重推规则）：
+      # tag 触发 → tag 名剥掉前导 v；手动普通 → inputs.version；手动 nightly → csproj 基数.run_number。
+      # versionCode(Android ApplicationVersion,必须单调递增)用提交数自动生成,与仓库历史绑定,天然单调,发版零人肉。
+      # csproj 里的值仅作本地构建兜底与 nightly 基数。
       - name: Resolve version
         shell: pwsh
         env:
           INPUT_VERSION: ${{ inputs.version }}
+          INPUT_NIGHTLY: ${{ inputs.nightly }}
         run: |
-          $v = $env:INPUT_VERSION
-          if ([string]::IsNullOrWhiteSpace($v)) { $v = "${{ github.ref_name }}".TrimStart('v', 'V') }
-          if ([string]::IsNullOrWhiteSpace($v)) { throw "版本号解析为空" }
+          $nightly = $env:INPUT_NIGHTLY -eq 'true'
+          $tag = ''
+          if ($nightly) {
+            # nightly 跳过 tag/源码一致性校验（版本号是算出来的，本就不等于源码版本）
+            $base = (Select-Xml -Path src/MediaOrganizer.Android/MediaOrganizer.Android.csproj `
+                     -XPath '/Project/PropertyGroup/ApplicationDisplayVersion').Node.InnerText
+            $v = "$base.$env:GITHUB_RUN_NUMBER"
+            $tag = 'nightly'
+          }
+          else {
+            $v = $env:INPUT_VERSION
+            if ([string]::IsNullOrWhiteSpace($v)) { $v = "${{ github.ref_name }}".TrimStart('v', 'V') }
+            if ([string]::IsNullOrWhiteSpace($v)) { throw "版本号解析为空" }
+            if ("${{ github.ref }}" -like 'refs/tags/*') { $tag = "${{ github.ref_name }}" }
+          }
           $code = [int](git rev-list --count HEAD)
           if ($code -lt 2) { throw "versionCode 异常: $code" }
           Write-Host "APP_VERSION = $v"
           Write-Host "VERSION_CODE = $code"
+          Write-Host "RELEASE_TAG = $tag"
           Add-Content $env:GITHUB_ENV "APP_VERSION=$v"
           Add-Content $env:GITHUB_ENV "VERSION_CODE=$code"
+          Add-Content $env:GITHUB_ENV "RELEASE_TAG=$tag"
+          Add-Content $env:GITHUB_ENV "PRERELEASE=$(if ($nightly) { 'true' } else { 'false' })"
 
       - uses: actions/setup-dotnet@v5
         with:
@@ -152,13 +176,50 @@ jobs:
           path: src/MediaOrganizer.Android/**/mapping.txt
           if-no-files-found: ignore
 
-      # 仅 tag 触发创建 Release，且排在构建、产物上传之后——构建失败就不会出现不完整的 Release
+      # nightly 滚动替换准备（技能 pipeline.md §6）：固定 tag=nightly，先删旧 Release 再删 tag
+      # （反序会在 Release 上留悬空引用）；首次运行两者都不存在，失败必须显式吞掉。
+      # 之后 Create GitHub Release 以同名 tag 重建，自动指向当前 commit——下载链接恒定。
+      - name: Delete previous nightly release and tag
+        if: env.RELEASE_TAG == 'nightly'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete nightly --yes --cleanup-tag
+          if ($LASTEXITCODE -ne 0) { Write-Host "旧 nightly Release 不存在，跳过" }
+          gh api -X DELETE "repos/$env:GITHUB_REPOSITORY/git/refs/tags/nightly"
+          if ($LASTEXITCODE -ne 0) { Write-Host "nightly tag 不存在，跳过" }
+
+      # 仅 tag（正式版）与 nightly（滚动预发布）创建 Release，且排在构建、产物上传之后——
+      # 构建失败就不会出现不完整的 Release。nightly 的 notes 为自上一正式 tag 以来的提交清单。
+      - name: Prepare release notes
+        if: env.RELEASE_TAG == 'nightly'
+        shell: pwsh
+        run: |
+          $last = git describe --tags --abbrev=0 --exclude nightly
+          if ($LASTEXITCODE -ne 0) { $range = 'HEAD~30..HEAD' } else { $range = "$last..HEAD" }
+          $log = git log $range --oneline --no-decorate
+          @(
+            "> 夜间构建（滚动预发布），未经完整回归，不建议日常使用。",
+            "> 版本 $env:APP_VERSION = 源码基数 + 构建号 #$env:GITHUB_RUN_NUMBER（保证可覆盖升级）。",
+            "> Android 崩溃排障需配合 Actions 产物中的 mapping.txt（不随 Release 分发）。",
+            "",
+            "自上一正式版本以来的变更：",
+            "",
+            $log
+          ) | Set-Content packaging/releases/nightly-notes.md
+          Write-Host "--- nightly notes ---"
+          Get-Content packaging/releases/nightly-notes.md
+
       - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: env.RELEASE_TAG != ''
         uses: softprops/action-gh-release@v3
         with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          prerelease: ${{ env.PRERELEASE }}
+          body_path: ${{ env.RELEASE_TAG == 'nightly' && 'packaging/releases/nightly-notes.md' || '' }}
           files: |
             packaging/releases/*.msi
             packaging/releases/MediaOrganizer-android-arm64-*.apk
-          generate_release_notes: true
+          generate_release_notes: ${{ env.RELEASE_TAG != 'nightly' }}
           fail_on_unmatched_files: true
