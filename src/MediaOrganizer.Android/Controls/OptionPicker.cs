@@ -3,6 +3,9 @@ using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
 using MediaOrganizer.Shared.Services;
+// Android 项目自动生成的全局 using 含 Android.Widget，裸写 Button 与 Avalonia.Controls.Button 二义（CS0104），
+// 与 Views/*.axaml.cs 的既有别名写法保持一致
+using Button = Avalonia.Controls.Button;
 
 namespace MediaOrganizer.Android.Controls;
 

@@ -3,6 +3,7 @@ using Android.Content;
 using Android.Content.PM;
 using Android.OS;
 using Android.Runtime;
+using Android.Views.InputMethod;
 using Avalonia.Android;
 using MediaOrganizer.Android.Platforms;
 
