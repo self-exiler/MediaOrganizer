@@ -185,10 +185,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release delete nightly --yes --cleanup-tag
+          gh release delete nightly --yes --cleanup-tag 2>$null
           if ($LASTEXITCODE -ne 0) { Write-Host "旧 nightly Release 不存在，跳过" }
-          gh api -X DELETE "repos/$env:GITHUB_REPOSITORY/git/refs/tags/nightly"
+          gh api -X DELETE "repos/$env:GITHUB_REPOSITORY/git/refs/tags/nightly" 2>$null
           if ($LASTEXITCODE -ne 0) { Write-Host "nightly tag 不存在，跳过" }
+          # Actions 的 pwsh 包装会在脚本尾执行 exit $LASTEXITCODE：上面两路失败都是预期内
+          # （首次运行不存在），必须显式归零；真实失败由后续产物校验与 Release 步骤把守
+          $global:LASTEXITCODE = 0
 
       # 仅 tag（正式版）与 nightly（滚动预发布）创建 Release，且排在构建、产物上传之后——
       # 构建失败就不会出现不完整的 Release。nightly 的 notes 为自上一正式 tag 以来的提交清单。
