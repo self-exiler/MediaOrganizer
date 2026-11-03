@@ -8,6 +8,7 @@ using MediaOrganizer.Core.Logging;
 using MediaOrganizer.Core.Models;
 using MediaOrganizer.Core.Patterns;
 using MediaOrganizer.Shared.Services;
+using System.ComponentModel;
 
 namespace MediaOrganizer.Shared.ViewModels;
 
@@ -71,6 +72,10 @@ public partial class FailedFilesViewModel : ViewModelBase
     [ObservableProperty]
     private string _moveHint = "";
 
+    /// <summary>批量操作栏全选按钮文案：已全选时切「取消全选」（审查报告3 P2）。</summary>
+    [ObservableProperty]
+    private string _selectAllText = "全选";
+
     public FailedFilesViewModel(
         AppState state,
         AppLogger logger,
@@ -99,8 +104,24 @@ public partial class FailedFilesViewModel : ViewModelBase
             .Select(x => new FailedItem(x.Item, x.Fp))
             .ToArray();
         Items.AddRange(items); // 单次 CollectionChanged
+        foreach (var item in items)
+            item.PropertyChanged += OnItemPropertyChanged; // 任一勾选变化 → 刷新全选文案
+        UpdateSelectAllText();
         _logger.Info($"失败文件列表已刷新：{Items.Count} 个（按指纹聚类排序）");
     }
+
+    /// <summary>批量勾选中置位：抑制逐项文案刷新（否则上千条目一次全选触发 O(n²) 重算）。</summary>
+    private bool _batchChecking;
+
+    private void OnItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (_batchChecking) return;
+        if (e.PropertyName == nameof(FailedItem.IsChecked))
+            UpdateSelectAllText();
+    }
+
+    private void UpdateSelectAllText()
+        => SelectAllText = Items.Count > 0 && Items.All(i => i.IsChecked) ? "取消全选" : "全选";
 
     partial void OnSelectedChanged(FailedItem? value)
     {
@@ -168,8 +189,17 @@ public partial class FailedFilesViewModel : ViewModelBase
     private void ToggleSelectAll()
     {
         var check = Items.Any(i => !i.IsChecked);
-        foreach (var i in Items)
-            i.IsChecked = check;
+        _batchChecking = true;
+        try
+        {
+            foreach (var i in Items)
+                i.IsChecked = check;
+        }
+        finally
+        {
+            _batchChecking = false;
+        }
+        UpdateSelectAllText();
     }
 
     [RelayCommand]
@@ -223,7 +253,11 @@ public partial class FailedFilesViewModel : ViewModelBase
             // 从列表移除已移动的条目：按源完整路径判定（文件名会误伤不同目录的同名文件）
             var movedSet = result.MovedIdentifiers.ToHashSet(StringComparer.Ordinal);
             foreach (var item in items.Where(i => movedSet.Contains(i.File.File.Path)))
+            {
+                item.PropertyChanged -= OnItemPropertyChanged; // 与 Refresh 的订阅对称，条目释放后不留引用
                 Items.Remove(item);
+            }
+            UpdateSelectAllText();
 
             MoveHint = $"移动完成：成功 {result.Moved}，失败 {result.Failed}";
             _logger.Info(MoveHint);

@@ -1,11 +1,25 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:MediaOrganizer.Android"
+             xmlns:c="using:MediaOrganizer.Android.Controls"
              xmlns:vm="using:MediaOrganizer.Shared.ViewModels"
              x:Class="MediaOrganizer.Android.Views.SettingsView"
              x:DataType="vm:SettingsViewModel">
 
     <ScrollViewer>
         <StackPanel Margin="16" Spacing="12">
+
+            <!-- ===== 外观（主题跟随系统/浅色/深色，审查报告3 F2：ThemeOptions 此前在安卓端未接线） ===== -->
+            <TextBlock Classes="sectionTitle" Text="外观"/>
+            <Border Classes="card">
+                <StackPanel Spacing="6">
+                    <TextBlock Text="主题" FontSize="{StaticResource FontSizeSecondary}"
+                               Foreground="{DynamicResource SystemControlForegroundBaseMediumHighBrush}"/>
+                    <c:OptionPicker Title="主题"
+                                    Options="{Binding ThemeOptions}"
+                                    SelectedIndex="{Binding ThemeIndex, Mode=TwoWay}"/>
+                </StackPanel>
+            </Border>
 
             <!-- ===== 提取器（FR-A8.1） ===== -->
             <TextBlock Classes="sectionTitle" Text="提取器"/>
@@ -15,37 +29,48 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:ExtractorSettingVM">
                                 <StackPanel Spacing="6" Margin="0,4">
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <TextBlock Text="{Binding DisplayLabel}" FontSize="14"
-                                                   Foreground="{StaticResource TextBrush}" VerticalAlignment="Center"/>
+                                    <Grid ColumnDefinitions="*,Auto" MinHeight="44">
+                                        <TextBlock Text="{Binding DisplayLabel}" FontSize="{StaticResource FontSizeBody}"
+                                                   Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}" VerticalAlignment="Center"/>
                                         <ToggleSwitch Grid.Column="1" IsChecked="{Binding Enabled}"/>
                                     </Grid>
-                                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
-                                        <Slider Minimum="0" Maximum="2" SmallChange="0.1" LargeChange="0.5"
-                                        TickFrequency="0.1" IsSnapToTickEnabled="True"
-                                        Value="{Binding Weight}" MinHeight="36"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding Weight, StringFormat='{}{0:F1}'}"
-                                                   FontSize="12" Foreground="{StaticResource AccentBrush}"
-                                                   FontWeight="SemiBold" Width="36" TextAlignment="Right"
+                                    <!-- 权重 0–2 / 步进 0.1：触屏精确拖动困难，改 −/+ 步进器（审查报告2 M6）；
+                                         "−"/"+" 用 ASCII 字符，不依赖符号字形 -->
+                                    <Grid ColumnDefinitions="*,Auto" MinHeight="48" Margin="0,0,0,6">
+                                        <TextBlock Grid.Column="0" Text="权重（数值越高优先级越高）" FontSize="{StaticResource FontSizeSecondary}"
+                                                   Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                                    VerticalAlignment="Center"/>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                            <Button Classes="sm" Content="-" MinWidth="44" Click="OnWeightDecrement"/>
+                                            <TextBlock Text="{Binding Weight, StringFormat='{}{0:F1}'}"
+                                                       FontSize="{StaticResource FontSizeBody}"
+                                                       Foreground="{DynamicResource AccentBrush}"
+                                                       FontWeight="SemiBold" Width="36" TextAlignment="Right"
+                                                       VerticalAlignment="Center"/>
+                                            <Button Classes="sm" Content="+" MinWidth="44" Click="OnWeightIncrement"/>
+                                        </StackPanel>
                                     </Grid>
-                                    <Separator Background="#F0F0F0"/>
+                                    <Separator Background="{DynamicResource SystemControlForegroundBaseLowBrush}"/>
                                 </StackPanel>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
                     <StackPanel Spacing="6">
-                        <TextBlock Text="最大年份回溯（max_years_past）" FontSize="12" Foreground="#616161"/>
-                        <ComboBox ItemsSource="{Binding MaxYearsOptions}"
-                                  SelectedValueBinding="{ReflectionBinding Value}"
-                                  SelectedValue="{Binding MaxYearsPast}"/>
+                        <TextBlock Text="最大年份回溯（max_years_past）" FontSize="{StaticResource FontSizeSecondary}"
+                                   Foreground="{DynamicResource SystemControlForegroundBaseMediumHighBrush}"/>
+                        <c:OptionPicker Title="最大年份回溯"
+                                        Options="{Binding MaxYearsOptions}"
+                                        SelectedValueMember="Value"
+                                        SelectedValue="{Binding MaxYearsPast, Mode=TwoWay}"/>
                     </StackPanel>
                     <StackPanel Spacing="6">
-                        <TextBlock Text="未来日期缓冲（future_date_buffer_days）" FontSize="12" Foreground="#616161"/>
-                        <ComboBox ItemsSource="{Binding FutureBufferOptions}"
-                                  SelectedValueBinding="{ReflectionBinding Value}"
-                                  SelectedValue="{Binding FutureDateBufferDays}"/>
+                        <TextBlock Text="未来日期缓冲（future_date_buffer_days）" FontSize="{StaticResource FontSizeSecondary}"
+                                   Foreground="{DynamicResource SystemControlForegroundBaseMediumHighBrush}"/>
+                        <c:OptionPicker Title="未来日期缓冲"
+                                        Options="{Binding FutureBufferOptions}"
+                                        SelectedValueMember="Value"
+                                        SelectedValue="{Binding FutureDateBufferDays, Mode=TwoWay}"/>
                     </StackPanel>
                 </StackPanel>
             </Border>
@@ -59,10 +84,12 @@
                             <DataTemplate x:DataType="vm:PatternSettingVM">
                                 <Grid ColumnDefinitions="*,Auto" MinHeight="52">
                                     <StackPanel Spacing="2" VerticalAlignment="Center" Margin="8,0">
-                                        <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="Medium"
-                                                   Foreground="{StaticResource TextBrush}"/>
-                                        <TextBlock FontSize="11" Foreground="{StaticResource MutedBrush}"
-                                                   TextTrimming="CharacterEllipsis" MaxWidth="230">
+                                        <TextBlock Text="{Binding Name}" FontSize="{StaticResource FontSizeBody}" FontWeight="Medium"
+                                                   Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+                                        <!-- 星号列宽 + TextTrimming 取代硬编码 MaxWidth（审查报告2 M7、报告3 P2） -->
+                                        <TextBlock FontSize="{StaticResource FontSizeSecondary}"
+                                                   Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                                   TextTrimming="CharacterEllipsis">
                                             <Run Text="{Binding Regex}"/><Run Text=" · "/><Run Text="{Binding Source}"/>
                                             <Run Text=" · 忽略组 "/><Run Text="{Binding IgnoredGroupsText}"/>
                                             <Run Text=" · 时间戳 "/><Run Text="{Binding TimestampLengthText}"/>
@@ -73,10 +100,9 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
-                    <Border Background="#F3F9FD" BorderBrush="#C3DCF1" BorderThickness="1" CornerRadius="8"
-                            Padding="12,8" Margin="8,4">
+                    <Border Classes="tip infoTip" Margin="8,4">
                         <TextBlock Text="提示：如需新增自定义模式，请在桌面版魔术工具中编辑后把 patterns.json 复制到手机。"
-                                   FontSize="12" Foreground="#0F4E7D" TextWrapping="Wrap"/>
+                                   FontSize="{StaticResource FontSizeSecondary}" TextWrapping="Wrap"/>
                     </Border>
                 </StackPanel>
             </Border>
@@ -88,27 +114,38 @@
                     <ItemsControl ItemsSource="{Binding NetworkProfiles}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:NetworkProfileVM">
-                                <Grid ColumnDefinitions="*,Auto,Auto,Auto" MinHeight="56" Margin="8,0">
-                                    <StackPanel Spacing="2" VerticalAlignment="Center">
-                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="Medium"
-                                                       Foreground="{StaticResource TextBrush}"/>
-                                            <Border Background="#E8F2FB" CornerRadius="10" Padding="8,1">
-                                                <TextBlock Text="{Binding TypeLabel}" FontSize="10" Foreground="#0F4E7D"/>
-                                            </Border>
-                                        </StackPanel>
-                                        <TextBlock Text="{Binding Address}" FontSize="11"
-                                                   Foreground="{StaticResource MutedBrush}"
-                                                   TextTrimming="CharacterEllipsis" MaxWidth="170"/>
-                                        <TextBlock Text="{Binding VerifiedLabel}" FontSize="10"
-                                                   Foreground="{StaticResource MutedBrush}"/>
-                                    </StackPanel>
-                                    <Button Grid.Column="1" Content="编辑" Classes="sm" Margin="4,0"
-                                            Click="OnEditProfile" VerticalAlignment="Center"/>
-                                    <Button Grid.Column="2" Content="删除" Classes="sm" Margin="4,0"
-                                            Click="OnDeleteProfile" VerticalAlignment="Center"/>
-                                    <Button Grid.Column="3" Content="测试" Classes="sm"
-                                            Click="OnTestProfile" VerticalAlignment="Center"/>
+                                <!-- 整行点击进编辑 + 行尾「⋯」菜单（编辑/测试/删除），三个 36dp 小按钮并排的
+                                     误触问题收敛（审查报告2 M4、报告3 触控 P1） -->
+                                <Grid ColumnDefinitions="*,Auto" MinHeight="56" Margin="8,0">
+                                    <Button Classes="rowAction" Click="OnEditProfile">
+                                        <Grid ColumnDefinitions="*,Auto" MinHeight="48">
+                                            <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <TextBlock Text="{Binding Name}" FontSize="{StaticResource FontSizeBody}" FontWeight="Medium"
+                                                               Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+                                                    <Border Background="{DynamicResource InfoTipBgBrush}" CornerRadius="99" Padding="8,1">
+                                                        <TextBlock Text="{Binding TypeLabel}" FontSize="{StaticResource FontSizeSecondary}"
+                                                                   Foreground="{DynamicResource InfoTipTextBrush}"/>
+                                                    </Border>
+                                                </StackPanel>
+                                                <TextBlock Text="{Binding Address}" FontSize="{StaticResource FontSizeSecondary}"
+                                                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                    <PathIcon Data="{x:Static local:AppIcons.Check}" Width="12" Height="12"
+                                                              Foreground="{DynamicResource SuccessBrush}"
+                                                              IsVisible="{Binding IsVerified}" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding VerifiedTimeText}" FontSize="{StaticResource FontSizeSecondary}"
+                                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Button>
+                                    <Button Classes="rowAction" Grid.Column="1" Width="48" Height="48"
+                                            VerticalAlignment="Center" Click="OnMoreProfile">
+                                        <PathIcon Data="{x:Static local:AppIcons.Dots}" Width="18" Height="18"
+                                                  Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                                    </Button>
                                 </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -119,32 +156,41 @@
                     </Grid>
 
                     <!-- 连接编辑表单（新增/编辑共用，FR-A8.3） -->
-                    <Border IsVisible="{Binding EditingNetwork}" Background="#FAFAFA"
-                            CornerRadius="8" Padding="12" Margin="8,4" BorderBrush="#E5E5E5" BorderThickness="1">
+                    <Border IsVisible="{Binding EditingNetwork}"
+                            Background="{DynamicResource SystemControlBackgroundListLowBrush}"
+                            CornerRadius="{StaticResource RadiusS}" Padding="12" Margin="8,4"
+                            BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="1">
                         <StackPanel Spacing="10">
                             <StackPanel Spacing="6">
-                                <TextBlock Text="类型" FontSize="12" Foreground="#616161"/>
-                                <ComboBox ItemsSource="{Binding NetworkTypeOptions}"
-                                          SelectedIndex="{Binding EditTypeIndex, Mode=TwoWay}"/>
+                                <TextBlock Text="类型" FontSize="{StaticResource FontSizeSecondary}"
+                                           Foreground="{DynamicResource SystemControlForegroundBaseMediumHighBrush}"/>
+                                <c:OptionPicker Title="类型"
+                                                Options="{Binding NetworkTypeOptions}"
+                                                SelectedIndex="{Binding EditTypeIndex, Mode=TwoWay}"/>
                             </StackPanel>
                             <StackPanel Spacing="6">
-                                <TextBlock Text="名称" FontSize="12" Foreground="#616161"/>
+                                <TextBlock Text="名称" FontSize="{StaticResource FontSizeSecondary}"
+                                           Foreground="{DynamicResource SystemControlForegroundBaseMediumHighBrush}"/>
                                 <TextBox Text="{Binding EditName, Mode=TwoWay}" PlaceholderText="家里的 NAS"/>
                             </StackPanel>
                             <StackPanel Spacing="6">
-                                <TextBlock Text="地址" FontSize="12" Foreground="#616161"/>
+                                <TextBlock Text="地址" FontSize="{StaticResource FontSizeSecondary}"
+                                           Foreground="{DynamicResource SystemControlForegroundBaseMediumHighBrush}"/>
                                 <TextBox Text="{Binding EditAddress, Mode=TwoWay}" PlaceholderText="\\192.168.1.10\photos 或 https://dav.example.com/dav"/>
                             </StackPanel>
                             <!-- 手机宽度下并排会挤压重叠，改为整行纵向堆叠 -->
                             <StackPanel Spacing="6">
-                                <TextBlock Text="用户名" FontSize="12" Foreground="#616161"/>
+                                <TextBlock Text="用户名" FontSize="{StaticResource FontSizeSecondary}"
+                                           Foreground="{DynamicResource SystemControlForegroundBaseMediumHighBrush}"/>
                                 <TextBox Text="{Binding EditUsername, Mode=TwoWay}"/>
                             </StackPanel>
                             <StackPanel Spacing="6">
-                                <TextBlock Text="密码（Keystore 加密存储）" FontSize="12" Foreground="#616161" TextWrapping="Wrap"/>
+                                <TextBlock Text="密码（Keystore 加密存储）" FontSize="{StaticResource FontSizeSecondary}"
+                                           Foreground="{DynamicResource SystemControlForegroundBaseMediumHighBrush}" TextWrapping="Wrap"/>
                                 <TextBox Text="{Binding EditPassword, Mode=TwoWay}" PasswordChar="•"/>
                             </StackPanel>
-                            <TextBlock Text="{Binding NetworkHint}" FontSize="12" Foreground="#8A3714" TextWrapping="Wrap"
+                            <TextBlock Text="{Binding NetworkHint}" FontSize="{StaticResource FontSizeSecondary}"
+                                       Foreground="{DynamicResource WarnTipTextBrush}" TextWrapping="Wrap"
                                        IsVisible="{Binding NetworkHint, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                             <Grid ColumnDefinitions="*,8,*,8,*">
                                 <Button Grid.Column="0" Content="测试连接" Click="OnTestEditing"/>
@@ -154,10 +200,9 @@
                         </StackPanel>
                     </Border>
 
-                    <Border Background="#F3F9FD" BorderBrush="#C3DCF1" BorderThickness="1" CornerRadius="8"
-                            Padding="12,8" Margin="8,4">
+                    <Border Classes="tip infoTip" Margin="8,4">
                         <TextBlock Text="提示：网络目标仅支持复制（copy）；SMB 需账号密码认证（首版不支持匿名）。"
-                                   FontSize="12" Foreground="#0F4E7D" TextWrapping="Wrap"/>
+                                   FontSize="{StaticResource FontSizeSecondary}" TextWrapping="Wrap"/>
                     </Border>
                 </StackPanel>
             </Border>
@@ -166,34 +211,42 @@
             <TextBlock Classes="sectionTitle" Text="扫描参数"/>
             <Border Classes="card">
                 <StackPanel Spacing="14">
-                    <Grid ColumnDefinitions="*,Auto">
+                    <Grid ColumnDefinitions="*,Auto" MinHeight="48">
                         <StackPanel Spacing="2" VerticalAlignment="Center">
-                            <TextBlock Text="扫描所有文件" FontSize="14" Foreground="{StaticResource TextBrush}"/>
-                            <TextBlock Text="忽略扩展名白名单" FontSize="12" Foreground="{StaticResource MutedBrush}"/>
+                            <TextBlock Text="扫描所有文件" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+                            <TextBlock Text="忽略扩展名白名单" FontSize="{StaticResource FontSizeSecondary}"
+                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
                         </StackPanel>
                         <ToggleSwitch Grid.Column="1" IsChecked="{Binding ScanAllFiles}"/>
                     </Grid>
                     <StackPanel Spacing="6">
-                        <TextBlock Text="扩展名白名单（逗号分隔）" FontSize="12" Foreground="#616161"/>
+                        <TextBlock Text="扩展名白名单（逗号分隔）" FontSize="{StaticResource FontSizeSecondary}"
+                                   Foreground="{DynamicResource SystemControlForegroundBaseMediumHighBrush}"/>
                         <TextBox Text="{Binding SupportedFormatsText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" MinHeight="72"
                                  AcceptsReturn="True" TextWrapping="Wrap"/>
                     </StackPanel>
                     <StackPanel Spacing="6">
-                        <TextBlock Text="扫描并行度" FontSize="12" Foreground="#616161"/>
-                        <ComboBox ItemsSource="{Binding ScanParallelOptions}"
-                                  SelectedValueBinding="{ReflectionBinding Value}"
-                                  SelectedValue="{Binding MaxDegreeOfParallelism}"/>
+                        <TextBlock Text="扫描并行度" FontSize="{StaticResource FontSizeSecondary}"
+                                   Foreground="{DynamicResource SystemControlForegroundBaseMediumHighBrush}"/>
+                        <c:OptionPicker Title="扫描并行度"
+                                        Options="{Binding ScanParallelOptions}"
+                                        SelectedValueMember="Value"
+                                        SelectedValue="{Binding MaxDegreeOfParallelism, Mode=TwoWay}"/>
                     </StackPanel>
                     <StackPanel Spacing="6">
-                        <TextBlock Text="执行并行度（SMB 目标单连接串行，此设置无效）" FontSize="12" Foreground="#616161"/>
-                        <ComboBox ItemsSource="{Binding ExecParallelOptions}"
-                                  SelectedValueBinding="{ReflectionBinding Value}"
-                                  SelectedValue="{Binding ExecutionParallelism}"/>
+                        <TextBlock Text="执行并行度（SMB 目标单连接串行，此设置无效）" FontSize="{StaticResource FontSizeSecondary}"
+                                   Foreground="{DynamicResource SystemControlForegroundBaseMediumHighBrush}"/>
+                        <c:OptionPicker Title="执行并行度"
+                                        Options="{Binding ExecParallelOptions}"
+                                        SelectedValueMember="Value"
+                                        SelectedValue="{Binding ExecutionParallelism, Mode=TwoWay}"/>
                     </StackPanel>
                 </StackPanel>
             </Border>
 
-            <TextBlock Text="{Binding SaveHint}" FontSize="12" Foreground="#107C10" Margin="4,2"
+            <TextBlock Text="{Binding SaveHint}" FontSize="{StaticResource FontSizeSecondary}"
+                       Foreground="{DynamicResource SuccessBrush}" Margin="4,2"
                        TextWrapping="Wrap"
                        IsVisible="{Binding SaveHint, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
             <Border Height="16"/>

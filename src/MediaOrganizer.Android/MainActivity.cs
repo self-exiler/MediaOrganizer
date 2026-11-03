@@ -45,6 +45,7 @@ public class Application(IntPtr javaReference, JniHandleOwnership transfer) : Av
     Icon = "@mipmap/ic_launcher",
     MainLauncher = true,
     LaunchMode = LaunchMode.SingleTop,
+    WindowSoftInputMode = SoftInput.AdjustResize,
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.UiMode
         | ConfigChanges.KeyboardHidden | ConfigChanges.SmallestScreenSize)]
 public class MainActivity : AvaloniaMainActivity
@@ -64,16 +65,18 @@ public class MainActivity : AvaloniaMainActivity
         ((App)Avalonia.Application.Current!).InitializeApp(this);
         base.OnCreate(savedInstanceState);
 
-        // FR-A7.3：返回键——抽屉打开时仅关抽屉（callback 启用期间拦截）；关闭时走系统默认（退出）
+        // FR-A7.3（审查报告2 M2 修订）：返回键——抽屉开着仅关抽屉；处于设置/报告/失败文件页先回工作台；
+        // 工作台且抽屉关闭时走系统默认（退出）
         _backCallback = new DrawerBackCallback();
         OnBackPressedDispatcher.AddCallback(this, _backCallback);
         if (App.Main is { } main)
         {
-            SyncBackCallback(main.DrawerOpen);
+            SyncBackCallback(main);
             main.PropertyChanged += (_, e) =>
             {
-                if (e.PropertyName == nameof(ViewModels.MainViewModel.DrawerOpen))
-                    SyncBackCallback(main.DrawerOpen);
+                if (e.PropertyName is nameof(ViewModels.MainViewModel.DrawerOpen)
+                    or nameof(ViewModels.MainViewModel.SelectedPage))
+                    SyncBackCallback(main);
             };
         }
 
@@ -83,7 +86,8 @@ public class MainActivity : AvaloniaMainActivity
             RequestPermissions([global::Android.Manifest.Permission.PostNotifications], RequestCodes.PostNotifications);
     }
 
-    private void SyncBackCallback(bool drawerOpen) => _backCallback!.Enabled = drawerOpen;
+    private void SyncBackCallback(ViewModels.MainViewModel main)
+        => _backCallback!.Enabled = main.DrawerOpen || main.SelectedPage != 0;
 
     protected override void OnDestroy()
     {
@@ -114,12 +118,19 @@ public class MainActivity : AvaloniaMainActivity
         return tcs.Task;
     }
 
-    /// <summary>返回键拦截：仅在抽屉打开时启用（Enabled 由 MainActivity 按 DrawerOpen 同步）。</summary>
+    /// <summary>返回键拦截：抽屉打开或非工作台页时启用（Enabled 由 MainActivity 按 DrawerOpen/SelectedPage 同步）。</summary>
     private sealed class DrawerBackCallback : AndroidX.Activity.OnBackPressedCallback
     {
         public DrawerBackCallback() : base(false) { }
 
         public override void HandleOnBackPressed()
-            => App.Main?.CloseDrawerCommand.Execute(null);
+        {
+            var main = App.Main;
+            if (main is null) return;
+            if (main.DrawerOpen)
+                main.CloseDrawerCommand.Execute(null);
+            else if (main.SelectedPage != 0)
+                main.NavigateCommand.Execute(0); // 先导航回工作台，再按一次退出
+        }
     }
 }

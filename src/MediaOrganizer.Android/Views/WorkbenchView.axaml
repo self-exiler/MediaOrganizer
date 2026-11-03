@@ -1,40 +1,46 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:MediaOrganizer.Android"
+             xmlns:c="using:MediaOrganizer.Android.Controls"
              xmlns:vm="using:MediaOrganizer.Shared.ViewModels"
              x:Class="MediaOrganizer.Android.Views.WorkbenchView"
              x:DataType="vm:WorkbenchViewModel">
 
     <UserControl.Styles>
-        <!-- 步骤指示状态 -->
+        <!-- 步骤指示状态（色值改 Fluent 主题资源，随深浅色切换） -->
         <Style Selector="Border.stepCircle">
             <Setter Property="Width" Value="22"/>
             <Setter Property="Height" Value="22"/>
-            <Setter Property="CornerRadius" Value="11"/>
-            <Setter Property="Background" Value="#E0E0E0"/>
+            <Setter Property="CornerRadius" Value="99"/>
+            <Setter Property="Background" Value="{DynamicResource SystemControlForegroundBaseLowBrush}"/>
         </Style>
-        <Style Selector="Border.stepCircle.done"><Setter Property="Background" Value="#107C10"/></Style>
-        <Style Selector="Border.stepCircle.cur"><Setter Property="Background" Value="#0067C0"/></Style>
+        <Style Selector="Border.stepCircle.done"><Setter Property="Background" Value="{DynamicResource SuccessBrush}"/></Style>
+        <Style Selector="Border.stepCircle.cur"><Setter Property="Background" Value="{DynamicResource AccentBrush}"/></Style>
         <Style Selector="TextBlock.stepLabel">
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="Foreground" Value="#8A8A8A"/>
+            <Setter Property="FontSize" Value="{StaticResource FontSizeSecondary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
         </Style>
-        <Style Selector="TextBlock.stepLabel.done"><Setter Property="Foreground" Value="#107C10"/></Style>
+        <Style Selector="TextBlock.stepLabel.done"><Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/></Style>
         <Style Selector="TextBlock.stepLabel.cur">
-            <Setter Property="Foreground" Value="#0067C0"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
         <Style Selector="TextBlock.stepNum">
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontSize" Value="{StaticResource FontSizeSecondary}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="HorizontalAlignment" Value="Center"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
+        <!-- 危险按钮（描边幽灵款）：补 :pressed 按压反馈（审查报告2 F3、报告3 F3） -->
         <Style Selector="Button.danger">
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#C42B1C"/>
-            <Setter Property="BorderBrush" Value="#C42B1C"/>
-            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Foreground" Value="{DynamicResource SystemControlErrorTextForegroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource SystemControlErrorTextForegroundBrush}"/>
+            <Setter Property="CornerRadius" Value="{StaticResource RadiusS}"/>
+        </Style>
+        <Style Selector="Button.danger:pressed">
+            <Setter Property="Background" Value="#1FC42B1C"/>
         </Style>
     </UserControl.Styles>
 
@@ -48,12 +54,12 @@
                         <Border x:Name="Step1Circle" Classes="stepCircle"><TextBlock Classes="stepNum" Text="1"/></Border>
                         <TextBlock x:Name="Step1Label" Classes="stepLabel" Text="选目录"/>
                     </StackPanel>
-                    <Rectangle Grid.Column="1" Height="2" Fill="#E0E0E0" VerticalAlignment="Center" Margin="8,0,8,16"/>
+                    <Rectangle Grid.Column="1" Height="2" Fill="{DynamicResource SystemControlForegroundBaseLowBrush}" VerticalAlignment="Center" Margin="8,0,8,16"/>
                     <StackPanel Grid.Column="2" Spacing="6" HorizontalAlignment="Center">
                         <Border x:Name="Step2Circle" Classes="stepCircle"><TextBlock Classes="stepNum" Text="2"/></Border>
                         <TextBlock x:Name="Step2Label" Classes="stepLabel" Text="分析"/>
                     </StackPanel>
-                    <Rectangle Grid.Column="3" Height="2" Fill="#E0E0E0" VerticalAlignment="Center" Margin="8,0,8,16"/>
+                    <Rectangle Grid.Column="3" Height="2" Fill="{DynamicResource SystemControlForegroundBaseLowBrush}" VerticalAlignment="Center" Margin="8,0,8,16"/>
                     <StackPanel Grid.Column="4" Spacing="6" HorizontalAlignment="Center">
                         <Border x:Name="Step3Circle" Classes="stepCircle"><TextBlock Classes="stepNum" Text="3"/></Border>
                         <TextBlock x:Name="Step3Label" Classes="stepLabel" Text="执行"/>
@@ -61,66 +67,73 @@
                 </Grid>
 
                 <!-- 目录卡片 -->
-                <Border Background="{StaticResource CardBrush}" CornerRadius="12" Padding="16"
-                        BorderBrush="{StaticResource DividerBrush}" BorderThickness="1"
-                        BoxShadow="0 1 3 0 #14000000">
+                <Border Classes="card">
                     <StackPanel Spacing="14">
-                        <TextBlock Text="目录" FontSize="14" FontWeight="SemiBold"/>
+                        <TextBlock Text="目录" FontSize="{StaticResource FontSizeTitle}" FontWeight="SemiBold"/>
 
                         <StackPanel Spacing="6">
-                            <TextBlock Text="源目录（SAF）" FontSize="12" Foreground="#616161"/>
-                            <Border Background="#F8F8F8" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1"
-                                    CornerRadius="8" MinHeight="48" Padding="12,8">
+                            <TextBlock Text="源目录（SAF）" FontSize="{StaticResource FontSizeSecondary}"
+                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumHighBrush}"/>
+                            <Border Background="{DynamicResource SystemControlBackgroundListLowBrush}"
+                                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="1"
+                                    CornerRadius="{StaticResource RadiusS}" MinHeight="48" Padding="12,8">
                                 <DockPanel>
-                                    <Button DockPanel.Dock="Right" Content="选取" FontSize="12" MinHeight="36"
+                                    <Button DockPanel.Dock="Right" Content="选取" FontSize="{StaticResource FontSizeSecondary}"
                                             Command="{Binding BrowseSourceCommand}"/>
-                                    <TextBlock Text="{Binding SourceDir}" FontSize="11" VerticalAlignment="Center"
-                                               Foreground="{StaticResource TextBrush}" TextTrimming="CharacterEllipsis"
+                                    <TextBlock Text="{Binding SourceDir}" FontSize="{StaticResource FontSizeSecondary}" VerticalAlignment="Center"
+                                               Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}" TextTrimming="CharacterEllipsis"
                                                MaxLines="2" TextWrapping="Wrap" Margin="0,0,8,0"/>
                                 </DockPanel>
                             </Border>
                         </StackPanel>
 
                         <StackPanel Spacing="6">
-                            <TextBlock Text="输出目标" FontSize="12" Foreground="#616161"/>
-                            <ComboBox ItemsSource="{Binding OutputTargetOptions}"
-                                      SelectedIndex="{Binding OutputTargetIndex, Mode=TwoWay}"/>
+                            <TextBlock Text="输出目标" FontSize="{StaticResource FontSizeSecondary}"
+                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumHighBrush}"/>
+                            <!-- 触屏选择字段（审查报告2 §2 / 报告3 §二）：替代桌面式 ComboBox，点按弹系统单选对话框 -->
+                            <c:OptionPicker Title="输出目标"
+                                            Options="{Binding OutputTargetOptions}"
+                                            SelectedIndex="{Binding OutputTargetIndex, Mode=TwoWay}"/>
                         </StackPanel>
 
                         <!-- 输出目录（本地目标，FR-A8.6）：SAF 选取，content: URI 由 Core 回退处理 -->
                         <StackPanel Spacing="6" IsVisible="{Binding IsLocalTarget}">
-                            <TextBlock Text="输出目录（SAF）" FontSize="12" Foreground="#616161"/>
-                            <Border Background="#F8F8F8" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1"
-                                    CornerRadius="8" MinHeight="48" Padding="12,8">
+                            <TextBlock Text="输出目录（SAF）" FontSize="{StaticResource FontSizeSecondary}"
+                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumHighBrush}"/>
+                            <Border Background="{DynamicResource SystemControlBackgroundListLowBrush}"
+                                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="1"
+                                    CornerRadius="{StaticResource RadiusS}" MinHeight="48" Padding="12,8">
                                 <DockPanel>
-                                    <Button DockPanel.Dock="Right" Content="选取" FontSize="12" MinHeight="36"
+                                    <Button DockPanel.Dock="Right" Content="选取" FontSize="{StaticResource FontSizeSecondary}"
                                             Command="{Binding BrowseOutputCommand}"/>
-                                    <TextBlock Text="{Binding OutputDir}" FontSize="11" VerticalAlignment="Center"
-                                               Foreground="{StaticResource TextBrush}" TextTrimming="CharacterEllipsis"
+                                    <TextBlock Text="{Binding OutputDir}" FontSize="{StaticResource FontSizeSecondary}" VerticalAlignment="Center"
+                                               Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}" TextTrimming="CharacterEllipsis"
                                                MaxLines="2" TextWrapping="Wrap" Margin="0,0,8,0"/>
                                 </DockPanel>
                             </Border>
                             <TextBlock Text="尚未选择输出目录，执行归档前必须先选取"
-                                       FontSize="12" Foreground="{StaticResource ErrorBrush}" TextWrapping="Wrap"
+                                       FontSize="{StaticResource FontSizeSecondary}"
+                                       Foreground="{DynamicResource SystemControlErrorTextForegroundBrush}" TextWrapping="Wrap"
                                        IsVisible="{Binding OutputDir, Converter={x:Static StringConverters.IsNullOrEmpty}}"/>
                         </StackPanel>
 
                         <!-- 网络目标提示（FR-A9.4）：仅复制，move 已禁用 -->
-                        <Border Background="#F3F9FD" BorderBrush="#C3DCF1" BorderThickness="1" CornerRadius="8"
-                                Padding="12,10" IsVisible="{Binding !IsMoveAllowed}">
+                        <Border Classes="tip infoTip" Padding="12,10" IsVisible="{Binding !IsMoveAllowed}">
                             <TextBlock Text="提示：网络目标（SMB / WebDAV）仅支持「复制」，已自动切换并禁用移动。"
-                                       FontSize="12" Foreground="#0F4E7D" TextWrapping="Wrap"/>
+                                       FontSize="{StaticResource FontSizeSecondary}" TextWrapping="Wrap"/>
                         </Border>
 
                         <StackPanel Spacing="6">
-                            <TextBlock Text="待处理目录（失败文件）" FontSize="12" Foreground="#616161"/>
-                            <Border Background="#F8F8F8" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1"
-                                    CornerRadius="8" MinHeight="48" Padding="12,8">
+                            <TextBlock Text="待处理目录（失败文件）" FontSize="{StaticResource FontSizeSecondary}"
+                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumHighBrush}"/>
+                            <Border Background="{DynamicResource SystemControlBackgroundListLowBrush}"
+                                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="1"
+                                    CornerRadius="{StaticResource RadiusS}" MinHeight="48" Padding="12,8">
                                 <DockPanel>
-                                    <Button DockPanel.Dock="Right" Content="选取" FontSize="12" MinHeight="36"
+                                    <Button DockPanel.Dock="Right" Content="选取" FontSize="{StaticResource FontSizeSecondary}"
                                             Command="{Binding BrowsePendingCommand}"/>
-                                    <TextBlock Text="{Binding PendingDir}" FontSize="11" VerticalAlignment="Center"
-                                               Foreground="{StaticResource TextBrush}" TextTrimming="CharacterEllipsis"
+                                    <TextBlock Text="{Binding PendingDir}" FontSize="{StaticResource FontSizeSecondary}" VerticalAlignment="Center"
+                                               Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}" TextTrimming="CharacterEllipsis"
                                                MaxLines="2" TextWrapping="Wrap" Margin="0,0,8,0"/>
                                 </DockPanel>
                             </Border>
@@ -129,36 +142,41 @@
                 </Border>
 
                 <!-- 执行参数卡片 -->
-                <Border Background="{StaticResource CardBrush}" CornerRadius="12" Padding="16"
-                        BorderBrush="{StaticResource DividerBrush}" BorderThickness="1"
-                        BoxShadow="0 1 3 0 #14000000">
+                <Border Classes="card">
                     <StackPanel Spacing="14">
-                        <TextBlock Text="执行参数" FontSize="14" FontWeight="SemiBold"/>
+                        <TextBlock Text="执行参数" FontSize="{StaticResource FontSizeTitle}" FontWeight="SemiBold"/>
 
                         <StackPanel Spacing="6">
-                            <TextBlock Text="分级目录" FontSize="12" Foreground="#616161"/>
-                            <ComboBox ItemsSource="{Binding LevelOptions}"
-                                      SelectedIndex="{Binding LevelIndex, Mode=TwoWay}"/>
+                            <TextBlock Text="分级目录" FontSize="{StaticResource FontSizeSecondary}"
+                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumHighBrush}"/>
+                            <c:OptionPicker Title="分级目录"
+                                            Options="{Binding LevelOptions}"
+                                            SelectedIndex="{Binding LevelIndex, Mode=TwoWay}"/>
                         </StackPanel>
 
                         <StackPanel Spacing="6">
-                            <TextBlock Text="操作类型" FontSize="12" Foreground="#616161"/>
-                            <ComboBox SelectedIndex="{Binding OperationIndex, Mode=TwoWay}">
-                                <ComboBoxItem Content="复制 copy（保留原文件）"/>
-                                <ComboBoxItem Content="移动 move" IsEnabled="{Binding IsMoveAllowed}"/>
-                            </ComboBox>
+                            <TextBlock Text="操作类型" FontSize="{StaticResource FontSizeSecondary}"
+                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumHighBrush}"/>
+                            <!-- 网络目标时「移动」直接从选项中滤除（原生单选不支持逐项禁用，原因见信息条，FR-A9.4） -->
+                            <c:OptionPicker Title="操作类型"
+                                            Options="{Binding OperationPickerOptions}"
+                                            SelectedIndex="{Binding OperationIndex, Mode=TwoWay}"/>
                         </StackPanel>
 
                         <StackPanel Spacing="6">
-                            <TextBlock Text="同名处理" FontSize="12" Foreground="#616161"/>
-                            <ComboBox ItemsSource="{Binding ExistActionOptions}"
-                                      SelectedIndex="{Binding ExistActionIndex, Mode=TwoWay}"/>
+                            <TextBlock Text="同名处理" FontSize="{StaticResource FontSizeSecondary}"
+                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumHighBrush}"/>
+                            <c:OptionPicker Title="同名处理"
+                                            Options="{Binding ExistActionOptions}"
+                                            SelectedIndex="{Binding ExistActionIndex, Mode=TwoWay}"/>
                         </StackPanel>
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" VerticalAlignment="Center">
-                                <TextBlock Text="mtime 矫正" FontSize="14" Foreground="{StaticResource TextBrush}"/>
-                                <TextBlock Text="将目标文件修改时间设为拍摄日期" FontSize="12" Foreground="#8A8A8A"/>
+                                <TextBlock Text="mtime 矫正" FontSize="{StaticResource FontSizeBody}"
+                                           Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+                                <TextBlock Text="将目标文件修改时间设为拍摄日期" FontSize="{StaticResource FontSizeSecondary}"
+                                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1" IsChecked="{Binding FixMtime}"/>
                         </Grid>
@@ -166,110 +184,132 @@
                 </Border>
 
                 <!-- 空态提示 -->
-                <Border Background="#F3F9FD" BorderBrush="#C3DCF1" BorderThickness="1" CornerRadius="8"
-                        Padding="12,10" IsVisible="{Binding !HasResult}">
+                <Border Classes="tip infoTip" Padding="12,10" IsVisible="{Binding !HasResult}">
                     <TextBlock Text="目录就绪。点击底部「开始分析」扫描源目录并提取拍摄日期；分析完成确认计划后再执行归档。"
-                               FontSize="13" Foreground="#0F4E7D" TextWrapping="Wrap"/>
+                               FontSize="{StaticResource FontSizeBody}" TextWrapping="Wrap"/>
                 </Border>
 
                 <!-- 分析/执行进行中 -->
-                <Border Background="{StaticResource CardBrush}" CornerRadius="12" Padding="16"
-                        BorderBrush="{StaticResource DividerBrush}" BorderThickness="1"
-                        BoxShadow="0 1 3 0 #14000000" IsVisible="{Binding IsBusy}">
+                <Border Classes="card" IsVisible="{Binding IsBusy}">
                     <StackPanel Spacing="10">
-                        <TextBlock Text="正在处理…" FontSize="14" FontWeight="SemiBold"/>
+                        <TextBlock Text="正在处理…" FontSize="{StaticResource FontSizeTitle}" FontWeight="SemiBold"/>
                         <ProgressBar MinHeight="6" IsIndeterminate="{Binding !HasResult}"
                                      Value="{Binding Progress}" Maximum="100"/>
-                        <TextBlock FontSize="12" Foreground="#8A8A8A" TextWrapping="Wrap"
+                        <TextBlock FontSize="{StaticResource FontSizeSecondary}"
+                                   Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" TextWrapping="Wrap"
                                    Text="{Binding StatusText}"/>
-                        <Button Content="× 取消" Classes="danger" HorizontalAlignment="Right" MinHeight="40"
-                                Command="{Binding CancelAnalysisCommand}"/>
+                        <Button Classes="danger" HorizontalAlignment="Right"
+                                Command="{Binding CancelAnalysisCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <PathIcon Data="{x:Static local:AppIcons.Close}" Width="14" Height="14"
+                                          Foreground="{DynamicResource SystemControlErrorTextForegroundBrush}"/>
+                                <TextBlock Text="取消" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
                     </StackPanel>
                 </Border>
 
-                <!-- 完成态：统计摘要 -->
-                <Border Background="{StaticResource CardBrush}" CornerRadius="12" Padding="16"
-                        BorderBrush="{StaticResource DividerBrush}" BorderThickness="1"
-                        BoxShadow="0 1 3 0 #14000000" IsVisible="{Binding HasResult}">
+                <!-- 完成态：统计摘要（审查报告3 P2：改回原型的 2×2 网格，390px 宽下不再拥挤） -->
+                <Border Classes="card" IsVisible="{Binding HasResult}">
                     <StackPanel Spacing="10">
                         <DockPanel>
-                            <TextBlock Text="分析结果" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                            <Button DockPanel.Dock="Right" Content="查看失败 →" FontSize="12" MinHeight="36"
-                                    HorizontalAlignment="Right" Click="OnViewFailed"/>
+                            <TextBlock Text="分析结果" FontSize="{StaticResource FontSizeTitle}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <Button DockPanel.Dock="Right" Classes="sm" HorizontalAlignment="Right" Click="OnViewFailed">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <TextBlock Text="查看失败" VerticalAlignment="Center"/>
+                                    <PathIcon Data="{x:Static local:AppIcons.ChevronRight}" Width="14" Height="14"
+                                              Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+                                </StackPanel>
+                            </Button>
                         </DockPanel>
 
-                        <Grid ColumnDefinitions="*,12,*,12,*,12,*">
-                            <Border Grid.Column="0" Background="#FAFAFA" BorderBrush="{StaticResource DividerBrush}"
-                                    BorderThickness="1" CornerRadius="10" Padding="6">
+                        <Grid ColumnDefinitions="*,12,*" RowDefinitions="Auto,12,Auto">
+                            <Border Grid.Row="0" Grid.Column="0" Background="{DynamicResource SystemControlBackgroundListLowBrush}"
+                                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                                    BorderThickness="1" CornerRadius="{StaticResource RadiusS}" Padding="6">
                                 <StackPanel>
                                     <!-- Viewbox DownOnly: 数值超宽（如 96.8%、5 位数）时整体等比缩小，避免被等宽卡片裁切 -->
-                                            <Viewbox MaxHeight="30" Stretch="Uniform" StretchDirection="DownOnly">
-                                                <TextBlock Text="{Binding TotalFiles}" FontSize="24" FontWeight="Bold"
-                                                           Foreground="{StaticResource AccentBrush}"/>
-                                            </Viewbox>
-                                    <TextBlock Text="总计" FontSize="11" Foreground="#8A8A8A" HorizontalAlignment="Center"/>
+                                    <Viewbox MaxHeight="30" Stretch="Uniform" StretchDirection="DownOnly">
+                                        <TextBlock Text="{Binding TotalFiles}" FontSize="{StaticResource FontSizeDisplay}" FontWeight="Bold"
+                                                   Foreground="{DynamicResource AccentBrush}"/>
+                                    </Viewbox>
+                                    <TextBlock Text="总计" FontSize="{StaticResource FontSizeSecondary}"
+                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" HorizontalAlignment="Center"/>
                                 </StackPanel>
                             </Border>
-                            <Border Grid.Column="2" Background="#FAFAFA" BorderBrush="{StaticResource DividerBrush}"
-                                    BorderThickness="1" CornerRadius="10" Padding="6">
+                            <Border Grid.Row="0" Grid.Column="2" Background="{DynamicResource SystemControlBackgroundListLowBrush}"
+                                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                                    BorderThickness="1" CornerRadius="{StaticResource RadiusS}" Padding="6">
                                 <StackPanel>
                                     <Viewbox MaxHeight="30" Stretch="Uniform" StretchDirection="DownOnly">
-                                                <TextBlock Text="{Binding SuccessFiles}" FontSize="24" FontWeight="Bold"
-                                                           Foreground="{StaticResource SuccessBrush}"/>
-                                            </Viewbox>
-                                    <TextBlock Text="成功" FontSize="11" Foreground="#8A8A8A" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="{Binding SuccessFiles}" FontSize="{StaticResource FontSizeDisplay}" FontWeight="Bold"
+                                                   Foreground="{DynamicResource SuccessBrush}"/>
+                                    </Viewbox>
+                                    <TextBlock Text="成功" FontSize="{StaticResource FontSizeSecondary}"
+                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" HorizontalAlignment="Center"/>
                                 </StackPanel>
                             </Border>
-                            <Border Grid.Column="4" Background="#FAFAFA" BorderBrush="{StaticResource DividerBrush}"
-                                    BorderThickness="1" CornerRadius="10" Padding="6">
+                            <Border Grid.Row="2" Grid.Column="0" Background="{DynamicResource SystemControlBackgroundListLowBrush}"
+                                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                                    BorderThickness="1" CornerRadius="{StaticResource RadiusS}" Padding="6">
                                 <StackPanel>
                                     <Viewbox MaxHeight="30" Stretch="Uniform" StretchDirection="DownOnly">
-                                                <TextBlock Text="{Binding FailedFiles}" FontSize="24" FontWeight="Bold"
-                                                           Foreground="{StaticResource ErrorBrush}"/>
-                                            </Viewbox>
-                                    <TextBlock Text="失败" FontSize="11" Foreground="#8A8A8A" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="{Binding FailedFiles}" FontSize="{StaticResource FontSizeDisplay}" FontWeight="Bold"
+                                                   Foreground="{DynamicResource SystemControlErrorTextForegroundBrush}"/>
+                                    </Viewbox>
+                                    <TextBlock Text="失败" FontSize="{StaticResource FontSizeSecondary}"
+                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" HorizontalAlignment="Center"/>
                                 </StackPanel>
                             </Border>
-                            <Border Grid.Column="6" Background="#FAFAFA" BorderBrush="{StaticResource DividerBrush}"
-                                    BorderThickness="1" CornerRadius="10" Padding="6">
+                            <Border Grid.Row="2" Grid.Column="2" Background="{DynamicResource SystemControlBackgroundListLowBrush}"
+                                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                                    BorderThickness="1" CornerRadius="{StaticResource RadiusS}" Padding="6">
                                 <StackPanel>
                                     <Viewbox MaxHeight="30" Stretch="Uniform" StretchDirection="DownOnly">
-                                                <TextBlock Text="{Binding SuccessRate}" FontSize="24" FontWeight="Bold"
-                                                           Foreground="{StaticResource AccentBrush}"/>
-                                            </Viewbox>
-                                    <TextBlock Text="成功率" FontSize="11" Foreground="#8A8A8A" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="{Binding SuccessRate}" FontSize="{StaticResource FontSizeDisplay}" FontWeight="Bold"
+                                                   Foreground="{DynamicResource AccentBrush}"/>
+                                    </Viewbox>
+                                    <TextBlock Text="成功率" FontSize="{StaticResource FontSizeSecondary}"
+                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" HorizontalAlignment="Center"/>
                                 </StackPanel>
                             </Border>
                         </Grid>
 
-                        <ProgressBar MinHeight="6" Maximum="{Binding TotalFiles, Mode=OneWay}"
+                        <!-- Maximum 钳到 ≥1：TotalFiles=0 时避免除零/NaN 渲染（审查报告3 P2） -->
+                        <ProgressBar MinHeight="6" Maximum="{Binding ProgressMaximum, Mode=OneWay}"
                                      Value="{Binding SuccessFiles, Mode=OneWay}"/>
-                        <TextBlock Text="{Binding SourceSummary}" FontSize="12" Foreground="#8A8A8A"/>
+                        <TextBlock Text="{Binding SourceSummary}" FontSize="{StaticResource FontSizeSecondary}"
+                                   Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
 
-                        <Border Background="#F2FBF2" BorderBrush="#BFE6BF" BorderThickness="1" CornerRadius="8"
-                                Padding="12,10">
-                            <TextBlock Text="{Binding PlanText}" FontSize="13" Foreground="#0B5A0B" TextWrapping="Wrap"/>
+                        <Border Classes="tip successTip" Padding="12,10">
+                            <TextBlock Text="{Binding PlanText}" FontSize="{StaticResource FontSizeBody}" TextWrapping="Wrap"/>
                         </Border>
 
                         <!-- 执行结果 / 拦截提示常驻（忙碌结束仍可见，避免"点了没反应"） -->
-                        <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="#616161" TextWrapping="Wrap"
+                        <TextBlock Text="{Binding StatusText}" FontSize="{StaticResource FontSizeSecondary}"
+                                   Foreground="{DynamicResource SystemControlForegroundBaseMediumHighBrush}" TextWrapping="Wrap"
                                    IsVisible="{Binding !IsBusy}"/>
                     </StackPanel>
                 </Border>
             </StackPanel>
         </ScrollViewer>
 
-        <!-- 底部固定操作栏：空态=开始分析 / 进行中=禁用 / 完成态=重新分析+执行归档 -->
-        <Border Grid.Row="1" Background="{StaticResource CardBrush}" Padding="16,12"
-                BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,1,0,0">
+        <!-- 底部固定操作栏：空态=开始分析 / 进行中=禁用 / 完成态=重新分析+执行归档。
+             ▶/↻ 字符图标换矢量 PathIcon（审查报告2 F8、报告3 F5）。 -->
+        <Border Grid.Row="1" Background="{DynamicResource SystemControlBackgroundAltHighBrush}" Padding="16,12"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,1,0,0">
             <Panel MinHeight="48">
-                <Button Content="▶ 开始分析" Classes="primary" Command="{Binding AnalyzeCommand}">
+                <Button Classes="primary" Command="{Binding AnalyzeCommand}">
                     <Button.IsVisible>
                         <MultiBinding Converter="{x:Static BoolConverters.And}">
                             <Binding Path="!IsBusy"/>
                             <Binding Path="!HasResult"/>
                         </MultiBinding>
                     </Button.IsVisible>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <PathIcon Data="{x:Static local:AppIcons.Play}" Width="16" Height="16" Foreground="White"/>
+                        <TextBlock Text="开始分析" VerticalAlignment="Center"/>
+                    </StackPanel>
                 </Button>
                 <Button Content="处理中…" Classes="primary" IsEnabled="False" IsVisible="{Binding IsBusy}"/>
                 <Grid ColumnDefinitions="*,8,*">
@@ -279,9 +319,20 @@
                             <Binding Path="!IsBusy"/>
                         </MultiBinding>
                     </Grid.IsVisible>
-                    <Button Grid.Column="0" Content="↻ 重新分析" Command="{Binding AnalyzeCommand}"/>
-                    <Button Grid.Column="2" Content="▶ 执行归档" Classes="primary" IsEnabled="{Binding CanExecute}"
-                            Command="{Binding ExecuteFilesCommand}"/>
+                    <Button Grid.Column="0" Command="{Binding AnalyzeCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <PathIcon Data="{x:Static local:AppIcons.Refresh}" Width="16" Height="16"
+                                      Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+                            <TextBlock Text="重新分析" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Grid.Column="2" Classes="primary" IsEnabled="{Binding CanExecute}"
+                            Command="{Binding ExecuteFilesCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <PathIcon Data="{x:Static local:AppIcons.Play}" Width="16" Height="16" Foreground="White"/>
+                            <TextBlock Text="执行归档" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
                 </Grid>
             </Panel>
         </Border>

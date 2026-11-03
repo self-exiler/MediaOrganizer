@@ -13,6 +13,7 @@ using MediaOrganizer.Core.Platforms;
 using MediaOrganizer.Core.Scanning;
 using MediaOrganizer.Core.Security;
 using MediaOrganizer.Core.Storage;
+using MediaOrganizer.Shared.Services;
 using MediaOrganizer.Shared.ViewModels;
 
 namespace MediaOrganizer.Android;
@@ -21,8 +22,14 @@ public partial class App : Avalonia.Application
 {
     private bool _initialized;
 
-    /// <summary>主 VM（抽屉/状态栏/页面切换），MainActivity 返回键拦截读取。</summary>
+    /// <summary>主 VM（抽屉/Toast/页面切换），MainActivity 返回键拦截读取。</summary>
     public static MainViewModel? Main { get; private set; }
+
+    /// <summary>确认弹窗服务（删除网络位置等，审查报告3 交互安全 P0）。视图层经此直接访问。</summary>
+    public static IConfirmDialog? Confirm { get; private set; }
+
+    /// <summary>单选对话框服务（OptionPicker 控件的弹出后端）。</summary>
+    public static IOptionPicker? OptionPicker { get; private set; }
 
     public override void Initialize()
     {
@@ -77,8 +84,11 @@ public partial class App : Avalonia.Application
         var folderPicker = new SafFolderPicker(activity);
         var fileSaver = new AndroidFileSaver(activity);
         var confirm = new AndroidConfirmDialog();
+        var optionPicker = new AndroidOptionPicker();
         var opener = new AndroidSystemFileOpener(activity);
         var wakeLock = new WakeLockHolder();
+        Confirm = confirm;
+        OptionPicker = optionPicker;
 
         // 进程级任务宿主：分析/执行交 dataSync 前台服务保活，退后台/锁屏不中断；
         // CTS 随宿主，Activity 重建不失效。VM 图仅构建一次，宿主同样进程内单例。
@@ -99,7 +109,18 @@ public partial class App : Avalonia.Application
             jobHost);
 
         var failedFiles = new FailedFilesViewModel(state, logger, confirm, opener, new AndroidImageLoader());
-        var settings = new SettingsViewModel(state);
+        // 主题设置（外观卡片）即时生效：Default 跟随系统深浅色，Light/Dark 强制覆盖
+        void ApplyTheme(string theme)
+        {
+            if (Current is { } app)
+                app.RequestedThemeVariant = theme switch
+                {
+                    "Light" => ThemeVariant.Light,
+                    "Dark" => ThemeVariant.Dark,
+                    _ => ThemeVariant.Default
+                };
+        }
+        var settings = new SettingsViewModel(state, ApplyTheme);
         var report = new ReportViewModel(fileSaver);
         var main = new MainViewModel(workbench, failedFiles, settings, report, wakeLock);
 
@@ -123,6 +144,9 @@ public partial class App : Avalonia.Application
         };
 
         Main = main;
+
+        // 启动时应用已保存的主题（设置项仅在变更时回调，此处补启动一次性应用）
+        ApplyTheme(state.Config.General.Theme);
 
         if (ApplicationLifetime is ISingleViewApplicationLifetime singleView)
             singleView.MainView = new MainView { DataContext = main };
@@ -153,17 +177,10 @@ public class AppTheme : Styles
             {
                 new Setter(TextBox.MinHeightProperty, 44d),
                 new Setter(TextBox.CornerRadiusProperty, new CornerRadius(8)),
-                new Setter(TextBox.FontSizeProperty, 13d),
+                new Setter(TextBox.FontSizeProperty, 14d),
             }
         });
-        Add(new Style(x => x.Is<ComboBox>())
-        {
-            Setters =
-            {
-                new Setter(ComboBox.MinHeightProperty, 44d),
-                new Setter(ComboBox.FontSizeProperty, 13d),
-            }
-        });
+        // ComboBox 尺寸样式已删除：9 处桌面式下拉全部替换为触屏 OptionPicker + 系统单选对话框
         Add(new Style(x => x.Is<ListBoxItem>())
         {
             Setters = { new Setter(ListBoxItem.MinHeightProperty, 48d) }

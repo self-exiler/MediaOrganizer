@@ -7,30 +7,33 @@
     <Grid RowDefinitions="*,Auto">
         <ScrollViewer Grid.Row="0">
             <StackPanel Margin="16" Spacing="8">
-                <Border Background="{StaticResource CardBrush}" CornerRadius="12" Padding="16"
-                        BorderBrush="{StaticResource DividerBrush}" BorderThickness="1"
-                        BoxShadow="0 1 3 0 #14000000">
+                <Border Classes="card">
                     <StackPanel Spacing="10">
-                        <DockPanel>
-                            <TextBlock Text="分析报告" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding ReportMeta}" FontSize="11" Foreground="{StaticResource MutedBrush}"
-                                       HorizontalAlignment="Right" TextTrimming="CharacterEllipsis" MaxWidth="180"/>
-                        </DockPanel>
-                        <TextBlock Text="{Binding ReportText}" FontSize="11" LineHeight="18"
-                                   Foreground="#1B1B1B" TextWrapping="Wrap"/>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="分析报告" FontSize="{StaticResource FontSizeTitle}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <!-- 元信息占星号列自适应宽度（硬编码 MaxWidth 修复，审查报告2 M7） -->
+                            <TextBlock Grid.Column="1" Text="{Binding ReportMeta}" FontSize="{StaticResource FontSizeSecondary}"
+                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                       VerticalAlignment="Center" Margin="12,0,0,0" TextTrimming="CharacterEllipsis"/>
+                        </Grid>
+                        <!-- 可选中复制（审查报告2 M5），正文字号提到 14 -->
+                        <SelectableTextBlock Text="{Binding ReportText}" FontSize="{StaticResource FontSizeBody}" LineHeight="22"
+                                             Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}" TextWrapping="Wrap"/>
                     </StackPanel>
                 </Border>
                 <TextBlock Text="报告自动保存于应用专有目录，可另存为或分享导出。"
-                           FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="4,0"/>
+                           FontSize="{StaticResource FontSizeSecondary}"
+                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" Margin="4,0"/>
             </StackPanel>
         </ScrollViewer>
 
-        <!-- 底部操作栏：另存为（SAF CREATE_DOCUMENT）/ 系统分享 -->
-        <Border Grid.Row="1" Background="{StaticResource CardBrush}" Padding="16,12"
-                BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,1,0,0">
-            <Grid ColumnDefinitions="*,8,*">
-                <Button Grid.Column="0" Content="另存为（SAF）" Command="{Binding SaveReportCommand}"/>
-                <Button Grid.Column="2" Content="分享" Classes="primary" Command="{Binding ShareReportCommand}"/>
+        <!-- 底部操作栏：复制文本（审查报告3 次要）/ 另存为（SAF CREATE_DOCUMENT）/ 系统分享 -->
+        <Border Grid.Row="1" Background="{DynamicResource SystemControlBackgroundAltHighBrush}" Padding="16,12"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,1,0,0">
+            <Grid ColumnDefinitions="*,8,*,8,*">
+                <Button Grid.Column="0" Content="复制文本" Click="OnCopyReport"/>
+                <Button Grid.Column="2" Content="另存为（SAF）" Command="{Binding SaveReportCommand}"/>
+                <Button Grid.Column="4" Content="分享" Classes="primary" Command="{Binding ShareReportCommand}"/>
             </Grid>
         </Border>
     </Grid>

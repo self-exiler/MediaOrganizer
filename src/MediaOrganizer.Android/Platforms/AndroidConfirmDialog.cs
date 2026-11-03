@@ -15,14 +15,22 @@ public sealed class AndroidConfirmDialog : IConfirmDialog
         var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         activity.RunOnUiThread(() =>
         {
-            // 链式 setter 在 Java 绑定里返回可空 Builder，拆开逐句调避免空解引用
-            var builder = new AlertDialog.Builder(activity);
-            builder.SetTitle(title);
-            builder.SetMessage(message);
-            builder.SetPositiveButton("确定", (_, _) => tcs.TrySetResult(true));
-            builder.SetNegativeButton("取消", (_, _) => tcs.TrySetResult(false));
-            builder.SetOnCancelListener(new CancelListener(() => tcs.TrySetResult(false)));
-            builder.Show();
+            try
+            {
+                // 链式 setter 在 Java 绑定里返回可空 Builder，拆开逐句调避免空解引用
+                var builder = new AlertDialog.Builder(activity);
+                builder.SetTitle(title);
+                builder.SetMessage(message);
+                builder.SetPositiveButton("确定", (_, _) => tcs.TrySetResult(true));
+                builder.SetNegativeButton("取消", (_, _) => tcs.TrySetResult(false));
+                builder.SetOnCancelListener(new CancelListener(() => tcs.TrySetResult(false)));
+                builder.Show();
+            }
+            catch (Exception)
+            {
+                // Activity 销毁后 Show() 抛 BadTokenException 等：不能让 TCS 永久悬挂 await 方
+                tcs.TrySetResult(false);
+            }
         });
         return tcs.Task;
     }

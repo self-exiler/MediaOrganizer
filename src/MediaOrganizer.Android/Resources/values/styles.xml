@@ -4,6 +4,9 @@
          "You need to use a Theme.AppCompat theme (or descendant)"。状态栏/导航栏由 Avalonia 自绘。 -->
     <style name="MyTheme" parent="Theme.AppCompat.Light.NoActionBar">
         <item name="android:windowBackground">@android:color/white</item>
+        <!-- 状态栏与 AppBar 同色（#0067C0）：消除顶部色差带（审查报告3 F6）。
+             Android 15+ 强制 edge-to-edge 时该值被忽略，由 MainView 的 insets 接管（AppBar 色带向上延伸）。 -->
+        <item name="android:statusBarColor">#0067C0</item>
     </style>
     <style name="MyTheme.NoActionBar" parent="MyTheme" />
 </resources>

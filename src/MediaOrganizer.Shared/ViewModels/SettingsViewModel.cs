@@ -36,7 +36,14 @@ public sealed class NetworkProfileVM
     public string Name => Source.Name;
     public string TypeLabel => Source.Type == NetworkType.Smb ? "SMB" : "WebDAV";
     public string Address => Source.Address;
-    public string VerifiedLabel => Source.LastVerifiedAt is { } t ? $"✓ {t:yyyy-MM-dd HH:mm}" : "未验证";
+
+    /// <summary>桌面端沿用的文本标签（含 ✓ 字形前缀），由下方拆分属性组合。</summary>
+    public string VerifiedLabel => (IsVerified ? "✓ " : "") + VerifiedTimeText;
+
+    /// <summary>Android 端拆分：✓ 用矢量图标渲染（自打包字体不保证含有该字形，审查报告3 F5）。</summary>
+    public bool IsVerified => Source.LastVerifiedAt is not null;
+
+    public string VerifiedTimeText => Source.LastVerifiedAt is { } t ? $"{t:yyyy-MM-dd HH:mm}" : "未验证";
 }
 
 /// <summary>文件名模式列表项（设置 → 文件名模式）。</summary>

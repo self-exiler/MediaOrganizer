@@ -36,6 +36,13 @@ public partial class WorkbenchViewModel : ViewModelBase
     public string[] ExistActionOptions { get; } = ["跳过 skip", "覆盖 overwrite", "重命名 rename（_1、_2…）"];
     public string[] LevelOptions { get; } = ["按日 2024/01/15", "按月 2024/01", "按年 2024"];
 
+    /// <summary>
+    /// Android 选择对话框用的操作类型选项：网络目标时滤掉「移动」——原生单选列表不支持逐项禁用，
+    /// 改为直接不出现（网络仅复制的原因解释由既有信息条承载，FR-A9.4；审查报告3 特例1）。
+    /// 桌面端 ComboBox 仍绑 OperationOptions（禁用项语义不变）。
+    /// </summary>
+    public string[] OperationPickerOptions => IsMoveAllowed ? OperationOptions : [OperationOptions[0]];
+
     [ObservableProperty]
     private string _sourceDir;
 
@@ -56,6 +63,13 @@ public partial class WorkbenchViewModel : ViewModelBase
 
     [ObservableProperty]
     private int _totalFiles;
+
+    /// <summary>执行进度条上限：TotalFiles 可能为 0（空源目录/空计划），Maximum=0 会产生除零/NaN 渲染，钳到 1
+    /// （审查报告3 工作台 P2）。</summary>
+    public int ProgressMaximum => Math.Max(TotalFiles, 1);
+
+    partial void OnTotalFilesChanged(int value)
+        => OnPropertyChanged(nameof(ProgressMaximum));
 
     [ObservableProperty]
     private int _successFiles;
@@ -93,6 +107,9 @@ public partial class WorkbenchViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _isMoveAllowed = true;
+
+    partial void OnIsMoveAllowedChanged(bool value)
+        => OnPropertyChanged(nameof(OperationPickerOptions)); // 网络目标切换时刷新 Android 选择器选项
 
     /// <summary>输出目标为本地目录（非网络位置）：移动端据此显示输出目录选取行（FR-A8.6/FR-A9.1）。</summary>
     [ObservableProperty]
