@@ -3,7 +3,6 @@ using Android.Content;
 using Android.Content.PM;
 using Android.OS;
 using Android.Runtime;
-using Android.Views.InputMethod;
 using Avalonia.Android;
 using MediaOrganizer.Android.Platforms;
 
@@ -46,7 +45,8 @@ public class Application(IntPtr javaReference, JniHandleOwnership transfer) : Av
     Icon = "@mipmap/ic_launcher",
     MainLauncher = true,
     LaunchMode = LaunchMode.SingleTop,
-    WindowSoftInputMode = SoftInput.AdjustResize,
+    // 软键盘弹出时压缩窗口（设置页底部输入框不被遮挡）；SoftInput 枚举在 Android.Views 命名空间
+    WindowSoftInputMode = Android.Views.SoftInput.AdjustResize,
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.UiMode
         | ConfigChanges.KeyboardHidden | ConfigChanges.SmallestScreenSize)]
 public class MainActivity : AvaloniaMainActivity
