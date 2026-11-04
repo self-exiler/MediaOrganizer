@@ -37,6 +37,11 @@ TestResults/
 
 参考代码（python）/*
 
+# 本地调试产物（adb 截图 / APK 备份）与 Python 缓存
+dist/
+*.pyc
+**/__pycache__/
+
 
 # 安卓签名 keystore 与密码(只在本地保留,绝不入库)
 keystore/*.jks

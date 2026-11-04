@@ -7,6 +7,7 @@ using MediaOrganizer.Core.Logging;
 using MediaOrganizer.Core.Platforms;
 using MediaOrganizer.Desktop.Icons;
 using MediaOrganizer.Desktop.Services;
+using MediaOrganizer.Shared.Services;
 using MediaOrganizer.Shared.ViewModels;
 using System.Collections.ObjectModel;
 

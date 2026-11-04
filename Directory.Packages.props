@@ -17,7 +17,6 @@
     <PackageVersion Include="SMBLibrary" Version="1.5.7.1" />
     <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="10.0.0" />
     <PackageVersion Include="WebDAVClient" Version="2.7.0" />
-    <PackageVersion Include="Xamarin.AndroidX.DocumentFile" Version="1.0.1.4" />
     <PackageVersion Include="Xamarin.AndroidX.Core" Version="1.17.0.2" />
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />

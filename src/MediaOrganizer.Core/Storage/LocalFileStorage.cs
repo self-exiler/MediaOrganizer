@@ -10,16 +10,16 @@ public class LocalFileStorage(string rootPath) : IFileStorage
         ? throw new ArgumentException("rootPath cannot be null or empty.", nameof(rootPath))
         : Path.GetFullPath(rootPath);
 
-    // Windows 文件系统大小写不敏感；Linux/Android 大小写敏感但不会因大小写产生路径逃逸，统一用 OrdinalIgnoreCase 更宽松安全。
-    private static readonly StringComparison PathComparison = StringComparison.OrdinalIgnoreCase;
-
     protected string Resolve(string relativePath)
     {
         var rel = relativePath.Replace('/', Path.DirectorySeparatorChar);
         var full = Path.GetFullPath(Path.Combine(Root, rel));
-        // 防路径穿越：相对路径含 ".." 段时不允许逃出根目录（文件名来自扫描结果，属不可信输入）
-        var rootPrefix = Path.TrimEndingDirectorySeparator(Root) + Path.DirectorySeparatorChar;
-        if (!full.StartsWith(rootPrefix, PathComparison) && !full.Equals(Root, PathComparison))
+        // 防路径穿越：相对路径含 ".." 段时不允许逃出根目录（文件名来自扫描结果，属不可信输入）。
+        // 不能用 TrimEndingDirectorySeparator(Root) + '\\' 拼前缀：盘符根（D:\）不会被去掉尾分隔符，
+        // 拼出 "D:\\" 后所有合法路径都会被误判越界（2026-11-04 走查 #2，已实跑验证）。
+        var relative = Path.GetRelativePath(Root, full);
+        if (relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal)
+            || Path.IsPathRooted(relative))
             throw new IOException($"目标路径越出输出根目录：{relativePath}");
         return full;
     }
@@ -31,13 +31,6 @@ public class LocalFileStorage(string rootPath) : IFileStorage
     {
         Directory.CreateDirectory(Resolve(relativePath));
         return Task.CompletedTask;
-    }
-
-    public virtual Task<long> GetLengthAsync(string relativePath, CancellationToken ct = default)
-    {
-        var info = new FileInfo(Resolve(relativePath));
-        // 与契约一致——文件不可用返回 -1，而非抛 FileNotFoundException
-        return Task.FromResult(info.Exists ? info.Length : -1L);
     }
 
     public virtual async Task<long> CopyFromAsync(IMediaSource source, string relativeTarget, IProgress<long>? progress = null, CancellationToken ct = default)
@@ -78,8 +71,8 @@ public class LocalFileStorage(string rootPath) : IFileStorage
         var from = Resolve(relativeFrom);
         var to = Resolve(relativeTo);
         Directory.CreateDirectory(Path.GetDirectoryName(to)!);
-        if (File.Exists(to)) File.Delete(to);
-        File.Move(from, to);
+        // 原子覆盖：旧写法「先删后移」在 Move 抛异常时新旧俱失（2026-11-04 走查 #1）
+        File.Move(from, to, overwrite: true);
         return Task.CompletedTask;
     }
 

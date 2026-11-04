@@ -26,8 +26,8 @@ public static class AndroidStorageAccess
         var intent = new Intent(
             Settings.ActionManageAppAllFilesAccessPermission,
             global::Android.Net.Uri.Parse("package:" + activity.PackageName));
-        intent.AddFlags(ActivityFlags.NewTask);
-
+        // 不能加 FLAG_ACTIVITY_NEW_TASK：以 NEW_TASK 启动的 Activity 会立即回调 RESULT_CANCELED，
+        // 权限复查必然仍为 false，首次点「选取」表现为无反应（走查 #3）
         await activity.StartForResultAsync(intent, RequestCodes.AllFilesAccess);
 
         return HasAllFilesAccess;

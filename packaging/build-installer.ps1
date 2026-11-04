@@ -47,8 +47,13 @@ function Invoke-Wix {
 # 改了以后升级不会清理旧版本的文件（MSI 视其为不同组件）。
 $AppFilesGuid = '{3F6B9C2E-8D41-4A7B-B0C5-2E9F7D4A1C63}'
 
-# 与 MediaOrganizer.iss（已删除）时代的默认值一致；CI 用 APP_VERSION 覆盖。
-if (-not $Version) { $Version = if ($env:APP_VERSION) { $env:APP_VERSION } else { '1.3.0' } }
+# 单一版本源：CI 用 APP_VERSION 覆盖；本地兜底从 Android csproj 读取，避免与 csproj 基数各写一份（走查 #18）。
+if (-not $Version) {
+    $Version = if ($env:APP_VERSION) { $env:APP_VERSION } else {
+        (Select-Xml -Path (Join-Path $PSScriptRoot '../src/MediaOrganizer.Android/MediaOrganizer.Android.csproj') `
+            -XPath '/Project/PropertyGroup/ApplicationDisplayVersion').Node.InnerText
+    }
+}
 if ($Version -notmatch '^\d+(\.\d+){1,3}$') {
     throw "版本号 '$Version' 不符合 MSI 要求（形如 1.4.0 或 1.4.0.1）"
 }

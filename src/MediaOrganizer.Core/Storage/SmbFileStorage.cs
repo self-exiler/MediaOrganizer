@@ -74,13 +74,6 @@ public sealed class SmbFileStorage : IFileStorage
     /// 此前 Exists/CreateDirectory/Delete 三处各用相对 '/' 路径、拼接 SMB '\' 路径、ToSmbPath 三种写法，互相读不到。</summary>
     private string DirCacheKey(string relativeDirPath) => ToSmbPath(relativeDirPath);
 
-    /// <summary>按 '/' 拆出父目录与叶子名（计划路径恒为 '/' 分隔）。</summary>
-    private static (string Dir, string Leaf) SplitParent(string relativePath)
-    {
-        var idx = relativePath.LastIndexOf('/');
-        return idx < 0 ? ("", relativePath) : (relativePath[..idx], relativePath[(idx + 1)..]);
-    }
-
     /// <summary>
     /// 单次 SMB2 写入字节数：取「协商的 MaxWriteSize」与「1MB 硬上限」的较小值。
     /// 连接建立后才有意义，EnsureConnected 之后调用。
@@ -176,7 +169,7 @@ public sealed class SmbFileStorage : IFileStorage
 
     public async Task<bool> ExistsAsync(string relativePath, CancellationToken ct = default)
     {
-        var (dirPath, leaf) = SplitParent(relativePath);
+        var (dirPath, leaf) = PlanPath.Split(relativePath);
         var key = DirCacheKey(dirPath);
         if (_dirCache.TryGetValue(key, out var listing))
             return listing.TryGetValue(leaf, out var isDir) && !isDir;
@@ -224,7 +217,7 @@ public sealed class SmbFileStorage : IFileStorage
     /// <summary>写操作后同步维护目录列表缓存（仅当该目录列表已被加载过；present=false 表示条目已消失）。</summary>
     private void UpdateDirCache(string relativePath, bool present, bool isDir = false)
     {
-        var (dirPath, leaf) = SplitParent(relativePath);
+        var (dirPath, leaf) = PlanPath.Split(relativePath);
         if (!_dirCache.TryGetValue(DirCacheKey(dirPath), out var listing)) return;
         if (present) listing[leaf] = isDir;
         else listing.TryRemove(leaf, out _);
@@ -273,28 +266,6 @@ public sealed class SmbFileStorage : IFileStorage
                     parentListing[segment] = true;
             }
             return null;
-        }, ct);
-
-    public Task<long> GetLengthAsync(string relativePath, CancellationToken ct = default)
-        => InvokeAsync(store =>
-        {
-            var path = ToSmbPath(relativePath);
-            var status = store.CreateFile(out var handle, out _, path, AccessMask.GENERIC_READ,
-                FileAttributes.Normal, ShareAccess.None, CreateDisposition.FILE_OPEN,
-                CreateOptions.FILE_NON_DIRECTORY_FILE, null);
-            if (status != NTStatus.STATUS_SUCCESS)
-                return -1L;
-            try
-            {
-                var infoStatus = store.GetFileInformation(out var info, handle, FileInformationClass.FileStandardInformation);
-                if (infoStatus != NTStatus.STATUS_SUCCESS || info is not FileStandardInformation standard)
-                    return -1L;
-                return standard.EndOfFile;
-            }
-            finally
-            {
-                store.CloseFile(handle);
-            }
         }, ct);
 
     public async Task<long> CopyFromAsync(IMediaSource source, string relativeTarget, IProgress<long>? progress = null, CancellationToken ct = default)
@@ -405,7 +376,7 @@ public sealed class SmbFileStorage : IFileStorage
         // 删的是目录时，同步失效目录创建缓存与父列表中的条目
         if (_knownDirs.TryRemove(ToSmbPath(relativePath), out _))
         {
-            var (parentPath, leaf) = SplitParent(relativePath);
+            var (parentPath, leaf) = PlanPath.Split(relativePath);
             if (_dirCache.TryGetValue(DirCacheKey(parentPath), out var parentListing))
                 parentListing.TryRemove(leaf, out _);
         }

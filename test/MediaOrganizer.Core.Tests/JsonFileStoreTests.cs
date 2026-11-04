@@ -43,8 +43,22 @@ public class JsonFileStoreTests : IDisposable
     {
         JsonFileStore.Save(P("b.json"), new JsonFileStoreTestsPayload { Name = "y" }, TestJsonContext.Default.JsonFileStoreTestsPayload);
 
-        var leftovers = Directory.GetFiles(_dir, "*.tmp");
-        Assert.Empty(leftovers);
+        // 临时名是 b.json.tmp-<GUID>，旧断言用 "*.tmp" 永远匹配不到，测试恒绿（走查 #13）
+        Assert.Empty(Directory.GetFiles(_dir, "*.tmp-*"));
+    }
+
+    [Fact]
+    public void 保存失败时也不残留tmp文件()
+    {
+        // 目标路径已是目录 → File.Move 抛异常，覆盖序列化/改名失败时的清理分支
+        var occupied = P("occupied");
+        Directory.CreateDirectory(occupied);
+
+        Assert.ThrowsAny<Exception>(() =>
+            JsonFileStore.Save(occupied, new JsonFileStoreTestsPayload { Name = "y" },
+                TestJsonContext.Default.JsonFileStoreTestsPayload));
+
+        Assert.Empty(Directory.GetFiles(_dir, "*.tmp-*"));
     }
 
     [Fact]

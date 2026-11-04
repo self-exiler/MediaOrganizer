@@ -2,6 +2,6 @@
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
   <!-- 主存储 /storage/emulated/0/** -->
   <external-path name="external_storage" path="." />
-  <!-- 其余物理卷（SD 卡 /storage/XXXX-XXXX/**）及根下其他路径 -->
-  <root-path name="root_storage" path="." />
+  <!-- 不再声明 root-path：它把整机文件系统（含应用私有 config.json 与加密凭据）暴露给 FileProvider（走查 #4）。
+       确需 SD 卡时按具体卷名单独加 external-path。 -->
 </paths>

@@ -155,13 +155,34 @@
         <Style Selector="Button.rowAction:pressed">
             <Setter Property="Background" Value="{DynamicResource SystemControlHighlightListLowBrush}"/>
         </Style>
-        <!-- 触屏选择字段（OptionPicker，审查报告2 §2.3 配套控件）：48dp 热区 + 输入框观感。 -->
+        <!-- 触屏选择字段（OptionPicker，审查报告2 §2.3 配套控件）：48dp 热区 + 输入框观感。
+             它继承 Button，但改成「点按弹单选对话框」后原位置只剩一行文字 + 箭头，真机上看不出可点；
+             这里补上与「选取」路径框一致的浅底/描边/圆角，并显式补 :pressed（覆盖背景会压掉 Fluent 的）。 -->
         <Style Selector="c|OptionPicker">
             <Setter Property="MinHeight" Value="48"/>
             <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
             <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListLowBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseLowBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="{StaticResource RadiusS}"/>
+            <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+        </Style>
+        <Style Selector="c|OptionPicker:pressed">
+            <Setter Property="Background" Value="{DynamicResource SystemControlHighlightListLowBrush}"/>
+        </Style>
+        <Style Selector="c|OptionPicker:disabled">
+            <Setter Property="Opacity" Value="0.45"/>
+        </Style>
+        <!-- Button 模板不保证把 Foreground 传给子控件：文字与箭头显式跟随深浅色 -->
+        <Style Selector="c|OptionPicker TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+        </Style>
+        <Style Selector="c|OptionPicker PathIcon">
+            <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseMediumHighBrush}"/>
         </Style>
         <!-- 全局字体兜底：TextElement.FontFamily 为可继承附加属性，作用于所有控件
              （含 PopupRoot 弹出层；TextBlock/AccessText 显式命中，避免 ContentPresenter

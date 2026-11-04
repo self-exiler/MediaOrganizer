@@ -31,22 +31,21 @@ public static class StorageFactory
         return CreateProfileStorage(profile);
     }
 
-    /// <summary>测试连接：创建目录 + 写探针源 + 校验 + 清理（探针为内存源，不落临时文件）。</summary>
+    /// <summary>测试连接：创建目录 + 写探针 + 写入字节数自证 + 清理（探针为内存源，不落临时文件）。</summary>
     public static async Task<(bool Ok, string Message)> TestConnectionAsync(NetworkProfile profile, CancellationToken ct = default)
     {
+        const string probeDir = ".mo-test";
+        const string probeFile = ".mo-test/probe.txt";
+        IFileStorage? storage = null;
         try
         {
             // SMB 存储持有 TCP 连接 + 会话，必须释放，否则每次「测试连接」泄漏一条连接
-            using var storage = CreateProfileStorage(profile);
-            const string probeDir = ".mo-test";
-            const string probeFile = ".mo-test/probe.txt";
+            storage = CreateProfileStorage(profile);
             var probe = new MemoryMediaSource("probe.txt", "ok"u8.ToArray());
             await storage.CreateDirectoryAsync(probeDir, ct);
-            await storage.CopyFromAsync(probe, probeFile, ct: ct);
-            var len = await storage.GetLengthAsync(probeFile, ct);
-            if (len != 2) return (false, "校验失败：目标文件大小异常");
-            await storage.DeleteAsync(probeFile, ct);
-            await storage.DeleteAsync(probeDir, ct);
+            // 写入自证：CopyFromAsync 的返回值就是目标端实际写入量，省掉一次 GetLengthAsync 往返（走查 #9）
+            var written = await storage.CopyFromAsync(probe, probeFile, ct: ct);
+            if (written != probe.Length) return (false, "校验失败：目标文件大小异常");
             return (true, "连接测试通过：认证成功，拥有写入权限");
         }
         catch (WebDAVException ex)
@@ -71,6 +70,16 @@ public static class StorageFactory
                 return (false, $"无法解析服务器主机名「{DisplayHost(profile)}」：请检查地址有无拼写错误或不可见字符（建议删除重输），并确认当前网络可访问该服务器。");
             }
             return (false, $"连接失败：{ex.Message}");
+        }
+        finally
+        {
+            if (storage is not null)
+            {
+                // 清理走 CancellationToken.None：异常/取消路径下 ct 已失效，否则 .mo-test 探针会永久残留（走查 #13）
+                try { await storage.DeleteAsync(probeFile, CancellationToken.None); } catch { /* 尽力清理 */ }
+                try { await storage.DeleteAsync(probeDir, CancellationToken.None); } catch { /* 尽力清理 */ }
+                storage.Dispose();
+            }
         }
     }
 

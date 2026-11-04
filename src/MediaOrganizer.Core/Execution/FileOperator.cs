@@ -32,6 +32,8 @@ public sealed class FileOperator
     // 执行结束后统一 Dispose，避免每文件一个信号量永不释放的累积泄漏
     // 大小写比较器：Windows/SMB 文件系统不区分大小写，IMG.JPG 与 img.jpg 必须共用同一把闸
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _targetGates = new(StringComparer.OrdinalIgnoreCase);
+    // 同目录重名探测的起点：一次执行内复用上次找到的空位，避免 N 个同名文件反复从 _1 开始探测（O(N²) 网络往返）
+    private readonly ConcurrentDictionary<string, int> _nextFreeIndex = new(StringComparer.OrdinalIgnoreCase);
 
     public FileOperator(IFileStorage target, FileOperation operation, ExistAction existAction, bool fixMtime, int maxDegreeOfParallelism = 2)
     {
@@ -91,8 +93,7 @@ public sealed class FileOperator
                         if (resolution.Action == CollisionAction.Rename) Interlocked.Increment(ref rename);
 
                         var temp = f.RelativeTarget + ".mo-tmp";
-                        await TransferWithRetryAsync(f, temp, resolution.Target,
-                            resolution.Action == CollisionAction.Overwrite, token);
+                        await TransferWithRetryAsync(f, temp, resolution.Target, token);
 
                         // move 语义：目标确认落盘后删除源（网络目标下 GUI 已禁用 move，此处防御性生效）
                         // SAF→SAF / SAF→网络的移动 = 流式复制 + 删除源，由 IMediaSource.Delete 保证
@@ -155,13 +156,13 @@ public sealed class FileOperator
         }
     }
 
-    private async Task TransferWithRetryAsync(PlannedFile f, string temp, string finalTarget, bool deleteBeforeMove, CancellationToken ct)
+    private async Task TransferWithRetryAsync(PlannedFile f, string temp, string finalTarget, CancellationToken ct)
     {
         for (var attempt = 0; ; attempt++)
         {
             try
             {
-                await _target.CreateDirectoryAsync(Path.GetDirectoryName(finalTarget)?.Replace('\\', '/') ?? "", ct);
+                await _target.CreateDirectoryAsync(PlanPath.Split(finalTarget).Dir, ct);
                 try
                 {
                     // 结果回读场景 MediaFile.Source 可能为 null，强解引用会得到 NullReferenceException 且信息无指导性 → 给出明确报错计入失败清单。
@@ -176,10 +177,8 @@ public sealed class FileOperator
                     if (actual != expected)
                         throw new IOException($"大小校验失败：期望 {expected}，实际 {actual}");
 
-                    // Overwrite：新数据已完整落盘到 .mo-tmp，此刻才删旧文件
-                    if (deleteBeforeMove && await _target.ExistsAsync(finalTarget, ct))
-                        await _target.DeleteAsync(finalTarget, ct);
-
+                    // 不预先删除旧文件：MoveAsync 在所有实现里都支持原子覆盖。
+                    // 先删后改名的旧写法在改名失败时会把新旧两份一起丢掉（2026-11-04 走查 #1）。
                     await _target.MoveAsync(temp, finalTarget, ct);
                 }
                 catch
@@ -249,6 +248,13 @@ public sealed class FileOperator
         }
     }
 
-    private Task<string> FindFreeNameAsync(string relativeTarget, CancellationToken ct)
-        => NameCollisionResolver.FindFreeAsync(_target, relativeTarget, ct);
+    private async Task<string> FindFreeNameAsync(string relativeTarget, CancellationToken ct)
+    {
+        var dir = PlanPath.Split(relativeTarget).Dir;
+        var (free, next) = await NameCollisionResolver.FindFreeAsync(
+            _target, relativeTarget, _nextFreeIndex.GetOrAdd(dir, 1), ct);
+        // 并发下保留更大的起点，避免两个线程各自回退到较小编号
+        _nextFreeIndex.AddOrUpdate(dir, next, (_, old) => Math.Max(old, next));
+        return free;
+    }
 }

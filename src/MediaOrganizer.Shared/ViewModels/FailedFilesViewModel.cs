@@ -44,7 +44,7 @@ public partial class FailedFilesViewModel : ViewModelBase
     private readonly AppLogger _logger;
     private readonly IConfirmDialog _confirm;
     private readonly ISystemFileOpener _opener;
-    private readonly IImageLoader _imageLoader;
+    private readonly IImageLoader? _imageLoader;
 
     public event Action<IEnumerable<string>>? NavigateToMagic;
 
@@ -81,7 +81,7 @@ public partial class FailedFilesViewModel : ViewModelBase
         AppLogger logger,
         IConfirmDialog confirm,
         ISystemFileOpener opener,
-        IImageLoader imageLoader)
+        IImageLoader? imageLoader = null)
     {
         _config = state.Config;
         _logger = logger;
@@ -93,6 +93,11 @@ public partial class FailedFilesViewModel : ViewModelBase
 
     public void Refresh(AnalysisResult? result)
     {
+        // 旧条目解绑 + 清空选中/预览/勾选集合，否则重新分析后 Selected 仍指向已移除的旧对象（走查 #17 附带）
+        foreach (var old in Items) old.PropertyChanged -= OnItemPropertyChanged;
+        _checked.Clear();
+        Selected = null;
+        PreviewInfo = "选择文件查看预览";
         Items.Clear();
         ReplacePreview(null);
         if (result is null) return;
@@ -110,18 +115,24 @@ public partial class FailedFilesViewModel : ViewModelBase
         _logger.Info($"失败文件列表已刷新：{Items.Count} 个（按指纹聚类排序）");
     }
 
-    /// <summary>批量勾选中置位：抑制逐项文案刷新（否则上千条目一次全选触发 O(n²) 重算）。</summary>
+    /// <summary>批量勾选中置位：抑制逐项文案刷新。</summary>
     private bool _batchChecking;
+    // 已勾选集合：逐项勾选时 O(1) 增减，替代每次 Items.All 的 O(n) 全表扫描（走查 #16）
+    private readonly HashSet<FailedItem> _checked = [];
 
     private void OnItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (_batchChecking) return;
-        if (e.PropertyName == nameof(FailedItem.IsChecked))
-            UpdateSelectAllText();
+        if (_batchChecking || e.PropertyName != nameof(FailedItem.IsChecked)) return;
+        if (sender is FailedItem item)
+        {
+            if (item.IsChecked) _checked.Add(item);
+            else _checked.Remove(item);
+        }
+        UpdateSelectAllText();
     }
 
     private void UpdateSelectAllText()
-        => SelectAllText = Items.Count > 0 && Items.All(i => i.IsChecked) ? "取消全选" : "全选";
+        => SelectAllText = Items.Count > 0 && _checked.Count == Items.Count ? "取消全选" : "全选";
 
     partial void OnSelectedChanged(FailedItem? value)
     {
@@ -147,6 +158,8 @@ public partial class FailedFilesViewModel : ViewModelBase
 
     private async Task LoadPreviewAsync(FailedItem item, CancellationToken ct)
     {
+        // Android 首版无缩略图预览：不再注入恒返回 null 的桩实现（走查 #17）
+        if (_imageLoader is null) return;
         Bitmap? bmp = null;
         try
         {
@@ -188,12 +201,15 @@ public partial class FailedFilesViewModel : ViewModelBase
     [RelayCommand]
     private void ToggleSelectAll()
     {
-        var check = Items.Any(i => !i.IsChecked);
+        var check = _checked.Count < Items.Count;
         _batchChecking = true;
         try
         {
             foreach (var i in Items)
+            {
                 i.IsChecked = check;
+                if (check) _checked.Add(i); else _checked.Remove(i);
+            }
         }
         finally
         {
@@ -220,30 +236,31 @@ public partial class FailedFilesViewModel : ViewModelBase
     private async Task MoveToPending()
     {
         if (Items.Count == 0 || IsMoving) return;
-
-        // 有勾选项时仅移动勾选的（Android 批量选择语义）；全部未勾选则移动全部（桌面语义保持不变）
-        var items = Items.Where(i => i.IsChecked).ToArray();
-        if (items.Length == 0) items = Items.ToArray();
-
-        // FR-A6.5：目标目录必须由用户指定，不自动落盘兜底
-        if (string.IsNullOrWhiteSpace(PendingDir))
-        {
-            MoveHint = "请先指定「待处理目录」";
-            return;
-        }
-        var targetDir = PendingDir;
-
-        // FR-A6.5：移动前确认（SAF 移动 = 复制 + 删除源）
-        var confirmed = await _confirm.ConfirmAsync(
-            "移入待处理目录",
-            $"将把 {items.Length} 个文件移动到：\n{targetDir}\n\n（移动 = 复制 + 删除源）确定继续吗？");
-        if (!confirmed) return;
-
+        // 必须在 await 确认弹窗之前置位：否则等待期间按钮仍可点，两个确认会并发搬运同一批文件（走查 #7）
         IsMoving = true;
-        MoveProgress = 0;
         MoveHint = "";
         try
         {
+            // 有勾选项时仅移动勾选的（Android 批量选择语义）；全部未勾选则移动全部（桌面语义保持不变）
+            var items = Items.Where(i => i.IsChecked).ToArray();
+            if (items.Length == 0) items = Items.ToArray();
+
+            // FR-A6.5：目标目录必须由用户指定，不自动落盘兜底
+            if (string.IsNullOrWhiteSpace(PendingDir))
+            {
+                MoveHint = "请先指定「待处理目录」";
+                return;
+            }
+            var targetDir = PendingDir;
+
+            // FR-A6.5：移动前确认（SAF 移动 = 复制 + 删除源）
+            var confirmed = await _confirm.ConfirmAsync(
+                "移入待处理目录",
+                $"将把 {items.Length} 个文件移动到：\n{targetDir}\n\n（移动 = 复制 + 删除源）确定继续吗？");
+            if (!confirmed) return;
+
+            MoveProgress = 0;
+
             var target = StorageFactory.CreateLocalStorage(targetDir);
             var progress = new Progress<double>(p => MoveProgress = p * 100);
             var files = items.Select(i => i.File.File).ToArray();
@@ -255,6 +272,7 @@ public partial class FailedFilesViewModel : ViewModelBase
             foreach (var item in items.Where(i => movedSet.Contains(i.File.File.Path)))
             {
                 item.PropertyChanged -= OnItemPropertyChanged; // 与 Refresh 的订阅对称，条目释放后不留引用
+                _checked.Remove(item);
                 Items.Remove(item);
             }
             UpdateSelectAllText();

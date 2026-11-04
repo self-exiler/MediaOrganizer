@@ -23,10 +23,10 @@ public sealed class DesktopFolderPicker : IFolderPicker
 /// <summary>桌面文件另存为 / 分享：StorageProvider 对话框（分享降级为另存为）。</summary>
 public sealed class DesktopFileSaver : IFileSaver
 {
-    public async Task<bool> SaveTextAsync(string suggestedName, string content)
+    public async Task SaveTextAsync(string suggestedName, string content)
     {
         var top = App.MainWindow;
-        if (top is null) return false;
+        if (top is null) return;
         var file = await top.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             Title = "另存分析报告",
@@ -34,11 +34,10 @@ public sealed class DesktopFileSaver : IFileSaver
             DefaultExtension = "txt",
             FileTypeChoices = [new FilePickerFileType("文本文件") { Patterns = ["*.txt"] }]
         });
-        if (file is null) return false;
+        if (file is null) return;
         await using var stream = await file.OpenWriteAsync();
         await using var writer = new StreamWriter(stream);
         await writer.WriteAsync(content);
-        return true;
     }
 
     public Task ShareTextAsync(string title, string content)

@@ -4,8 +4,8 @@ name: release
 # ① 推送 v* 标签 → 云端编译 → 构建成功才创建 GitHub Release 并附产物；
 # ② 手动 workflow_dispatch（nightly=false，填版本号）→ 仅编译 + 上传 Actions 产物，不创建 Release（验证管线/临时出包）；
 # ③ 手动 workflow_dispatch（nightly=true）→ 夜间滚动预发布：固定 tag=nightly 的 prerelease，
-#    每次删除旧 Release/tag 后重建（下载链接恒定）；版本 = csproj 基数.run_number 四段数字，
-#    保证 MSI ProductVersion 严格变大、可覆盖升级（技能 versioning.md §3）。
+#    每次删除旧 Release/tag 后重建（下载链接恒定）；版本 = 最新正式 tag 的 major.minor + run_number 三段数字，
+#    MSI 的 ProductVersion 只比较前三段，四段版本号无效（走查 #18）。
 # 快速编译验证（不签名、不需要 secrets）请用 ci.yml。
 on:
   push:
@@ -23,6 +23,11 @@ on:
 
 permissions:
   contents: write
+
+# 固定 group：nightly 与 v* tag 发布共用同一条队列，避免两个 run 互相删除 nightly Release/tag（走查 #18）
+concurrency:
+  group: release-pipeline
+  cancel-in-progress: false
 
 jobs:
   build-and-release:
@@ -46,10 +51,16 @@ jobs:
           $nightly = $env:INPUT_NIGHTLY -eq 'true'
           $tag = ''
           if ($nightly) {
-            # nightly 跳过 tag/源码一致性校验（版本号是算出来的，本就不等于源码版本）
-            $base = (Select-Xml -Path src/MediaOrganizer.Android/MediaOrganizer.Android.csproj `
-                     -XPath '/Project/PropertyGroup/ApplicationDisplayVersion').Node.InnerText
-            $v = "$base.$env:GITHUB_RUN_NUMBER"
+            # nightly 跳过 tag/源码一致性校验（版本号是算出来的，本就不等于源码版本）。
+            # 基数取最新正式 tag 的 major.minor（无 tag 时回落 csproj），run_number 放第三段：
+            # MSI 比较只看前三段，写成 1.1.1.22 时所有 nightly 都等价于 1.1.1。
+            $csprojBase = (Select-Xml -Path src/MediaOrganizer.Android/MediaOrganizer.Android.csproj `
+                           -XPath '/Project/PropertyGroup/ApplicationDisplayVersion').Node.InnerText
+            $lastTag = (git describe --tags --abbrev=0 --exclude nightly 2>$null)
+            $lastVersion = if ($LASTEXITCODE -eq 0 -and $lastTag) { $lastTag.TrimStart('v','V') } else { $csprojBase }
+            $parts = $lastVersion.Split('.')
+            $v = "$($parts[0]).$($parts[1]).$env:GITHUB_RUN_NUMBER"
+            if ([version]$v -le [version]$lastVersion) { throw "nightly 版本 $v 未超过已发布 $lastVersion，请发布新的正式 tag" }
             $tag = 'nightly'
           }
           else {
@@ -185,12 +196,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # --cleanup-tag 已经删除同名 tag，再调 git/refs/tags/nightly 必然 404，纯属多余日志与 API 调用
           gh release delete nightly --yes --cleanup-tag 2>$null
           if ($LASTEXITCODE -ne 0) { Write-Host "旧 nightly Release 不存在，跳过" }
-          gh api -X DELETE "repos/$env:GITHUB_REPOSITORY/git/refs/tags/nightly" 2>$null
-          if ($LASTEXITCODE -ne 0) { Write-Host "nightly tag 不存在，跳过" }
-          # Actions 的 pwsh 包装会在脚本尾执行 exit $LASTEXITCODE：上面两路失败都是预期内
-          # （首次运行不存在），必须显式归零；真实失败由后续产物校验与 Release 步骤把守
+          # Actions 的 pwsh 包装会在脚本尾执行 exit $LASTEXITCODE：首次运行不存在属预期，显式归零
           $global:LASTEXITCODE = 0
 
       # 仅 tag（正式版）与 nightly（滚动预发布）创建 Release，且排在构建、产物上传之后——

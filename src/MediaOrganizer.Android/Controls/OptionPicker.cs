@@ -34,6 +34,10 @@ public class OptionPicker : Button
     public static readonly StyledProperty<string?> SelectedValueMemberProperty =
         AvaloniaProperty.Register<OptionPicker, string?>(nameof(SelectedValueMember));
 
+    /// <summary>无选中值时的占位提示：配合输入框外观，明确告诉用户「这里可点」。</summary>
+    public static readonly StyledProperty<string?> PlaceholderProperty =
+        AvaloniaProperty.Register<OptionPicker, string?>(nameof(Placeholder), "点击选择");
+
     private TextBlock? _valueText;
     private bool _syncing;
 
@@ -65,6 +69,12 @@ public class OptionPicker : Button
     {
         get => GetValue(SelectedValueMemberProperty);
         set => SetValue(SelectedValueMemberProperty, value);
+    }
+
+    public string? Placeholder
+    {
+        get => GetValue(PlaceholderProperty);
+        set => SetValue(PlaceholderProperty, value);
     }
 
     public OptionPicker()
@@ -122,6 +132,8 @@ public class OptionPicker : Button
             SyncFromValue();
         else if (change.Property == SelectedIndexProperty)
             SyncFromIndex();
+        else if (change.Property == PlaceholderProperty)
+            UpdateDisplay();
     }
 
     /// <summary>SelectedValue 外部变更（VM 写回）：按值反查索引并刷新显示。</summary>
@@ -186,6 +198,11 @@ public class OptionPicker : Button
         var text = options is not null && idx >= 0 && idx < options.Count
             ? options[idx]?.ToString() ?? string.Empty
             : string.Empty;
-        if (_valueText is not null) _valueText.Text = text;
+        if (_valueText is not null)
+        {
+            var empty = string.IsNullOrEmpty(text);
+            _valueText.Text = empty ? Placeholder ?? string.Empty : text;
+            _valueText.Opacity = empty ? 0.6 : 1;
+        }
     }
 }

@@ -1,6 +1,4 @@
-using System.Collections.ObjectModel;
 using System.Reflection;
-using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MediaOrganizer.Android.Platforms;
@@ -10,33 +8,9 @@ using MediaOrganizer.Shared.ViewModels;
 
 namespace MediaOrganizer.Android.ViewModels;
 
-/// <summary>抽屉导航项（FR-A7.1）：图标 + 标签 + 页索引 + 失败文件角标（Badge=0 时角标隐藏）。
-/// 可变 ObservableObject：角标变化时原地更新属性，避免替换实例破坏 ListBox 选中状态。</summary>
-public sealed partial class NavItem : ObservableObject
-{
-    public NavItem(string label, int page, Geometry icon)
-    {
-        Label = label;
-        Page = page;
-        Icon = icon;
-    }
-
-    public string Label { get; }
-    public int Page { get; }
-
-    /// <summary>矢量导航图标（审查报告3 F5：原型中抽屉项带图标）。</summary>
-    public Geometry Icon { get; }
-
-    [ObservableProperty]
-    private int _badge;
-
-    public bool HasBadge => Badge > 0;
-
-    partial void OnBadgeChanged(int value) => OnPropertyChanged(nameof(HasBadge));
-}
-
 /// <summary>
 /// 应用外壳 VM（FR-A7）：顶部 AppBar 标题随页面切换、侧滑抽屉（整理工作台 / 失败文件 / 分析报告 / 设置）。
+/// 抽屉的 4 个导航项已在 MainView 里改为静态按钮（见该文件注释），此处不再持有导航项集合。
 /// 操作反馈经轻提示（Toast）：状态文本变化且非忙碌时由 MainView 弹出、3.5s 自动消失
 /// （审查报告1 #8：常驻底部状态栏移除，忙碌进度留在工作台/结果卡片内）。
 /// 返回键行为（关抽屉/回工作台/退出）由 MainActivity 的 OnBackPressedCallback 处理；
@@ -108,15 +82,6 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private int _selectedPage; // 0 工作台 / 1 失败 / 2 报告 / 3 设置
 
-    /// <summary>抽屉导航项（带矢量图标；失败文件项带角标，角标值原地变更）。</summary>
-    public ObservableCollection<NavItem> NavItems { get; } =
-    [
-        new NavItem("整理工作台", 0, AppIcons.Folder),
-        new NavItem("失败文件", 1, AppIcons.Alert) { Badge = 0 },
-        new NavItem("分析报告", 2, AppIcons.Document),
-        new NavItem("设置", 3, AppIcons.Tune)
-    ];
-
     public MainViewModel(
         WorkbenchViewModel workbench,
         FailedFilesViewModel failedFiles,
@@ -155,9 +120,6 @@ public partial class MainViewModel : ViewModelBase
         SelectedPage = page;
         DrawerOpen = false;
     }
-
-    partial void OnFailedBadgeChanged(int value)
-        => NavItems[1].Badge = value;
 
     public void RefreshFailedBadge(AnalysisResult? result)
     {

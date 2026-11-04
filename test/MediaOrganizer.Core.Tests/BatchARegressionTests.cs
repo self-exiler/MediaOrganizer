@@ -87,11 +87,24 @@ public class BatchARegressionTests : IDisposable
     {
         public Task<bool> ExistsAsync(string r, CancellationToken ct = default) => inner.ExistsAsync(r, ct);
         public Task CreateDirectoryAsync(string r, CancellationToken ct = default) => inner.CreateDirectoryAsync(r, ct);
-        public Task<long> GetLengthAsync(string r, CancellationToken ct = default) => inner.GetLengthAsync(r, ct);
         public Task<long> CopyFromAsync(IMediaSource s, string r, IProgress<long>? p = null, CancellationToken ct = default)
             => Task.FromException<long>(new IOException("模拟网络中断"));
         public Task DeleteAsync(string r, CancellationToken ct = default) => inner.DeleteAsync(r, ct);
         public Task MoveAsync(string from, string to, CancellationToken ct = default) => inner.MoveAsync(from, to, ct);
+        public Task SetModifiedUtcAsync(string r, DateTime utc, CancellationToken ct = default) => inner.SetModifiedUtcAsync(r, utc, ct);
+        public void Dispose() => inner.Dispose();
+    }
+
+    /// <summary>MoveAsync 必失败的存储：模拟改名被服务端拒绝（旧文件必须原样保留）。</summary>
+    private sealed class FailingMoveStorage(IFileStorage inner) : IFileStorage
+    {
+        public Task<bool> ExistsAsync(string r, CancellationToken ct = default) => inner.ExistsAsync(r, ct);
+        public Task CreateDirectoryAsync(string r, CancellationToken ct = default) => inner.CreateDirectoryAsync(r, ct);
+        public Task<long> CopyFromAsync(IMediaSource s, string r, IProgress<long>? p = null, CancellationToken ct = default)
+            => inner.CopyFromAsync(s, r, p, ct);
+        public Task DeleteAsync(string r, CancellationToken ct = default) => inner.DeleteAsync(r, ct);
+        public Task MoveAsync(string from, string to, CancellationToken ct = default)
+            => Task.FromException(new IOException("模拟改名被拒绝"));
         public Task SetModifiedUtcAsync(string r, DateTime utc, CancellationToken ct = default) => inner.SetModifiedUtcAsync(r, utc, ct);
         public void Dispose() => inner.Dispose();
     }
@@ -118,7 +131,6 @@ public class BatchARegressionTests : IDisposable
         public List<string> Log { get; } = [];
         public Task<bool> ExistsAsync(string r, CancellationToken ct = default) => inner.ExistsAsync(r, ct);
         public Task CreateDirectoryAsync(string r, CancellationToken ct = default) => inner.CreateDirectoryAsync(r, ct);
-        public Task<long> GetLengthAsync(string r, CancellationToken ct = default) => inner.GetLengthAsync(r, ct);
         public Task<long> CopyFromAsync(IMediaSource s, string r, IProgress<long>? p = null, CancellationToken ct = default)
         {
             Log.Add($"copy:{r}");
@@ -139,7 +151,7 @@ public class BatchARegressionTests : IDisposable
     }
 
     [Fact]
-    public async Task Overwrite成功路径_删除发生在拷贝之后改名之前()
+    public async Task Overwrite成功路径_不再预先删除旧文件()
     {
         WriteFile(Path.Combine(_src, "dup.jpg"), "new");
         var date = new DateTimeOffset(2024, 1, 15, 0, 0, 0, TimeSpan.Zero);
@@ -152,11 +164,24 @@ public class BatchARegressionTests : IDisposable
         Assert.Equal(1, r.Succeeded);
         Assert.Equal(1, r.Overwritten);
         Assert.Equal("new", File.ReadAllText(Path.Combine(_out, "2024", "01", "15", "dup.jpg")));
-        var iCopy = storage.Log.IndexOf("copy:2024/01/15/dup.jpg.mo-tmp");
-        var iDelete = storage.Log.IndexOf("delete:2024/01/15/dup.jpg");
-        var iMove = storage.Log.IndexOf("move:2024/01/15/dup.jpg.mo-tmp->2024/01/15/dup.jpg");
-        Assert.True(iCopy >= 0 && iDelete > iCopy && iMove > iDelete,
-            $"删除必须发生在临时文件写完之后、改名之前：{string.Join(" | ", storage.Log)}");
+        // 改名本身原子覆盖：先删旧文件会在 Move 失败时新旧俱失（走查 #1）
+        Assert.DoesNotContain("delete:2024/01/15/dup.jpg", storage.Log);
+        Assert.Contains("move:2024/01/15/dup.jpg.mo-tmp->2024/01/15/dup.jpg", storage.Log);
+    }
+
+    [Fact]
+    public async Task Overwrite改名失败_旧文件仍在()
+    {
+        WriteFile(Path.Combine(_src, "dup.jpg"), "new");
+        var date = new DateTimeOffset(2024, 1, 15, 0, 0, 0, TimeSpan.Zero);
+        var plan = Plan(("dup.jpg", date));
+        var target = Path.Combine(_out, "2024", "01", "15", "dup.jpg");
+        WriteFile(target, "old");
+
+        var r = await Run(plan, ExistAction.Overwrite, new FailingMoveStorage(new LocalFileStorage(_out)));
+
+        Assert.Equal(1, r.Failed);
+        Assert.Equal("old", File.ReadAllText(target));
     }
 
     // ---- 审计 3：大小写互斥闸（Windows/SMB 不区分大小写） ----
@@ -316,7 +341,6 @@ public class BatchARegressionTests : IDisposable
                 ? Task.FromException<bool>(new IOException("模拟瞬时网络故障"))
                 : inner.ExistsAsync(r, ct);
         public Task CreateDirectoryAsync(string r, CancellationToken ct = default) => inner.CreateDirectoryAsync(r, ct);
-        public Task<long> GetLengthAsync(string r, CancellationToken ct = default) => inner.GetLengthAsync(r, ct);
         public Task<long> CopyFromAsync(IMediaSource s, string r, IProgress<long>? p = null, CancellationToken ct = default)
             => inner.CopyFromAsync(s, r, p, ct);
         public Task DeleteAsync(string r, CancellationToken ct = default) => inner.DeleteAsync(r, ct);

@@ -175,9 +175,9 @@ MediaOrganizer Android 版访问用户指定的源目录（全局存储权限直
 | FR-A9.2 | WebDAV 走协议客户端（WebDAVClient），与桌面版共享 `WebDavFileStorage` 实现 |
 | FR-A9.3 | 连接配置提供"测试连接"即时验证（认证 + 写权限探测）；**须带超时与取消**，不得阻塞 UI 线程 |
 | FR-A9.4 | 网络目标（WebDAV / SMB）下仅提供 copy，move 选项禁用并给出原因提示 |
-| FR-A9.5 | 流式拷贝，**单次写入载荷不得超过连接协商的写入上限**（SMB = `min(服务器 MaxWriteSize, 1MB)`；SMBLibrary 的 `WriteFile` 不自动分片，超限必失败）。逐文件 + 总体双进度；网络中断自动重试 3 次（指数退避 1/2/4s） |
+| FR-A9.5 | 流式拷贝，**单次写入载荷不得超过连接协商的写入上限**（SMB = `min(服务器 MaxWriteSize, 1MB)`；SMBLibrary 的 `WriteFile` 不自动分片，超限必失败）。逐文件 + 总体双进度；网络中断共 3 次尝试、退避 1s/2s（与桌面版一致） |
 | FR-A9.6 | **支持 SMB**（ADR-0007）：SMBLibrary 纯托管客户端，双端统一实现；SMB profile 的用户名/密码显式 NTLM 认证（首版不支持 guest）；仅作输出目标，仅 copy |
-| FR-A9.7 | SMB 传输与 WebDAV 同一套可靠性语义：按协商上限分块流式、`.mo-tmp` 临时名 + 大小校验（取不到长度须记失败而非跳过）、**失败须清理 `.mo-tmp` 残留**、中断重试 3 次（指数退避）、WakeLock 保持 |
+| FR-A9.7 | SMB 传输与 WebDAV 同一套可靠性语义：按协商上限分块流式、`.mo-tmp` 临时名 + 大小校验（取不到长度须记失败而非跳过）、**失败须清理 `.mo-tmp` 残留**、中断共 3 次尝试（退避 1s/2s）、WakeLock 保持 |
 | FR-A9.8 | SMB 连接为 `IDisposable`，所有创建点（执行归档、测试连接）须释放，不得泄漏 TCP 连接与会话 |
 
 ### FR-A10 凭据管理（P0）
@@ -269,7 +269,7 @@ MediaOrganizer Android 版访问用户指定的源目录（全局存储权限直
 | R-A4 | ViewModel 跨平台耦合（桌面版 VM 可能有 Avalonia.Desktop 依赖） | 审查现有 VM，平台相关逻辑抽到接口 |
 | R-A5 | Android Keystore 在不同厂商设备上行为差异 | 主流设备测试；降级方案：EncryptedSharedPreferences |
 | R-A5b | SMBLibrary 不支持 SMB 3.1.1 加密/签名，强制加密的服务器连不上；手机 Wi-Fi 下长传稳定性 | 覆盖主流家用 NAS（群晖/威联通默认不强制加密）；失败给明确文案；WakeLock + 重试 + `.mo-tmp` 保护（ADR-0007） |
-| R-A6 | 大文件 WebDAV 上传时网络中断 | 重试 3 次 + 指数退避（与桌面版一致）；WakeLock 保持上传 |
+| R-A6 | 大文件 WebDAV 上传时网络中断 | 共 3 次尝试、退避 1s/2s（与桌面版一致）；WakeLock 保持上传 |
 | R-A7 | 无 Play Store 分发，用户需手动更新 | GitHub Release + 应用内版本检查 |
 | R-A8 | `MANAGE_EXTERNAL_STORAGE` 为强制前置且无降级路径，系统收紧该权限时应用将完全不可用 | 现状接受（侧载分发、自用与小众开源场景）；**待决**：是否补 `READ_MEDIA_IMAGES/VIDEO` + SAF 只读降级路径 |
 | R-A9 | 凭据随 `allowBackup` 进入设备迁移备份，而 Keystore 密钥不可导出 → 换机恢复后凭据永久无法解密 | 现状未处理。**待决**：关闭 `allowBackup` 或显式提示用户重新录入密码 |

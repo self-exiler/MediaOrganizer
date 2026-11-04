@@ -72,7 +72,6 @@
     <PackageReference Include="Avalonia" />
     <PackageReference Include="Avalonia.Android" />
     <PackageReference Include="Avalonia.Themes.Fluent" />
-    <PackageReference Include="Xamarin.AndroidX.DocumentFile" />
     <!-- 前台服务进度通知的 NotificationCompat.Builder / NotificationManagerCompat（AndroidX.Core）。
          该包本就经 Avalonia.Android → AppCompat 链传递打包进 APK，显式引用不增加体积。 -->
     <PackageReference Include="Xamarin.AndroidX.Core" />

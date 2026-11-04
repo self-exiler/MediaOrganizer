@@ -63,7 +63,6 @@ public class FileOperatorTests : IDisposable
 
         public Task CreateDirectoryAsync(string relativePath, CancellationToken ct = default) => inner.CreateDirectoryAsync(relativePath, ct);
 
-        public Task<long> GetLengthAsync(string relativePath, CancellationToken ct = default) => inner.GetLengthAsync(relativePath, ct);
 
         public Task<long> CopyFromAsync(IMediaSource source, string relativeTarget, IProgress<long>? progress = null, CancellationToken ct = default)
             => inner.CopyFromAsync(source, relativeTarget, progress, ct);

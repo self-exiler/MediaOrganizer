@@ -50,7 +50,6 @@ public class BatchBRegressionTests : IDisposable
 
         public Task<bool> ExistsAsync(string r, CancellationToken ct = default) => inner.ExistsAsync(r, ct);
         public Task CreateDirectoryAsync(string r, CancellationToken ct = default) => inner.CreateDirectoryAsync(r, ct);
-        public Task<long> GetLengthAsync(string r, CancellationToken ct = default) => inner.GetLengthAsync(r, ct);
         public Task<long> CopyFromAsync(IMediaSource s, string r, IProgress<long>? p = null, CancellationToken ct = default)
             => Task.FromException<long>(new OperationCanceledException("模拟传输中途取消"));
         public Task DeleteAsync(string r, CancellationToken ct = default)
@@ -83,7 +82,6 @@ public class BatchBRegressionTests : IDisposable
         public int CopyCount;
         public Task<bool> ExistsAsync(string r, CancellationToken ct = default) => inner.ExistsAsync(r, ct);
         public Task CreateDirectoryAsync(string r, CancellationToken ct = default) => inner.CreateDirectoryAsync(r, ct);
-        public Task<long> GetLengthAsync(string r, CancellationToken ct = default) => inner.GetLengthAsync(r, ct);
         public Task<long> CopyFromAsync(IMediaSource s, string r, IProgress<long>? p = null, CancellationToken ct = default)
         {
             Interlocked.Increment(ref CopyCount);

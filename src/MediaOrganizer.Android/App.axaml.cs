@@ -108,19 +108,10 @@ public partial class App : Avalonia.Application
             dataDir,
             jobHost);
 
-        var failedFiles = new FailedFilesViewModel(state, logger, confirm, opener, new AndroidImageLoader());
-        // 主题设置（外观卡片）即时生效：Default 跟随系统深浅色，Light/Dark 强制覆盖
-        void ApplyTheme(string theme)
-        {
-            if (Current is { } app)
-                app.RequestedThemeVariant = theme switch
-                {
-                    "Light" => ThemeVariant.Light,
-                    "Dark" => ThemeVariant.Dark,
-                    _ => ThemeVariant.Default
-                };
-        }
-        var settings = new SettingsViewModel(state, ApplyTheme);
+        // Android 首版无缩略图：IImageLoader 可空，不再注入恒返回 null 的桩类（走查 #17）
+        var failedFiles = new FailedFilesViewModel(state, logger, confirm, opener);
+        // 主题映射与桌面共用 Shared 的 ThemeHelper（走查 #19）
+        var settings = new SettingsViewModel(state, ThemeHelper.Apply);
         var report = new ReportViewModel(fileSaver);
         var main = new MainViewModel(workbench, failedFiles, settings, report, wakeLock);
 
@@ -146,7 +137,7 @@ public partial class App : Avalonia.Application
         Main = main;
 
         // 启动时应用已保存的主题（设置项仅在变更时回调，此处补启动一次性应用）
-        ApplyTheme(state.Config.General.Theme);
+        ThemeHelper.Apply(state.Config.General.Theme);
 
         if (ApplicationLifetime is ISingleViewApplicationLifetime singleView)
             singleView.MainView = new MainView { DataContext = main };

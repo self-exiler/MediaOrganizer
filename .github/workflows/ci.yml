@@ -61,13 +61,6 @@ jobs:
           if ($text -notmatch 'POST_NOTIFICATIONS') { throw "缺少 POST_NOTIFICATIONS 权限" }
           Write-Host "OK: dataSync 前台服务与相关权限均已声明"
 
-      - name: Upload unsigned APK
-        uses: actions/upload-artifact@v6
-        with:
-          name: MediaOrganizer-android-unsigned
-          path: src/MediaOrganizer.Android/bin/Release/net10.0-android/**/*.apk
-          if-no-files-found: error
-
   # 桌面编译与 Core 单测合并为一个 job:两者都很快(合计约 2 分钟,仍短于 Android job),
   # 省一个 runner,产物失败归属仍由步骤名区分。
   build-desktop-and-test:

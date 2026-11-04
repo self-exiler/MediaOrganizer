@@ -38,19 +38,20 @@ public sealed class OrganizeForegroundService : Service
 
         if (intent?.Action == ActionCancel)
         {
-            host?.Cancel();
+            // FinalizeAndStop 内部会 ForceFinish：任务卡在同步 socket 时也必须释放宿主终态（走查 #5）
             FinalizeAndStop("已停止，已完成文件保留");
             return StartCommandResult.NotSticky;
         }
 
         if (host is null || !host.IsJobRunning)
         {
-            // 无运行中任务（任务已结束/服务被系统误拉起）：不占前台位，直接退出
-            StopForeground(StopForegroundFlags.Remove);
-            StopSelf();
+            // 极快任务可能在订阅事件之前结束：走统一终态路径补发最终摘要通知，而不是静默退出
+            FinalizeAndStop("任务已结束");
             return StartCommandResult.NotSticky;
         }
 
+        // 服务实例可能被系统复用：新任务开始时必须重置终态标志，否则最终通知不会再发
+        _finalized = false;
         // 三参 StartForeground：API 29+ 必须显式声明与 manifest 一致的 foregroundServiceType
         StartForeground(NotificationId, BuildNotification(host), global::Android.Content.PM.ForegroundService.TypeDataSync);
 
@@ -76,9 +77,15 @@ public sealed class OrganizeForegroundService : Service
 
     private void OnHostFinished(string outcome) => FinalizeAndStop(outcome);
 
+    private bool _finalized;
+
     private void FinalizeAndStop(string outcome)
     {
+        // 幂等：ActionCancel / OnTimeout / Finished 事件 / 极快任务复查可能同时走到这里
+        if (_finalized) return;
+        _finalized = true;
         Unsubscribe();
+        OrganizeJobHost.Current?.ForceFinish(outcome);
         _mainHandler.Post(() =>
         {
             // 先撤前台态，再发非常驻的最终摘要通知（独立 ID，不与进行中通知冲突）

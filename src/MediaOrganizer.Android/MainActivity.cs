@@ -53,7 +53,8 @@ public class Application(IntPtr javaReference, JniHandleOwnership transfer) : Av
         | ConfigChanges.KeyboardHidden | ConfigChanges.SmallestScreenSize)]
 public class MainActivity : AvaloniaMainActivity
 {
-    private readonly Dictionary<int, Action<Intent?>> _pending = new();
+    // 进程级而非实例级：Activity 因未声明的配置变更/内存回收重建后，新实例仍能了结旧的 SAF 回调（走查 #6）
+    private static readonly Dictionary<int, Action<Intent?>> Pending = new();
     private DrawerBackCallback? _backCallback;
 
     public static MainActivity? Instance { get; private set; }
@@ -101,7 +102,7 @@ public class MainActivity : AvaloniaMainActivity
     protected override void OnActivityResult(int requestCode, Result resultCode, Intent? data)
     {
         base.OnActivityResult(requestCode, resultCode, data);
-        if (_pending.Remove(requestCode, out var cb))
+        if (Pending.Remove(requestCode, out var cb))
             cb(resultCode == Result.Ok ? data : null);
     }
 
@@ -111,12 +112,12 @@ public class MainActivity : AvaloniaMainActivity
     {
         var tcs = new TaskCompletionSource<Intent?>(TaskCreationOptions.RunContinuationsAsynchronously);
         // 同一请求码重复发起：先以「取消」（回调 null）了结先前悬挂的等待，其 Task 不至于永不完成
-        if (_pending.TryGetValue(requestCode, out var stale))
+        if (Pending.TryGetValue(requestCode, out var stale))
         {
-            _pending.Remove(requestCode);
+            Pending.Remove(requestCode);
             stale(null);
         }
-        _pending[requestCode] = data => tcs.TrySetResult(data);
+        Pending[requestCode] = data => tcs.TrySetResult(data);
         RunOnUiThread(() => StartActivityForResult(intent, requestCode));
         return tcs.Task;
     }

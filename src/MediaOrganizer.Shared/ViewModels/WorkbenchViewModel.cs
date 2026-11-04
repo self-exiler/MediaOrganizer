@@ -64,8 +64,8 @@ public partial class WorkbenchViewModel : ViewModelBase
     [ObservableProperty]
     private int _totalFiles;
 
-    /// <summary>执行进度条上限：TotalFiles 可能为 0（空源目录/空计划），Maximum=0 会产生除零/NaN 渲染，钳到 1
-    /// （审查报告3 工作台 P2）。</summary>
+    /// <summary>结果卡片进度条上限：Value=SuccessFiles（文件数），故 Maximum 用总文件数并钳到 ≥1，
+    /// 空目录时避免 Maximum=0 的 NaN 渲染。与「进行中」卡片的 0..100 进度条不是同一量纲。</summary>
     public int ProgressMaximum => Math.Max(TotalFiles, 1);
 
     partial void OnTotalFilesChanged(int value)
@@ -163,7 +163,10 @@ public partial class WorkbenchViewModel : ViewModelBase
         var selected = _config.Paths.OutputNetworkProfile;
         OutputTargetOptions = ["本地目录", .. _config.NetworkProfiles.Select(p => $"网络位置：{p.Name}")];
         OnPropertyChanged(nameof(OutputTargetOptions));
-        var newIndex = string.IsNullOrEmpty(selected) ? 0 : Math.Max(0, 1 + _config.NetworkProfiles.FindIndex(p => p.Name == selected));
+        var idx = string.IsNullOrEmpty(selected) ? -1 : _config.NetworkProfiles.FindIndex(p => p.Name == selected);
+        // 自愈：profile 已被删/改名后残留的旧名会一路传到 CreateTarget 抛异常（走查 #8）
+        if (idx < 0 && !string.IsNullOrEmpty(selected)) _config.Paths.OutputNetworkProfile = "";
+        var newIndex = idx < 0 ? 0 : 1 + idx;
         IsLocalTarget = newIndex <= 0;
         if (newIndex != OutputTargetIndex)
             OutputTargetIndex = newIndex; // 触发 OnOutputTargetIndexChanged → 写回配置并刷新网络状态
@@ -171,6 +174,8 @@ public partial class WorkbenchViewModel : ViewModelBase
 
     partial void OnOutputTargetIndexChanged(int value)
     {
+        // ComboBox/OptionPicker 重建 ItemsSource 时会回写瞬时 -1；不能让它把已持久化的网络目标清空（走查 #8）
+        if (value < 0) return;
         IsLocalTarget = value <= 0;
         var profileName = value > 0 && value - 1 < _config.NetworkProfiles.Count
             ? _config.NetworkProfiles[value - 1].Name
@@ -199,6 +204,7 @@ public partial class WorkbenchViewModel : ViewModelBase
 
     private void OnPlanChanged(ArchivePlan plan)
     {
+        if (_analysisGeneration != _generation) { CanExecute = false; return; }
         var op = _session.Operation == FileOperation.Move ? "移动" : "复制";
         PlanText = $"将对 {plan.Files.Count} 个文件执行「{op}」到 {plan.OutputRoot}";
         CanExecute = true;
@@ -207,6 +213,7 @@ public partial class WorkbenchViewModel : ViewModelBase
     /// <summary>Session 分析完成后回调：更新 UI 展示 + 转发给外部订阅者。</summary>
     private void OnAnalysisCompleted(AnalysisResult result)
     {
+        if (_analysisGeneration != _generation) return;
         SuccessRate = result.SuccessRate.ToString("P1");
         SourceSummary = string.Join(" · ", result.Parsed
             .GroupBy(p => p.Source)
@@ -283,6 +290,7 @@ public partial class WorkbenchViewModel : ViewModelBase
         _config.Paths.SourceDir = SourceDir;
         _config.Paths.OutputDir = OutputDir;
         IsBusy = true;
+        _analysisGeneration = _generation;
         CanExecute = false;
         Progress = 0;
 
@@ -338,8 +346,9 @@ public partial class WorkbenchViewModel : ViewModelBase
             TotalFiles = p.Total;
             SuccessFiles = p.Succeeded;
             FailedFiles = p.Failed;
+            // 终态文案由 OnAnalysisCompleted / catch 独占：Progress<T> 是异步 Post，
+            // 残留回调会在任务结束后把「已完成」改回「正在分析」（走查 #11）
             Progress = p.Total == 0 ? 0 : (double)p.Processed / p.Total * 100;
-            StatusText = $"正在分析 {p.Processed}/{p.Total}…";
         });
 
     [RelayCommand]
@@ -458,18 +467,29 @@ public partial class WorkbenchViewModel : ViewModelBase
                 return;
             lastFlush = DateTime.UtcNow;
             Progress = p * 100;
-            StatusText = $"正在执行 {p:P0}…";
         });
     }
+
+    // 配置代次：在途分析用的是旧提取链，完成后不得覆盖新状态（走查 #10）
+    private int _generation;
+    private int _analysisGeneration;
 
     /// <summary>规则或配置变更后重建提取链（由主 VM 事件接线）。</summary>
     public void RebuildChain()
     {
         _logger.Info("配置/规则已变更，提取链已重建");
+        if (IsBusy)
+        {
+            _generation++;
+            // 直接取消在途任务：旧链产出的结果不该覆盖刚失效的状态
+            if (_jobHost?.IsJobRunning == true) _jobHost.Cancel();
+            else _cts?.Cancel();
+        }
         if (HasResult)
         {
             // 已有分析结果是旧配置产物，失效计划，避免按过期日期归档
             _session.InvalidateResult();
+            HasResult = false;
             CanExecute = false;
             PlanText = "提取配置已变更，请重新分析后再执行";
             StatusText = "提取配置已变更，请重新分析后再执行";

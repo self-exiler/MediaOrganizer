@@ -1,30 +1,25 @@
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
+using MediaOrganizer.Android.Views;
 using MediaOrganizer.Shared.ViewModels;
 
 namespace MediaOrganizer.Android;
 
-/// <summary>VM → View 解析：Shared 的 XxxViewModel 与 Android 专属 VM 都映射到 Android.Views.XxxView。</summary>
+/// <summary>VM → View 解析：与桌面端同为显式静态登记表，避免反射解析被裁剪（走查 #19）。</summary>
 public sealed class ViewLocator : IDataTemplate
 {
+    private static readonly Dictionary<Type, Func<Control>> Views = new()
+    {
+        [typeof(WorkbenchViewModel)] = () => new WorkbenchView(),
+        [typeof(FailedFilesViewModel)] = () => new FailedFilesView(),
+        [typeof(ReportViewModel)] = () => new ReportView(),
+        [typeof(SettingsViewModel)] = () => new SettingsView()
+    };
+
     public Control Build(object? param)
-    {
-        var type = Resolve(param?.GetType());
-        return type is not null
-            ? (Control)Activator.CreateInstance(type)!
+        => param is not null && Views.TryGetValue(param.GetType(), out var createView)
+            ? createView()
             : new TextBlock { Text = "未找到视图：" + param?.GetType().FullName };
-    }
 
-    private static System.Type? Resolve(System.Type? vmType)
-    {
-        if (vmType is null) return null;
-        var viewName = vmType.FullName!
-            .Replace(".Shared.ViewModels.", ".Android.Views.")
-            .Replace("ViewModel", "View");
-        // 视图全部位于本程序集的 MediaOrganizer.Android.Views 命名空间
-        return typeof(ViewLocator).Assembly.GetType(viewName);
-    }
-
-    public bool Match(object? data)
-        => data is ViewModelBase;
+    public bool Match(object? data) => data is ViewModelBase;
 }

@@ -399,6 +399,10 @@ public partial class SettingsViewModel : ViewModelBase
             // 验证状态已由 BuildEditProfile 携带；密码的保留/更新也在其中处理，此处只做替换
             var idx = _config.NetworkProfiles.IndexOf(_editingProfile);
             if (idx >= 0) _config.NetworkProfiles[idx] = profile;
+            // 当前选中目标被改名时必须同步引用，否则 ReloadOutputTargets 按旧名找不到 profile，
+            // UI 退回本地而执行仍按旧名抛异常（走查 #8）
+            if (_config.Paths.OutputNetworkProfile == _editingProfile.Name && profile.Name != _editingProfile.Name)
+                _config.Paths.OutputNetworkProfile = profile.Name;
         }
 
         RefreshNetworkProfiles();
@@ -487,7 +491,7 @@ public partial class SettingsViewModel : ViewModelBase
         if (sender is not PatternSettingVM vm) return;
         PatternSummary = $"{_patterns.Count} 条 · {_patterns.Count(p => p.Enabled)} 启用";
         SaveHint = $"「{vm.Name}」启用状态已即时生效并保存";
-        _state.SavePatterns(); // SavePatterns 自带 Changed + ChainChanged
+        DebouncePersist(_state.SavePatterns); // SavePatterns 自带 Changed + ChainChanged
     }
 
     [RelayCommand]
@@ -518,7 +522,30 @@ public partial class SettingsViewModel : ViewModelBase
     private void OpenMagicTools() => NavigateToMagic?.Invoke();
 
     /// <summary>提取器开关/权重即时生效：写回共享配置并通知工作台（无需点保存配置）。</summary>
-    private CancellationTokenSource? _extractorSaveCts;
+    private CancellationTokenSource? _persistCts;
+
+    /// <summary>300ms 防抖落盘：勾选/滑块/输入框连续变更合并为一次写文件（走查 #16）。
+    /// 代价：停止操作 300ms 内退出应用，最后一次改动可能未落盘。</summary>
+    private void DebouncePersist(Action save)
+    {
+        _persistCts?.Cancel();
+        _persistCts = new CancellationTokenSource();
+        var token = _persistCts.Token;
+        _ = Task.Run(async () =>
+        {
+            try { await Task.Delay(300, token); }
+            catch (OperationCanceledException) { return; }
+            try
+            {
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(save);
+            }
+            catch (Exception ex)
+            {
+                // fire-and-forget：异常必须自行记录，否则成为未观察任务异常
+                System.Diagnostics.Debug.WriteLine($"[Settings] 防抖落盘失败：{ex.Message}");
+            }
+        });
+    }
 
     private void OnExtractorChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -530,24 +557,11 @@ public partial class SettingsViewModel : ViewModelBase
         setting.Weight = vm.Weight;
         SaveHint = $"「{vm.Name}」{Describe(e.PropertyName)}已即时生效并保存";
 
-        // 滑块已 SnapToTick 0.1，拖满量程仍触发 ~20 次本回调；
-        // 300ms 防抖合并落盘（临时文件+改名）与工作台链重建（NotifyChanged），内存配置即时生效。
-        // 代价：停止拖动 300ms 内退出应用，最后一次改动可能未落盘。
-        _extractorSaveCts?.Cancel();
-        _extractorSaveCts = new CancellationTokenSource();
-        var token = _extractorSaveCts.Token;
-        _ = Task.Run(async () =>
+        // 滑块已 SnapToTick 0.1，拖满量程仍触发 ~20 次本回调；统一走 300ms 防抖落盘
+        DebouncePersist(() =>
         {
-            try
-            {
-                await Task.Delay(300, token);
-            }
-            catch (OperationCanceledException) { return; }
-            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                _state.SaveConfig(notifyChanged: false);
-                _state.NotifyChainChanged(); // 提取器权重/开关影响提取链
-            });
+            _state.SaveConfig(notifyChanged: false);
+            _state.NotifyChainChanged(); // 提取器权重/开关影响提取链
         });
     }
 
@@ -570,7 +584,7 @@ public partial class SettingsViewModel : ViewModelBase
     /// <summary>统一落盘样板（精简项：原先十几个 OnXxxChanged 各写一遍）。</summary>
     private void Persist(string hint, ConfigChange kind)
     {
-        _state.SaveConfig(notifyChanged: false);
+        DebouncePersist(() => _state.SaveConfig(notifyChanged: false));
         switch (kind)
         {
             case ConfigChange.Ui: _state.NotifyChanged(); break;

@@ -9,5 +9,6 @@
   </Folder>
   <Folder Name="/test/">
     <Project Path="test/MediaOrganizer.Core.Tests/MediaOrganizer.Core.Tests.csproj" />
+    <Project Path="test/MediaOrganizer.Shared.Tests/MediaOrganizer.Shared.Tests.csproj" />
   </Folder>
 </Solution>

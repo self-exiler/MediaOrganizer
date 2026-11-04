@@ -4,35 +4,29 @@
              xmlns:vm="using:MediaOrganizer.Android.ViewModels"
              x:Class="MediaOrganizer.Android.Views.MainView"
              x:DataType="vm:MainViewModel">
-    <UserControl.Resources>
-        <!-- 抽屉导航项（FR-A7.1）：48dp 热区、选中态左侧高亮条 + 淡色底（Fluent 列表语义色，深浅色自适应） -->
-        <ControlTheme x:Key="NavListItem" TargetType="ListBoxItem">
+    <UserControl.Styles>
+        <!-- 抽屉导航按钮（固定 4 项）：48dp 热区、选中态左侧 3px 高亮条 + 淡色圆角底。
+             本轮 GUI 优化后「ListBox + 自定义 ItemContainerTheme」在真机上只生成首个容器，
+             表现为侧栏只剩「整理工作台」；固定导航项改为静态按钮，彻底绕开容器生成/虚拟化路径。
+             选中态由 MainView.UpdateNavSelection 按 SelectedPage 切 Classes.selected。 -->
+        <Style Selector="Button.nav">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="0,24,24,0"/>
             <Setter Property="Padding" Value="20,0"/>
             <Setter Property="MinHeight" Value="48"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Template">
-                <ControlTemplate>
-                    <Panel>
-                        <Border x:Name="RootB" Background="Transparent" CornerRadius="0,24,24,0" Margin="0,2"/>
-                        <Border x:Name="ActiveBar" Width="3" HorizontalAlignment="Left" CornerRadius="2"
-                                Background="{DynamicResource SystemControlBackgroundAccentBrush}" Margin="0,14" IsVisible="False"/>
-                        <ContentPresenter Content="{TemplateBinding Content}"
-                                          ContentTemplate="{TemplateBinding ContentTemplate}"
-                                          Margin="{TemplateBinding Padding}" VerticalAlignment="Center"/>
-                    </Panel>
-                </ControlTemplate>
-            </Setter>
-            <Style Selector="^:selected /template/ Border#RootB">
-                <Setter Property="Background" Value="{DynamicResource SystemControlHighlightListAccentLowBrush}"/>
-            </Style>
-            <Style Selector="^:selected /template/ Border#ActiveBar">
-                <Setter Property="IsVisible" Value="True"/>
-            </Style>
-        </ControlTheme>
-    </UserControl.Resources>
-
-    <!-- 触屏无悬停：NavListItem 的 :pointerover 态已删（审查报告1 #3），仅保留选中态 -->
-    <UserControl.Styles>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+        </Style>
+        <Style Selector="Button.nav.selected">
+            <Setter Property="Background" Value="{DynamicResource SystemControlHighlightListAccentLowBrush}"/>
+            <Setter Property="BorderThickness" Value="3,0,0,0"/>
+        </Style>
+        <Style Selector="Button.nav:pressed">
+            <Setter Property="Background" Value="{DynamicResource SystemControlHighlightListLowBrush}"/>
+        </Style>
         <!-- 抽屉遮罩基态（关）：注意 Opacity/IsHitTestVisible 必须走样式而非本地属性——
              Avalonia 本地值优先级高于样式 Setter，写在元素上会令 .open 态失效 -->
         <Style Selector="Border#DrawerOverlay">
@@ -55,8 +49,8 @@
     <Grid x:Name="Root" RowDefinitions="Auto,*"
           Background="{DynamicResource SystemControlPageBackgroundChromeLowBrush}">
 
-        <!-- AppBar（FR-A7.1）：汉堡菜单 + 页面标题。品牌色带保留（审查报告3 F6），
-             MinHeight 含状态栏 insets：安全区由 code-behind 接管，色带向上延伸到状态栏背后。
+        <!-- AppBar（FR-A7.1）：汉堡菜单 + 页面标题，固定 56dp（审查报告3 F6 保留品牌色）。
+             不再把状态栏 insets 叠进色带高度：真机上会把顶部蓝块撑成近 200dp，见 MainView.ApplyInsets。
              汉堡字符 ≡ 换矢量 PathIcon（审查报告2 F8、报告3 F5）。 -->
         <Border x:Name="AppBar" Grid.Row="0" Background="{DynamicResource AccentBrush}" MinHeight="56">
             <DockPanel x:Name="AppBarContent" VerticalAlignment="Bottom" Height="56" Margin="4,0">
@@ -139,29 +133,55 @@
                         </StackPanel>
                     </Border>
 
-                    <ListBox Background="Transparent" BorderThickness="0" Padding="0,4"
-                             SelectedIndex="{Binding SelectedPage, Mode=TwoWay}"
-                             ItemsSource="{Binding NavItems}"
-                             ItemContainerTheme="{StaticResource NavListItem}">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate x:DataType="vm:NavItem">
-                                <Grid ColumnDefinitions="Auto,*,Auto" MinHeight="48">
-                                    <PathIcon Grid.Column="0" Data="{Binding Icon}" Width="20" Height="20"
-                                              Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
-                                              VerticalAlignment="Center"/>
-                                    <TextBlock Grid.Column="1" Text="{Binding Label}" FontSize="{StaticResource FontSizeBody}"
-                                               Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
-                                               VerticalAlignment="Center" Margin="14,0,0,0"/>
-                                    <!-- 失败文件角标（Badge=0 时隐藏） -->
-                                    <Border Grid.Column="2" IsVisible="{Binding HasBadge}"
-                                            Background="{DynamicResource SystemControlErrorTextForegroundBrush}"
-                                            CornerRadius="99" Padding="8,2" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Badge}" FontSize="{StaticResource FontSizeSecondary}" Foreground="White"/>
-                                    </Border>
-                                </Grid>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
+                    <!-- 静态导航项：4 个页面固定，不依赖 ItemsSource/容器生成（见 UserControl.Styles 注释） -->
+                    <StackPanel Margin="0,4" Spacing="2">
+                        <Button x:Name="Nav0" Classes="nav" Tag="0" Click="OnNavClicked">
+                            <Grid ColumnDefinitions="Auto,*,Auto" MinHeight="48">
+                                <PathIcon Grid.Column="0" Data="{x:Static local:AppIcons.Folder}" Width="20" Height="20"
+                                          Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                                          VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="整理工作台" FontSize="{StaticResource FontSizeBody}"
+                                           Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                                           VerticalAlignment="Center" Margin="14,0,0,0"/>
+                            </Grid>
+                        </Button>
+                        <Button x:Name="Nav1" Classes="nav" Tag="1" Click="OnNavClicked">
+                            <Grid ColumnDefinitions="Auto,*,Auto" MinHeight="48">
+                                <PathIcon Grid.Column="0" Data="{x:Static local:AppIcons.Alert}" Width="20" Height="20"
+                                          Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                                          VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="失败文件" FontSize="{StaticResource FontSizeBody}"
+                                           Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                                           VerticalAlignment="Center" Margin="14,0,0,0"/>
+                                <!-- 失败文件角标：由 code-behind 按 FailedBadge 刷新（0 时隐藏） -->
+                                <Border x:Name="NavBadge" Grid.Column="2" IsVisible="False"
+                                        Background="{DynamicResource SystemControlErrorTextForegroundBrush}"
+                                        CornerRadius="99" Padding="8,2" VerticalAlignment="Center">
+                                    <TextBlock x:Name="NavBadgeText" Text="0" FontSize="{StaticResource FontSizeSecondary}" Foreground="White"/>
+                                </Border>
+                            </Grid>
+                        </Button>
+                        <Button x:Name="Nav2" Classes="nav" Tag="2" Click="OnNavClicked">
+                            <Grid ColumnDefinitions="Auto,*,Auto" MinHeight="48">
+                                <PathIcon Grid.Column="0" Data="{x:Static local:AppIcons.Document}" Width="20" Height="20"
+                                          Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                                          VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="分析报告" FontSize="{StaticResource FontSizeBody}"
+                                           Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                                           VerticalAlignment="Center" Margin="14,0,0,0"/>
+                            </Grid>
+                        </Button>
+                        <Button x:Name="Nav3" Classes="nav" Tag="3" Click="OnNavClicked">
+                            <Grid ColumnDefinitions="Auto,*,Auto" MinHeight="48">
+                                <PathIcon Grid.Column="0" Data="{x:Static local:AppIcons.Tune}" Width="20" Height="20"
+                                          Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                                          VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="设置" FontSize="{StaticResource FontSizeBody}"
+                                           Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                                           VerticalAlignment="Center" Margin="14,0,0,0"/>
+                            </Grid>
+                        </Button>
+                    </StackPanel>
                 </DockPanel>
             </Border>
         </Panel>

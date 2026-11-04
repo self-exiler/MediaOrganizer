@@ -6,8 +6,8 @@ namespace MediaOrganizer.Shared.Services;
 /// </summary>
 public interface IFileSaver
 {
-    /// <summary>另存文本文件（用户选择位置）；返回是否保存成功。</summary>
-    Task<bool> SaveTextAsync(string suggestedName, string content);
+    /// <summary>另存文本文件（用户选择位置）；取消由实现静默返回，失败抛异常由调用方提示。</summary>
+    Task SaveTextAsync(string suggestedName, string content);
 
     /// <summary>系统分享文本内容（Android 分享面板；桌面降级为另存为）。</summary>
     Task ShareTextAsync(string title, string content);

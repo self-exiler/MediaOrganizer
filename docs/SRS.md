@@ -181,7 +181,7 @@ UI 文本须集中在 View/XAML 或 VM 的可枚举位置，不得散落进业�
 | FR-10.3 | SMB 走 **SMBLibrary 纯托管客户端**（SMB2，445 端口，NTLM 显式认证，首版不支持 guest/匿名）；WebDAV 走协议客户端，全平台可用。两者均为**双端统一实现**（ADR-0007，取代 ADR-0004 的 UNC 方式） |
 | FR-10.4 | 连接配置提供"测试连接"即时验证（认证 + 写权限探测）；**须带超时与取消**，不得阻塞 UI 直到 OS 级 TCP 超时 |
 | FR-10.5 | 网络目标下仅提供 copy，move 选项禁用并给出原因提示 |
-| FR-10.6 | 流式拷贝，**单次写入载荷不得超过连接协商的写入上限**（SMB = `min(服务器 MaxWriteSize, 1MB)`，该上限由 `SMB2Client.MaxWriteSize` 取得；SMBLibrary 的 `WriteFile` **不**自动分片，超限请求会被服务器直接拒绝）。读取缓冲 1MB，逐文件 + 总体双进度；网络中断自动重试 3 次（指数退避 1/2/4s） |
+| FR-10.6 | 流式拷贝，**单次写入载荷不得超过连接协商的写入上限**（SMB = `min(服务器 MaxWriteSize, 1MB)`，该上限由 `SMB2Client.MaxWriteSize` 取得；SMBLibrary 的 `WriteFile` **不**自动分片，超限请求会被服务器直接拒绝）。读取缓冲 1MB，逐文件 + 总体双进度；网络中断共 3 次尝试、退避 1s/2s（与 `FileOperator.MaxRetries` / `Backoff` 一致） |
 | FR-10.7 | 传输采用临时名（`<name>.mo-tmp`）+ 完成后改名，杜绝半成品；完成校验 = 大小一致（目标取不到长度时须记为失败而非跳过校验）。**传输或改名失败时须删除 `.mo-tmp` 残留**，目标端不得留下垃圾文件 |
 | FR-10.8 | mtime 矫正兼容网络目标：SMB 用 SetFileInformation（FileBasicInformation）写入 LastWriteTime；**WebDAV v1.0 不实现 PROPPATCH，静默跳过**（原"用 PROPPATCH，不支持则跳过"降级为本条，ADR-0008 决策 2） |
 | FR-10.9 | 明确不支持 FTP（ADR-0004）。SMB 自 ADR-0007 起双端统一走 SMBLibrary，**不再要求 macOS/Linux 用户自行挂载**（原条款作废） |

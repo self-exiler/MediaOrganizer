@@ -22,7 +22,7 @@
 | 连接配置 | network profile | 一条网络位置记录：名称/协议/地址/用户名/密码（密码加密存储） |
 | 文件存储抽象 | IFileStorage | 执行层文件操作抽象：Local / Smb / WebDav / AndroidSaf 四种实现（ADR-0006 起 CopyFromAsync 源参数为 IMediaSource） |
 | 临时名传输 | .mo-tmp | 网络拷贝先写 `<name>.mo-tmp`，成功且大小校验一致后改名，杜绝半成品。**传输或改名失败须删除该临时文件**，目标端不留垃圾（2026-08-30 补，见 ADR-0008） |
-| 大小校验 | size verification | 网络传输完成的判定：目标大小 == 源大小；失败重试 3 次（指数退避）。**目标取不到长度时须记为失败，不得跳过校验**（否则截断文件会被误判成功） |
+| 大小校验 | size verification | 网络传输完成的判定：目标大小 == 源大小；失败共 3 次尝试、退避 1s/2s。**目标取不到长度时须记为失败，不得跳过校验**（否则截断文件会被误判成功） |
 | 写入分片 | write chunking | SMB 单次 `WriteFile` 的载荷上限 = `min(服务器协商 MaxWriteSize, 1MB)`。SMBLibrary **不**自动分片，超限请求被服务器拒绝；分片由 `SmbFileStorage` 自行负责（2026-08-30 修正，原各处"8MB 分块"均为错误值） |
 | ~~FTP 支持~~ | — | 明确不支持（ADR-0004） |
 | ~~加权投票~~ | — | 旧称，见"加权链" |
@@ -37,12 +37,12 @@
 | 术语 | 英文/代码对应 | 定义 |
 |------|--------------|------|
 | SAF | Storage Access Framework | Android 系统级文件选择框架；用户授权目录后返回 `content://` 树 URI，应用通过 ContentResolver 访问 |
-| 树 URI | content tree URI | SAF 返回的 `content://` URI，代表用户选定的目录树；持久化授权后跨会话可用 |
+| 树 URI | content tree URI | SAF 返回的 `content://` URI，代表用户选定的目录树；当前仅用于 `SafPaths` 换算真实路径，扫描/写入走 `System.IO`，不申请持久化授权 |
 | ContentResolver | ContentResolver | Android 系统 API，通过 URI 访问文件/目录（打开流、查询、创建/删除） |
-| DocumentFile | DocumentFile | SAF 的高级封装类，提供类似 File 的树状遍历 API |
+| DocumentFile | DocumentFile | SAF 高级封装类（历史实现，现已移除 `Xamarin.AndroidX.DocumentFile` 依赖与包引用） |
 | Scoped Storage | Scoped Storage | Android 10+ 的存储隔离模型；应用只能直接访问专有目录，共享存储须走 SAF |
-| AndroidSafStorage | AndroidSafStorage | IFileStorage 的 Android 实现，内部走 ContentResolver + DocumentFile |
-| AndroidFileScanner | AndroidFileScanner | FileScanner 的 Android 对应物，遍历 DocumentFile.listFiles() |
+| AndroidSafStorage | AndroidSafStorage | 历史实现，已删除；本地/网络目标统一由 Core 的 `IFileStorage` 实现承载 |
+| AndroidFileScanner | AndroidFileScanner | 把 SAF 树 URI 换算成真实目录后委托 `FileScanner` 遍历 `System.IO`，不再逐文件走 DocumentFile IPC |
 | Android Keystore | AndroidKeyStore | Android 系统密钥库；生成 AES 密钥加密凭据，密钥不可导出 |
 | ICredentialCrypto | ICredentialCrypto | Core 新增的凭据加密抽象；桌面用 DPAPI，Android 用 Keystore |
 | IExifReader | IExifReader | Core 新增的图片 EXIF 读取抽象；桌面用 Magick.NET，Android 用 ExifInterface |

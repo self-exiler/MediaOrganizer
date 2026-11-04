@@ -44,7 +44,10 @@ public sealed class ExifExtractor(bool enabled, double weight, IExifReader? exif
 
     /// <summary>视频元数据内存闸门：SAF 等不可 seek 流会被整文件读入
     /// MemoryStream，超过此阈值直接跳过视频 TagLib 提取，交给 FileName 提取器兜底，避免 OOM。</summary>
-    private const long MaxVideoBytesForTagRead = 200L * 1024 * 1024;
+    private const long MaxVideoBytesForTagRead = 32L * 1024 * 1024;
+    // 不可 seek 流会被整段拷进 MemoryStream；Analyzer 默认按 CPU 核数并行，
+    // 不限制并发视频读取会一次性放大到数 GB 托管内存（Android 直接 OOM，走查 #15）
+    private static readonly SemaphoreSlim VideoReadGate = new(2, 2);
 
     private static DateTimeOffset? ExtractFromVideo(MediaFile file)
     {
@@ -52,6 +55,7 @@ public sealed class ExifExtractor(bool enabled, double weight, IExifReader? exif
         // 长度不可知（-1）或超大文件：不确定能否安全读完，跳过 TagLib
         var len = file.Source.Length;
         if (len < 0 || len > MaxVideoBytesForTagRead) return null;
+        VideoReadGate.Wait();
         try
         {
             var abstraction = new TagLibStreamFileAbstraction(file.FileName, file.Source.OpenRead);
@@ -67,6 +71,10 @@ public sealed class ExifExtractor(bool enabled, double weight, IExifReader? exif
         {
             // 容器无法解析等：视为无结果
             System.Diagnostics.Debug.WriteLine($"[ExifExtractor] Video tag read failed for {file.FileName}: {ex.Message}");
+        }
+        finally
+        {
+            VideoReadGate.Release();
         }
         return null;
     }

@@ -275,7 +275,7 @@
                             </Border>
                         </Grid>
 
-                        <!-- Maximum 钳到 ≥1：TotalFiles=0 时避免除零/NaN 渲染（审查报告3 P2） -->
+                        <!-- 结果统计：Value=成功文件数，Maximum=总文件数（钳到 ≥1 避免 NaN） -->
                         <ProgressBar MinHeight="6" Maximum="{Binding ProgressMaximum, Mode=OneWay}"
                                      Value="{Binding SuccessFiles, Mode=OneWay}"/>
                         <TextBlock Text="{Binding SourceSummary}" FontSize="{StaticResource FontSizeSecondary}"

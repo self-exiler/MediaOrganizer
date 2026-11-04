@@ -26,6 +26,8 @@ public sealed class OrganizeJobHost : IJobHost
     private readonly object _sync = new();
     private CancellationTokenSource? _cts;
     private bool _running;
+    // Finish 幂等标志：服务侧的 ForceFinish 与 RunJobAsync.finally 的 End 会竞争，只让第一个落地（走查 #5）
+    private bool _finished = true;
     private volatile bool _systemTimeout;
     private volatile string _lastOutcome = "";
     private bool _batteryHintShown;
@@ -99,6 +101,14 @@ public sealed class OrganizeJobHost : IJobHost
         lock (_sync) _cts?.Cancel();
     }
 
+    /// <summary>强制终结：服务停止/系统超时但任务仍卡在不受 CancellationToken 控制的同步 IO 时，
+    /// 必须把 _running/WakeLock/CTS 归位并触发 Finished，否则 UI 永远显示忙碌且后续任务全被拒（走查 #5）。</summary>
+    public void ForceFinish(string outcome)
+    {
+        Cancel();
+        Finish(outcome);
+    }
+
     /// <summary>系统 dataSync 配额触顶（服务 OnTimeout 回调）：取消任务并在完成通知中说明原因。</summary>
     public void CancelBySystemTimeout()
     {
@@ -131,6 +141,7 @@ public sealed class OrganizeJobHost : IJobHost
                 return false;
             }
             _running = true;
+            _finished = false;
             _systemTimeout = false;
             _kind = kind;
             _startedAt = DateTimeOffset.Now;
@@ -181,20 +192,25 @@ public sealed class OrganizeJobHost : IJobHost
         }
     }
 
-    private void End()
+    private void End() => Finish(_lastOutcome);
+
+    private void Finish(string outcome)
     {
-        string outcome;
+        string finalOutcome;
         lock (_sync)
         {
+            if (_finished) return;
+            _finished = true;
             _running = false;
-            outcome = _lastOutcome;
+            finalOutcome = outcome;
+            _lastOutcome = outcome;
             _cts?.Dispose();
             _cts = null;
         }
         ReleaseWifiLock();
         _progressFraction = -1;
         RaiseStateChanged(force: true);
-        Finished?.Invoke(outcome);
+        Finished?.Invoke(finalOutcome);
     }
 
     private void StartForegroundService()

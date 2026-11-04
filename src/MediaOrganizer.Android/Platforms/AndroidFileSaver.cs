@@ -9,7 +9,7 @@ namespace MediaOrganizer.Android.Platforms;
 /// </summary>
 public sealed class AndroidFileSaver(MainActivity activity) : IFileSaver
 {
-    public async Task<bool> SaveTextAsync(string suggestedName, string content)
+    public async Task SaveTextAsync(string suggestedName, string content)
     {
         var intent = new Intent(Intent.ActionCreateDocument);
         intent.SetType("text/plain");
@@ -18,13 +18,12 @@ public sealed class AndroidFileSaver(MainActivity activity) : IFileSaver
 
         var data = await activity.StartForResultAsync(intent, RequestCodes.CreateDocument);
         var uri = data?.Data;
-        if (uri is null) return false;
+        if (uri is null) return;
 
         await using var stream = activity.Resolver.OpenOutputStream(uri)
                                   ?? throw new IOException("无法打开输出流");
         await using var writer = new StreamWriter(stream);
         await writer.WriteAsync(content);
-        return true;
     }
 
     public Task ShareTextAsync(string title, string content)

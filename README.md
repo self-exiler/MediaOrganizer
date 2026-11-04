@@ -51,7 +51,7 @@ MediaOrganizer/
 ├─ packaging/                       # 桌面版打包：发布脚本 + WiX v5 打包脚本（产出 MSI）
 ├─ src/
 │  ├─ MediaOrganizer.Core/         # 核心扫描、分析、提取、归档逻辑（net10.0 + net10.0-android 双目标）
-│  ├─ MediaOrganizer.Shared/       # 桌面 / 安卓共享的 ViewModel 层（net10.0 单目标）
+│  ├─ MediaOrganizer.Shared/       # 桌面 / 安卓共享的 ViewModel 层（net10.0 + net10.0-android 条件双目标）
 │  ├─ MediaOrganizer.Desktop/      # Avalonia 桌面应用界面
 │  └─ MediaOrganizer.Android/      # Avalonia 安卓应用
 ├─ test/
@@ -121,7 +121,7 @@ Desktop 项目为 Avalonia + MVVM 架构的桌面界面，主要提供：
 
 ### 桌面端（最终用户）
 
-使用安装包 `MediaOrganizer_Setup_<版本>.exe`（构建方式见 `packaging/README.md`）：
+使用安装包 `MediaOrganizer-windows-x64-<版本>.msi`（构建方式见 `packaging/README.md`）：
 
 - 中文向导，全程无需管理员权限
 - 默认安装到用户目录 `%LocalAppData%\Programs\MediaOrganizer`
